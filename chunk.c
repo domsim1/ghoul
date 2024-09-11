@@ -67,7 +67,7 @@ void writeConstant(Chunk *chunk, Value value, int line) {
     if (valueIndex > 65535) {
       exit(1);
     }
-    writeChunk(chunk, OP_CONSTANT_LONG, line);
+    writeChunk(chunk, OP_CONSTANT_SHORT, line);
     writeChunk(chunk, (valueIndex >> 8) & 0xFF, line);
     writeChunk(chunk, valueIndex & 0xFF, line);
     return;

@@ -4,7 +4,7 @@
 #include "common.h"
 #include "vm.h"
 
-static void repl(VM *vm) {
+static void repl() {
   char line[1024];
   for (;;) {
     printf("> ");
@@ -14,7 +14,7 @@ static void repl(VM *vm) {
       break;
     }
 
-    interpret(vm, line);
+    interpret(line);
   }
 }
 
@@ -45,30 +45,29 @@ static char *readFile(const char *path) {
   return buffer;
 }
 
-static void runFile(VM *vm, const char *path) {
+static void runFile(const char *path) {
   char *source = readFile(path);
-  InterpretResult result = interpret(vm, source);
+  InterpretResult result = interpret(source);
   free(source);
 
   if (result == INTERPRET_COMPILE_ERROR)
     exit(65);
-  if (result == INTERPRET_RUNTUME_ERROR)
+  if (result == INTERPRET_RUNTIME_ERROR)
     exit(70);
 }
 
 int main(int argc, const char *argv[]) {
-  VM vm;
-  initVM(&vm);
+  initVM();
 
   if (argc == 1) {
-    repl(&vm);
+    repl();
   } else if (argc == 2) {
-    runFile(&vm, argv[1]);
+    runFile(argv[1]);
   } else {
     fprintf(stderr, "Usage: clox [path]\n");
     exit(64);
   }
 
-  freeVM(&vm);
+  freeVM();
   return 0;
 }

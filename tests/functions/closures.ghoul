@@ -1,0 +1,13 @@
+::createAdder(numA) {
+  ::newAdder(numB) {
+    -> numA + numB;
+  }
+  -> newAdder;
+}
+
+:addFive = createAdder(5);
+
+print "$expected$";
+print 10;
+print "$actual$";
+print addFive(5);

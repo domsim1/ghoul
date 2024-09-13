@@ -1,8 +1,0 @@
-print "$expect$";
-print 10 - 10;
-print -10 + 10;
-print "$actual$";
-print 20;
-print 0;
-
-

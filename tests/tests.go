@@ -10,6 +10,7 @@ import (
 
 func main() {
 	files := getFiles()
+	println("-------------")
 	for _, f := range files {
 		res := run(f)
 		if getRes(res, f) {

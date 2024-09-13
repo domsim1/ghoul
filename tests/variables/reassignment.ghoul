@@ -1,0 +1,32 @@
+:numA = 10;
+:numB = 10.5;
+:numC = 43;
+:strA = "test";
+:strB = "test";
+:boolA = true;
+:boolB = true;
+
+numA = 42;
+numB = 69;
+numC = "fresh";
+strA = "not test";
+strB = false;
+boolA = false;
+boolB = "true";
+
+print "$expected$";
+print 42;
+print 69;
+print "fresh";
+print "not test";
+print false;
+print false;
+print "true";
+print "$actual$";
+print numA;
+print numB;
+print numC;
+print strA;
+print strB;
+print boolA;
+print boolB;

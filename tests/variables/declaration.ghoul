@@ -1,0 +1,15 @@
+:numA = 10;
+:numB = 10.5;
+:str = "test";
+:bool = true;
+
+print "$expected$";
+print 10;
+print 10.5;
+print "test";
+print true;
+print "$actual$";
+print numA;
+print numB;
+print str;
+print bool;

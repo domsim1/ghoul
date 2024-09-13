@@ -1,0 +1,24 @@
+::testEmpty() {}
+
+::testReturn() {
+  -> 10;
+}
+
+::testArgument(test) {
+  -> test;
+}
+
+print "$expected$";
+print "<fn testEmpty>";
+print nil;
+print 10;
+print 15;
+print "test";
+print false;
+print "$actual$";
+print testEmpty;
+print testEmpty();
+print testReturn();
+print testArgument(15);
+print testArgument("test");
+print testArgument(false);

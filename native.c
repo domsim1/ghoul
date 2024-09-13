@@ -1,8 +1,17 @@
+#include <string.h>
 #include <time.h>
 
 #include "object.h"
 #include "value.h"
 #include "vm.h"
+
+static bool checkArgCount(int argCount, int expectedCount) {
+  if (argCount != expectedCount) {
+    runtimeError("Expected %d argugments but got %d.", expectedCount, argCount);
+    return false;
+  }
+  return true;
+}
 
 static void defineNative(const char *name, NativeFn function) {
   push(OBJ_VAL(copyString(name, (int)strlen(name))));
@@ -10,20 +19,6 @@ static void defineNative(const char *name, NativeFn function) {
   tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
   pop();
   pop();
-}
-
-static Value clockNative(int argCount, Value *args) {
-  return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
-}
-
-static Value pushListNative(int argCount, Value *args) {
-  if (argCount != 2 || !IS_LIST(args[0])) {
-    return NIL_VAL;
-  }
-  ObjList *list = AS_LIST(args[0]);
-  Value item = args[1];
-  pushToList(list, item);
-  return NIL_VAL;
 }
 
 static void defineListNative(const char *name, NativeFn function) {
@@ -34,16 +29,39 @@ static void defineListNative(const char *name, NativeFn function) {
   pop();
 }
 
+static Value clockNative(int argCount, Value *args) {
+  if (!checkArgCount(argCount, 0)) {
+    return 0;
+  };
+  return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
+}
+
+static Value pushListNative(int argCount, Value *args) {
+  if (!checkArgCount(argCount - 1, 1)) {
+    return 0;
+  };
+  ObjList *list = AS_LIST(args[0]);
+  Value item = args[1];
+  pushToList(list, item);
+  return NIL_VAL;
+}
+
 static Value deleteListNative(int argCount, Value *args) {
-  if (argCount != 2 || !IS_LIST(args[0]) || !IS_NUMBER(args[1])) {
-    return NIL_VAL;
+  if (!checkArgCount(argCount - 1, 1)) {
+    return 0;
+  }
+
+  if (!IS_NUMBER(args[1])) {
+    runtimeError("Argugment must be number");
+    return 0;
   }
 
   ObjList *list = AS_LIST(args[0]);
   int index = AS_NUMBER(args[1]);
 
   if (!isValidListIndex(list, index)) {
-    return NIL_VAL;
+    runtimeError("List index out of range.");
+    return 0;
   }
 
   deleteFromList(list, index);

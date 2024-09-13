@@ -118,8 +118,6 @@ static TokenType identifierType() {
     return checkKeyword(1, 1, "r", TOKEN_OR);
   case 'p':
     return checkKeyword(1, 4, "rint", TOKEN_PRINT);
-  case 'r':
-    return checkKeyword(1, 5, "eturn", TOKEN_RETURN);
   case 's':
     return checkKeyword(1, 4, "uper", TOKEN_SUPER);
   case 't':
@@ -214,7 +212,7 @@ Token scanToken() {
   case '.':
     return makeToken(TOKEN_DOT);
   case '-':
-    return makeToken(TOKEN_MINUS);
+    return makeToken(match('>') ? TOKEN_RETURN : TOKEN_MINUS);
   case '+':
     return makeToken(TOKEN_PLUS);
   case '/':

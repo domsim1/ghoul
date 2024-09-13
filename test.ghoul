@@ -1,26 +1,8 @@
-:pie = ["hi", "this", "is", "a", "script"];
+print "$expect$";
+print 10 - 10;
+print -10 + 10;
+print "$actual$";
+print 20;
+print 0;
 
-::doThing() {
-  pie.push("maybe?");
-  pie.push("idk");
-  pie.remove(1);
-  print pie;
-}
-
-:;Bark {
-  init() {
-    print "lol";
-  }
-}
-
-:;Barking < Bark {
-  init() {
-    print "lol";
-    super.init();
-  }
-}
-
-:bark = Barking();
-
-doThing();
 

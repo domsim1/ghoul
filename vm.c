@@ -19,7 +19,7 @@ static void resetStack() {
   vm.openUpvalues = NULL;
 }
 
-static void runtimeError(const char *format, ...) {
+void runtimeError(const char *format, ...) {
   va_list args;
   va_start(args, format);
   vfprintf(stderr, format, args);
@@ -117,7 +117,7 @@ static bool callValue(Value callee, int argCount) {
       if (tableGet(&klass->methods, vm.initString, &initializer)) {
         return call(AS_CLOSURE(initializer), argCount);
       } else if (argCount != 0) {
-        runtimeError("Expected 0 argugments but for %d.", argCount);
+        runtimeError("Expected 0 argugments but got %d.", argCount);
         return false;
       }
       return true;
@@ -142,6 +142,9 @@ static bool callValue(Value callee, int argCount) {
 static bool callObjNative(NativeFn native, int argCount) {
   argCount = argCount + 1;
   Value result = native(argCount, vm.stackTop - argCount);
+  if (!result) {
+    return false;
+  }
   vm.stackTop -= argCount;
   push(result);
   return true;

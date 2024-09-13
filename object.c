@@ -75,6 +75,46 @@ ObjNative *newNative(NativeFn function) {
   return native;
 }
 
+ObjList *newList() {
+  ObjList *list = ALLOCATE_OBJ(ObjList, OBJ_LIST);
+  list->items = NULL;
+  list->count = 0;
+  list->capacity = 0;
+  return list;
+}
+
+void pushToList(ObjList *list, Value value) {
+  if (list->capacity < list->count + 1) {
+    int oldCapacity = list->capacity;
+    list->capacity = GROW_CAPACITY(oldCapacity);
+    list->items = GROW_ARRAY(Value, list->items, oldCapacity, list->capacity);
+  }
+  list->items[list->count] = value;
+  list->count++;
+  return;
+}
+
+void storeToList(ObjList *list, int index, Value value) {
+  list->items[index] = value;
+}
+
+Value indexFromList(ObjList *list, int index) { return list->items[index]; }
+
+void deleteFromList(ObjList *list, int index) {
+  for (int i = index; i < list->count - 1; i++) {
+    list->items[i] = list->items[i + 1];
+  }
+  list->items[list->count - 1] = NIL_VAL;
+  list->count--;
+}
+
+bool isValidListIndex(ObjList *list, int index) {
+  if (index < 0 || index > list->count - 1) {
+    return false;
+  }
+  return true;
+}
+
 static ObjString *allocateString(char *chars, int length, uint32_t hash) {
   ObjString *string = ALLOCATE_OBJ(ObjString, OBJ_STRING);
   string->length = length;
@@ -130,6 +170,17 @@ static void printFunction(ObjFunction *function) {
   printf("<fn %s>", function->name->chars);
 }
 
+static void printList(ObjList *list) {
+  printf("[");
+  for (int i = 0; i < list->count; i++) {
+    printValue(list->items[i]);
+    if (i < list->count - 1) {
+      printf(", ");
+    }
+  }
+  printf("]");
+}
+
 void printObject(Value value) {
   switch (OBJ_TYPE(value)) {
   case OBJ_BOUND_METHOD:
@@ -149,6 +200,9 @@ void printObject(Value value) {
     break;
   case OBJ_NATIVE:
     printf("<native fn>");
+    break;
+  case OBJ_LIST:
+    printList(AS_LIST(value));
     break;
   case OBJ_STRING:
     printf("%s", AS_CSTRING(value));

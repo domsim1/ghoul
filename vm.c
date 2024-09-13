@@ -7,15 +7,11 @@
 #include "compiler.h"
 #include "debug.h"
 #include "memory.h"
+#include "native.h"
 #include "object.h"
 #include "vm.h"
 
 VM vm;
-
-// NATIVE FUN
-static Value clockNative(int argCount, Value *args) {
-  return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
-}
 
 static void resetStack() {
   vm.stackTop = vm.stack;
@@ -34,7 +30,7 @@ static void runtimeError(const char *format, ...) {
     CallFrame *frame = &vm.frames[i];
     ObjFunction *function = frame->closure->function;
     size_t instruction = frame->ip - function->chunk.code - 1;
-    fprintf(stderr, "[line %d] in ", function->chunk.lines[instruction]);
+    fprintf(stderr, "[line %d] in ", getLine(&function->chunk, instruction));
     if (function->name == NULL) {
       fprintf(stderr, "script\n");
     } else {
@@ -43,14 +39,6 @@ static void runtimeError(const char *format, ...) {
   }
 
   resetStack();
-}
-
-static void defineNative(const char *name, NativeFn function) {
-  push(OBJ_VAL(copyString(name, (int)strlen(name))));
-  push(OBJ_VAL(newNative(function)));
-  tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
-  pop();
-  pop();
 }
 
 void initVM() {
@@ -63,16 +51,20 @@ void initVM() {
   vm.grayCapacity = 0;
   vm.grayStack = NULL;
 
+  initTable(&vm.stringMethods);
+  initTable(&vm.listMethods);
   initTable(&vm.globals);
   initTable(&vm.strings);
 
   vm.initString = NULL;
   vm.initString = copyString("init", 4);
 
-  defineNative("clock", clockNative);
+  registerNatives();
 }
 
 void freeVM() {
+  freeTable(&vm.stringMethods);
+  freeTable(&vm.listMethods);
   freeTable(&vm.strings);
   freeTable(&vm.globals);
   vm.initString = NULL;
@@ -147,6 +139,32 @@ static bool callValue(Value callee, int argCount) {
   return false;
 }
 
+static bool callObjNative(NativeFn native, int argCount) {
+  argCount = argCount + 1;
+  Value result = native(argCount, vm.stackTop - argCount);
+  vm.stackTop -= argCount;
+  push(result);
+  return true;
+}
+
+static bool invokeFromList(ObjString *name, int argCount) {
+  Value value;
+  if (!tableGet(&vm.listMethods, name, &value)) {
+    runtimeError("Undefined list method '%s'.", name->chars);
+    return false;
+  }
+  return callObjNative(AS_NATIVE(value), argCount);
+}
+
+static bool invokeFromString(ObjString *name, int argCount) {
+  Value value;
+  if (!tableGet(&vm.listMethods, name, &value)) {
+    runtimeError("Undefined string method '%s'.", name->chars);
+    return false;
+  }
+  return callObjNative(AS_NATIVE(value), argCount);
+}
+
 static bool invokeFromClass(ObjClass *klass, ObjString *name, int argCount) {
   Value method;
   if (!tableGet(&klass->methods, name, &method)) {
@@ -160,6 +178,12 @@ static bool invoke(ObjString *name, int argCount) {
   Value receiver = peek(argCount);
 
   if (!IS_INSTANCE(receiver)) {
+    if (IS_LIST(receiver)) {
+      return invokeFromList(name, argCount);
+    }
+    if (IS_STRING(receiver)) {
+      return invokeFromString(name, argCount);
+    }
     runtimeError("Only instances have methods.");
     return false;
   }
@@ -550,6 +574,69 @@ static InterpretResult run() {
     case OP_METHOD:
       defineMethod(READ_STRING());
       break;
+    case OP_BUILD_LIST: {
+      ObjList *list = newList();
+      uint8_t itemCount = READ_BYTE();
+
+      push(OBJ_VAL(list));
+      for (int i = itemCount; i > 0; i--) {
+        pushToList(list, peek(i));
+      }
+      pop();
+
+      while (itemCount-- > 0) {
+        pop();
+      }
+
+      push(OBJ_VAL(list));
+      break;
+    }
+    case OP_INDEX_SUBSCR: {
+      if (!IS_NUMBER(peek(0))) {
+        runtimeError("List index is not a number.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      double index = AS_NUMBER(pop());
+
+      if (!IS_LIST(peek(0))) {
+        runtimeError("Invalid type to index into.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      ObjList *list = AS_LIST(pop());
+
+      if (!isValidListIndex(list, index)) {
+        runtimeError("List index out of range.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
+
+      Value result = indexFromList(list, index);
+      push(result);
+      break;
+    }
+    case OP_STORE_SUBSCR: {
+      Value item = pop();
+
+      if (!IS_NUMBER(peek(0))) {
+        runtimeError("List index is not a number.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      int index = AS_NUMBER(pop());
+
+      if (!IS_LIST(peek(0))) {
+        runtimeError("Invalid type to index into.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      ObjList *list = AS_LIST(pop());
+
+      if (!isValidListIndex(list, index)) {
+        runtimeError("List index out of range.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
+
+      storeToList(list, index, item);
+      push(item);
+      break;
+    }
     }
   }
 

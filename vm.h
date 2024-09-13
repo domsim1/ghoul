@@ -21,6 +21,8 @@ typedef struct {
   Value stack[STACK_MAX];
   Value *stackTop;
   Table globals;
+  Table listMethods;
+  Table stringMethods;
   Table strings;
   ObjString *initString;
   ObjUpvalue *openUpvalues;

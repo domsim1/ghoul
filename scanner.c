@@ -98,8 +98,6 @@ static TokenType identifierType() {
   switch (scanner.start[0]) {
   case 'a':
     return checkKeyword(1, 2, "nd", TOKEN_AND);
-  case 'c':
-    return checkKeyword(1, 4, "lass", TOKEN_CLASS);
   case 'e':
     return checkKeyword(1, 3, "lse", TOKEN_ELSE);
   case 'f':
@@ -109,8 +107,6 @@ static TokenType identifierType() {
         return checkKeyword(2, 3, "lse", TOKEN_FALSE);
       case 'o':
         return checkKeyword(2, 1, "r", TOKEN_FOR);
-      case 'u':
-        return checkKeyword(2, 1, "n", TOKEN_FUN);
       }
     }
     break;
@@ -136,8 +132,6 @@ static TokenType identifierType() {
       }
     }
     break;
-  case 'v':
-    return checkKeyword(1, 2, "ar", TOKEN_VAR);
   case 'w':
     return checkKeyword(1, 4, "hile", TOKEN_WHILE);
   }
@@ -237,6 +231,10 @@ Token scanToken() {
     return makeToken(match('=') ? TOKEN_GREATER_EQUAL : TOKEN_GREATER);
   case '"':
     return string();
+  case ':':
+    return makeToken(match(':')   ? TOKEN_FUN
+                     : match(';') ? TOKEN_CLASS
+                                  : TOKEN_VAR);
   }
 
   return errorToken("Unexpected character.");

@@ -1,5 +1,5 @@
-#ifndef clox_native_h
-#define clox_native_h
+#ifndef ghoul_native_h
+#define ghoul_native_h
 
 void registerNatives();
 

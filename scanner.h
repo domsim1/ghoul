@@ -1,5 +1,5 @@
-#ifndef clox_scanner_h
-#define clox_scanner_h
+#ifndef ghoul_scanner_h
+#define ghoul_scanner_h
 
 typedef enum {
   TOKEN_LEFT_PAREN,

@@ -1,0 +1,26 @@
+:pie = ["hi", "this", "is", "a", "script"];
+
+::doThing() {
+  pie.push("maybe?");
+  pie.push("idk");
+  pie.remove(1);
+  print pie;
+}
+
+:;Bark {
+  init() {
+    print "lol";
+  }
+}
+
+:;Barking < Bark {
+  init() {
+    print "lol";
+    super.init();
+  }
+}
+
+:bark = Barking();
+
+doThing();
+

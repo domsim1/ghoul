@@ -1,20 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "common.h"
+#include <readline/history.h>
+#include <readline/readline.h>
+
 #include "vm.h"
 
 static void repl() {
-  char line[1024];
   for (;;) {
-    printf("> ");
+    char *input = readline("ghoul> ");
 
-    if (!fgets(line, sizeof(line), stdin)) {
-      printf("\n");
-      break;
-    }
+    add_history(input);
 
-    interpret(line);
+    interpret(input);
+
+    free(input);
   }
 }
 
@@ -64,7 +64,7 @@ int main(int argc, const char *argv[]) {
   } else if (argc == 2) {
     runFile(argv[1]);
   } else {
-    fprintf(stderr, "Usage: clox [path]\n");
+    fprintf(stderr, "Usage: ghoul [path]\n");
     exit(64);
   }
 

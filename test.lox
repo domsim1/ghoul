@@ -1,6 +1,0 @@
-var pie = ["hi", "this", "is", "a", "script"];
-pie.push("maybe?");
-pie.push("idk");
-pie.remove(1);
-print pie;
-

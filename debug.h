@@ -1,5 +1,5 @@
-#ifndef clox_debug_h
-#define clox_debug_h
+#ifndef ghoul_debug_h
+#define ghoul_debug_h
 
 #include "chunk.h"
 

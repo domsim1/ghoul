@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -80,6 +81,8 @@ typedef struct ClassCompiler {
 Parser parser;
 Compiler *current = NULL;
 ClassCompiler *currentClass = NULL;
+
+static char actualpath[PATH_MAX + 1];
 
 static Chunk *currentChunk() { return &current->function->chunk; }
 
@@ -785,11 +788,20 @@ static void useStatement() {
   Token useFile = parser.previous;
 
   ObjString *filePath = copyString(parser.previous.start + 1,
-                                   parser.previous.length - 2, &vm.useStrings);
+                                   parser.previous.length - 2, &vm.strings);
+
+  char *resolvePathRes = realpath(filePath->chars, actualpath);
+  if (resolvePathRes == NULL) {
+    fprintf(stderr, "Failed to resolve file path.");
+    exit(74);
+  }
+  ObjString *absulueFilePath =
+      copyString(actualpath, strlen(actualpath), &vm.useStrings);
+
   Scanner oldScanner;
-  const char *source = readFile(filePath->chars);
+  const char *source = readFile(absulueFilePath->chars);
   const char *oldFile = current->file;
-  current->file = filePath->chars;
+  current->file = absulueFilePath->chars;
 
   oldScanner = scanner;
 

@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -5,6 +6,8 @@
 #include <readline/readline.h>
 
 #include "vm.h"
+
+static char actualpath[PATH_MAX + 1];
 
 static void repl() {
   for (;;) {
@@ -46,8 +49,13 @@ static char *readFile(const char *path) {
 }
 
 static void runFile(const char *path) {
-  char *source = readFile(path);
-  InterpretResult result = interpret(source, path);
+  char *res = realpath(path, actualpath);
+  if (res == NULL) {
+    fprintf(stderr, "Failed to resolve file path.");
+    exit(74);
+  }
+  char *source = readFile(actualpath);
+  InterpretResult result = interpret(source, actualpath);
   free(source);
 
   if (result == INTERPRET_COMPILE_ERROR)

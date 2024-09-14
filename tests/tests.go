@@ -107,7 +107,7 @@ func getRes(fileData string, fileName string) bool {
 
 	result := expected == actual
 	if !result {
-		println(fmt.Sprintf("\033[31mtest failed:\033[0m test failled in %s", fileName))
+		println(fmt.Sprintf("\033[31mtest failed:\033[0m test failled in %s; expected: %s; but got: %s", fileName, expected, actual))
 		return result
 	}
 	return result

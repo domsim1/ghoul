@@ -16,6 +16,7 @@
 :;testClassTwo < testClass {
   init() {
     super.init();
+    this.val2 = 7;
     this.val3 = 6;
   }
 
@@ -32,9 +33,9 @@
 
 print "$expected$";
 print "testClassTwo";
-//print "<fn returnString>";
-//print "<fn returnVal>";
-//print "<fn newfunction>";
+print "<fn returnString>";
+print "<fn returnVal>";
+print "<fn newfunction>";
 print 4;
 print 7;
 print 6;
@@ -43,9 +44,9 @@ print 7;
 print "new";
 print "$actual$";
 print test;
-//print test.returnString;
-//print test.returnVal;
-//print test.newfunction;
+print test.returnString;
+print test.returnVal;
+print test.newfunction;
 print test.val;
 print test.val2;
 print test.val3;

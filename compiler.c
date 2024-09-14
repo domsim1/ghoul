@@ -8,6 +8,7 @@
 #include "compiler.h"
 #include "memory.h"
 #include "scanner.h"
+#include "table.h"
 
 #ifdef DEBUG_PRINT_CODE
 #include "debug.h"
@@ -785,7 +786,7 @@ static void method() {
   emitBytes(OP_METHOD, constant);
 }
 
-static void useStatement() {
+static void use() {
   consume(TOKEN_STRING, "Expect file path.");
   Token useFile = parser.previous;
 
@@ -797,13 +798,28 @@ static void useStatement() {
     fprintf(stderr, "Failed to resolve file path.");
     exit(74);
   }
-  ObjString *absulueFilePath =
-      copyString(actualpath, strlen(actualpath), &vm.useStrings);
+
+  int pathLength = strlen(actualpath);
+  uint32_t hash = hashString(actualpath, pathLength);
+  ObjString *interned =
+      tableFindString(&vm.useStrings, actualpath, pathLength, hash);
+
+  if (interned != NULL) {
+    // already used
+    consume(TOKEN_SEMICOLON, "Expect ';' after use statement.");
+    return;
+  }
+
+  char *heapChars = ALLOCATE(char, pathLength + 1);
+  memcpy(heapChars, actualpath, pathLength);
+  heapChars[pathLength] = '\0';
+  ObjString *realFilePath =
+      allocateString(heapChars, pathLength, hash, &vm.useStrings);
 
   Scanner oldScanner;
-  const char *source = readFile(absulueFilePath->chars);
+  const char *source = readFile(realFilePath->chars);
   const char *oldFile = current->file;
-  current->file = absulueFilePath->chars;
+  current->file = realFilePath->chars;
 
   oldScanner = scanner;
 
@@ -1016,7 +1032,7 @@ static void synchronize() {
 
 static void declaration() {
   if (match(TOKEN_USE)) {
-    useStatement();
+    use();
   } else if (match(TOKEN_CLASS)) {
     classDeclaration();
   } else if (match(TOKEN_FUN)) {

@@ -115,8 +115,8 @@ bool isValidListIndex(ObjList *list, int index) {
   return true;
 }
 
-static ObjString *allocateString(char *chars, int length, uint32_t hash,
-                                 Table *stringTable) {
+ObjString *allocateString(char *chars, int length, uint32_t hash,
+                          Table *stringTable) {
   ObjString *string = ALLOCATE_OBJ(ObjString, OBJ_STRING);
   string->length = length;
   string->hash = hash;
@@ -128,7 +128,7 @@ static ObjString *allocateString(char *chars, int length, uint32_t hash,
   return string;
 }
 
-static uint32_t hashString(const char *key, int length) {
+uint32_t hashString(const char *key, int length) {
   uint32_t hash = 2166136261u;
   for (int i = 0; i < length; i++) {
     hash ^= (uint8_t)key[i];

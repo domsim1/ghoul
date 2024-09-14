@@ -124,6 +124,9 @@ void storeToList(ObjList *list, int index, Value value);
 Value indexFromList(ObjList *list, int index);
 void deleteFromList(ObjList *list, int index);
 bool isValidListIndex(ObjList *list, int index);
+uint32_t hashString(const char *key, int length);
+ObjString *allocateString(char *chars, int length, uint32_t hash,
+                          Table *stringTable);
 
 static inline bool isObjType(Value value, ObjType type) {
   return IS_OBJ(value) && AS_OBJ(value)->type == type;

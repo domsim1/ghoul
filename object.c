@@ -115,14 +115,15 @@ bool isValidListIndex(ObjList *list, int index) {
   return true;
 }
 
-static ObjString *allocateString(char *chars, int length, uint32_t hash) {
+static ObjString *allocateString(char *chars, int length, uint32_t hash,
+                                 Table *stringTable) {
   ObjString *string = ALLOCATE_OBJ(ObjString, OBJ_STRING);
   string->length = length;
   string->hash = hash;
   string->chars = chars;
 
   push(OBJ_VAL(string));
-  tableSet(&vm.strings, string, NIL_VAL);
+  tableSet(stringTable, string, NIL_VAL);
   pop();
   return string;
 }
@@ -138,12 +139,12 @@ static uint32_t hashString(const char *key, int length) {
 
 ObjString *takeString(char *chars, int length) {
   uint32_t hash = hashString(chars, length);
-  return allocateString(chars, length, hash);
+  return allocateString(chars, length, hash, &vm.strings);
 }
 
-ObjString *copyString(const char *chars, int length) {
+ObjString *copyString(const char *chars, int length, Table *stringTable) {
   uint32_t hash = hashString(chars, length);
-  ObjString *interned = tableFindString(&vm.strings, chars, length, hash);
+  ObjString *interned = tableFindString(stringTable, chars, length, hash);
 
   if (interned != NULL)
     return interned;
@@ -151,7 +152,7 @@ ObjString *copyString(const char *chars, int length) {
   char *heapChars = ALLOCATE(char, length + 1);
   memcpy(heapChars, chars, length);
   heapChars[length] = '\0';
-  return allocateString(heapChars, length, hash);
+  return allocateString(heapChars, length, hash, stringTable);
 }
 
 ObjUpvalue *newUpvalue(Value *slot) {

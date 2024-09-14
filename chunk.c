@@ -9,9 +9,8 @@ void initChunk(Chunk *chunk) {
   chunk->count = 0;
   chunk->capacity = 0;
   chunk->code = NULL;
-  chunk->lineCount = 0;
-  chunk->lineCapacity = 0;
   chunk->lines = NULL;
+  chunk->file = NULL;
   initValueArray(&chunk->constants);
 }
 
@@ -22,59 +21,40 @@ void freeChunk(Chunk *chunk) {
   initChunk(chunk);
 }
 
-void writeChunk(Chunk *chunk, uint8_t byte, int line) {
+void writeChunk(Chunk *chunk, uint8_t byte, int line, const char *file) {
   if (chunk->capacity < chunk->count + 1) {
     int oldCapacity = chunk->capacity;
     chunk->capacity = GROW_CAPACITY(oldCapacity);
     chunk->code =
         GROW_ARRAY(uint8_t, chunk->code, oldCapacity, chunk->capacity);
+    chunk->lines = GROW_ARRAY(int, chunk->lines, oldCapacity, chunk->capacity);
+    chunk->file = GROW_ARRAY(char *, chunk->file, oldCapacity, chunk->capacity);
   }
 
-  if (chunk->lineCapacity < chunk->lineCount + 3) {
-    int oldCapacity = chunk->lineCapacity;
-    chunk->lineCapacity = GROW_CAPACITY(oldCapacity);
-    chunk->lines =
-        GROW_ARRAY(int, chunk->lines, oldCapacity, chunk->lineCapacity);
-    if (chunk->lineCount == 0) {
-      chunk->lines[chunk->lineCount] = 0;
-      chunk->lines[chunk->lineCount + 1] = 0;
-    }
-  }
-
-  if (chunk->lines[chunk->lineCount] != line) {
-    chunk->lineCount += 2;
-    chunk->lines[chunk->lineCount] = line;
-    chunk->lines[chunk->lineCount + 1] = 0;
-  }
-  chunk->lines[chunk->lineCount + 1] += 1;
-
+  chunk->file[chunk->count] = (char *)file;
+  chunk->lines[chunk->count] = line;
   chunk->code[chunk->count] = byte;
   chunk->count++;
 }
 
-int getLine(Chunk *chunk, int line) {
-  for (int i = 0; i < chunk->lineCount + 1; i += 2) {
-    line -= chunk->lines[i + 1];
-    if (line < 0) {
-      return chunk->lines[i];
-    }
-  }
-  exit(1);
+int getLine(Chunk *chunk, int line) { return chunk->lines[line]; }
+const char *getLineFileName(Chunk *chunk, int line) {
+  return chunk->file[line];
 }
 
-void writeConstant(Chunk *chunk, Value value, int line) {
+void writeConstant(Chunk *chunk, Value value, int line, const char *file) {
   int valueIndex = addConstant(chunk, value);
   if (valueIndex > 255) {
     if (valueIndex > 65535) {
       exit(1);
     }
-    writeChunk(chunk, OP_CONSTANT_SHORT, line);
-    writeChunk(chunk, (valueIndex >> 8) & 0xFF, line);
-    writeChunk(chunk, valueIndex & 0xFF, line);
+    writeChunk(chunk, OP_CONSTANT_SHORT, line, file);
+    writeChunk(chunk, (valueIndex >> 8) & 0xFF, line, file);
+    writeChunk(chunk, valueIndex & 0xFF, line, file);
     return;
   }
-  writeChunk(chunk, OP_CONSTANT, line);
-  writeChunk(chunk, valueIndex, line);
+  writeChunk(chunk, OP_CONSTANT, line, file);
+  writeChunk(chunk, valueIndex, line, file);
 }
 
 int addConstant(Chunk *chunk, Value value) {

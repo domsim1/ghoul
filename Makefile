@@ -3,10 +3,11 @@ STD=-std=c99
 WARN=-Wall -Wextra
 EXE=ghoul
 LIBS=-lreadline
-files := main.c chunk.c memory.c debug.c value.c vm.c compiler.c scanner.c object.c table.c native.c
+cfiles := main.c chunk.c memory.c debug.c value.c vm.c compiler.c scanner.c object.c table.c native.c
+hfiles := common.h chunk.h compiler.h debug.h memory.h native.h object.h scanner.h table.h value.h vm.h
 
-ghoul: $(files)
-	$(CC) $(STD) $(WARN) -o $(EXE) $(files) $(LIBS)
+ghoul: $(cfiles) $(hfiles)
+	$(CC) $(STD) $(WARN) -o $(EXE) $(cfiles) $(LIBS)
 
 .PHONY: test clean
 test: ghoul

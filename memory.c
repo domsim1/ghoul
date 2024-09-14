@@ -197,6 +197,8 @@ static void markRoots() {
   markTable(&vm.globals);
   markTable(&vm.listMethods);
   markTable(&vm.stringMethods);
+  markTable(&vm.useStrings);
+
   markCompilerRoots();
   markObject((Obj *)vm.initString);
 }

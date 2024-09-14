@@ -12,7 +12,7 @@ static void repl() {
 
     add_history(input);
 
-    interpret(input);
+    interpret(input, "REPL");
 
     free(input);
   }
@@ -47,7 +47,7 @@ static char *readFile(const char *path) {
 
 static void runFile(const char *path) {
   char *source = readFile(path);
-  InterpretResult result = interpret(source);
+  InterpretResult result = interpret(source, path);
   free(source);
 
   if (result == INTERPRET_COMPILE_ERROR)

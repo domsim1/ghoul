@@ -4,12 +4,6 @@
 #include "common.h"
 #include "scanner.h"
 
-typedef struct {
-  const char *start;
-  const char *current;
-  int line;
-} Scanner;
-
 Scanner scanner;
 
 void initScanner(const char *source) {
@@ -130,6 +124,8 @@ static TokenType identifierType() {
       }
     }
     break;
+  case 'u':
+    return checkKeyword(1, 2, "se", TOKEN_USE);
   case 'w':
     return checkKeyword(1, 4, "hile", TOKEN_WHILE);
   }

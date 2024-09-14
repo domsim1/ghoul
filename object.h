@@ -35,6 +35,7 @@ typedef enum {
   OBJ_INSTANCE,
   OBJ_NATIVE,
   OBJ_LIST,
+  OBJ_MODULE,
   OBJ_STRING,
   OBJ_UPVALUE,
 } ObjType;
@@ -114,7 +115,7 @@ ObjInstance *newInstance(ObjClass *klass);
 ObjNative *newNative(NativeFn function);
 ObjList *newList();
 ObjString *takeString(char *chars, int length);
-ObjString *copyString(const char *chars, int length);
+ObjString *copyString(const char *chars, int length, Table *stringTable);
 ObjUpvalue *newUpvalue(Value *slot);
 void printObject(Value value);
 

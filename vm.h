@@ -23,6 +23,7 @@ typedef struct {
   Table globals;
   Table listMethods;
   Table stringMethods;
+  Table useStrings;
   Table strings;
   ObjString *initString;
   ObjUpvalue *openUpvalues;
@@ -46,7 +47,7 @@ extern VM vm;
 void runtimeError(const char *format, ...);
 void initVM();
 void freeVM();
-InterpretResult interpret(const char *source);
+InterpretResult interpret(const char *source, const char *file);
 void push(Value value);
 Value pop();
 

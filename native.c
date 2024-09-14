@@ -14,7 +14,7 @@ static bool checkArgCount(int argCount, int expectedCount) {
 }
 
 static void defineNative(const char *name, NativeFn function) {
-  push(OBJ_VAL(copyString(name, (int)strlen(name))));
+  push(OBJ_VAL(copyString(name, (int)strlen(name), &vm.strings)));
   push(OBJ_VAL(newNative(function)));
   tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
   pop();
@@ -22,7 +22,7 @@ static void defineNative(const char *name, NativeFn function) {
 }
 
 static void defineListNative(const char *name, NativeFn function) {
-  push(OBJ_VAL(copyString(name, (int)strlen(name))));
+  push(OBJ_VAL(copyString(name, (int)strlen(name), &vm.strings)));
   push(OBJ_VAL(newNative(function)));
   tableSet(&vm.listMethods, AS_STRING(vm.stack[0]), vm.stack[1]);
   pop();

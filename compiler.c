@@ -69,6 +69,7 @@ typedef struct Compiler {
   int localCount;
   Upvalue upvalues[UINT8_COUNT];
   int scopeDepth;
+  const char *file;
 } Compiler;
 
 typedef struct ClassCompiler {
@@ -86,7 +87,7 @@ static void errorAt(Token *token, const char *message) {
   if (parser.panicMode)
     return;
   parser.panicMode = true;
-  fprintf(stderr, "[line %d] Error", token->line);
+  fprintf(stderr, "[line %d of %s] Error", token->line, current->file);
 
   if (token->type == TOKEN_EOF) {
     fprintf(stderr, " at end");
@@ -98,6 +99,33 @@ static void errorAt(Token *token, const char *message) {
 
   fprintf(stderr, ": %s\n", message);
   parser.hadError = true;
+}
+
+static char *readFile(const char *path) {
+  FILE *file = fopen(path, "rb");
+  if (file == NULL) {
+    fprintf(stderr, "Could not open file \"%s\".\n", path);
+    exit(74);
+  }
+
+  fseek(file, 0L, SEEK_END);
+  size_t fileSize = ftell(file);
+  rewind(file);
+
+  char *buffer = (char *)malloc(fileSize + 1);
+  if (buffer == NULL) {
+    fprintf(stderr, "Not enough memory to read \"%s\".\n", path);
+    exit(74);
+  }
+  size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
+  if (bytesRead < fileSize) {
+    fprintf(stderr, "Could not read file \"%s\".\n", path);
+    exit(74);
+  }
+  buffer[bytesRead] = '\0';
+
+  fclose(file);
+  return buffer;
 }
 
 static void error(const char *message) { errorAt(&parser.previous, message); }
@@ -137,7 +165,7 @@ static bool match(TokenType type) {
 }
 
 static void emitByte(uint8_t byte) {
-  writeChunk(currentChunk(), byte, parser.previous.line);
+  writeChunk(currentChunk(), byte, parser.previous.line, current->file);
 }
 
 static void emitBytes(uint8_t byte1, uint8_t byte2) {
@@ -198,17 +226,19 @@ static void patchJump(int offset) {
   currentChunk()->code[offset + 1] = jump & 0xff;
 }
 
-static void initCompiler(Compiler *compiler, FunctionType type) {
+static void initCompiler(Compiler *compiler, FunctionType type,
+                         const char *file) {
   compiler->enclosing = current;
   compiler->function = NULL;
   compiler->type = type;
   compiler->localCount = 0;
   compiler->scopeDepth = 0;
   compiler->function = newFunction();
+  compiler->file = file;
   current = compiler;
   if (type != TYPE_SCRIPT) {
     current->function->name =
-        copyString(parser.previous.start, parser.previous.length);
+        copyString(parser.previous.start, parser.previous.length, &vm.strings);
   }
 
   Local *local = &current->locals[current->localCount++];
@@ -373,12 +403,13 @@ static void number(bool canAssign) {
 }
 
 static void string(bool canAssign) {
-  emitConstant(OBJ_VAL(
-      copyString(parser.previous.start + 1, parser.previous.length - 2)));
+  emitConstant(OBJ_VAL(copyString(parser.previous.start + 1,
+                                  parser.previous.length - 2, &vm.strings)));
 }
 
 static uint8_t identifierConstant(Token *name) {
-  return makeConstant(OBJ_VAL(copyString(name->start, name->length)));
+  return makeConstant(
+      OBJ_VAL(copyString(name->start, name->length, &vm.strings)));
 }
 
 static bool identifierEqual(Token *a, Token *b) {
@@ -616,6 +647,7 @@ ParseRule rules[] = {
     [TOKEN_TRUE] = {literal, NULL, PREC_NONE},
     [TOKEN_VAR] = {NULL, NULL, PREC_NONE},
     [TOKEN_WHILE] = {NULL, NULL, PREC_NONE},
+    [TOKEN_USE] = {NULL, NULL, PREC_NONE},
     [TOKEN_ERROR] = {NULL, NULL, PREC_NONE},
     [TOKEN_EOF] = {NULL, NULL, PREC_NONE},
 };
@@ -708,7 +740,7 @@ static void block() {
 
 static void function(FunctionType type) {
   Compiler compiler;
-  initCompiler(&compiler, type);
+  initCompiler(&compiler, type, current->file);
   beginScope();
 
   consume(TOKEN_LEFT_PAREN, "Expect '(' after function name.");
@@ -746,6 +778,32 @@ static void method() {
   }
   function(type);
   emitBytes(OP_METHOD, constant);
+}
+
+static void useStatement() {
+  consume(TOKEN_STRING, "Expect file path.");
+  Token useFile = parser.previous;
+
+  ObjString *filePath = copyString(parser.previous.start + 1,
+                                   parser.previous.length - 2, &vm.useStrings);
+  Scanner oldScanner;
+  const char *source = readFile(filePath->chars);
+  const char *oldFile = current->file;
+  current->file = filePath->chars;
+
+  oldScanner = scanner;
+
+  initScanner(source);
+  advance();
+  while (!match(TOKEN_EOF)) {
+    declaration();
+  }
+
+  current->file = oldFile;
+  scanner = oldScanner;
+  scanner.current--;
+  advance();
+  consume(TOKEN_SEMICOLON, "Expect ';' after use statement.");
 }
 
 static void classDeclaration() {
@@ -943,7 +1001,9 @@ static void synchronize() {
 }
 
 static void declaration() {
-  if (match(TOKEN_CLASS)) {
+  if (match(TOKEN_USE)) {
+    useStatement();
+  } else if (match(TOKEN_CLASS)) {
     classDeclaration();
   } else if (match(TOKEN_FUN)) {
     funDeclaration();
@@ -977,10 +1037,10 @@ static void statement() {
   }
 }
 
-ObjFunction *compile(const char *source) {
+ObjFunction *compile(const char *source, const char *file) {
   initScanner(source);
   Compiler compiler;
-  initCompiler(&compiler, TYPE_SCRIPT);
+  initCompiler(&compiler, TYPE_SCRIPT, file);
 
   parser.hadError = false;
   parser.panicMode = false;

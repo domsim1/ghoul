@@ -30,7 +30,9 @@ void runtimeError(const char *format, ...) {
     CallFrame *frame = &vm.frames[i];
     ObjFunction *function = frame->closure->function;
     size_t instruction = frame->ip - function->chunk.code - 1;
-    fprintf(stderr, "[line %d] in ", getLine(&function->chunk, instruction));
+    fprintf(stderr, "[line %d of %s] in ",
+            getLine(&function->chunk, instruction),
+            getLineFileName(&function->chunk, instruction));
     if (function->name == NULL) {
       fprintf(stderr, "script\n");
     } else {
@@ -55,9 +57,10 @@ void initVM() {
   initTable(&vm.listMethods);
   initTable(&vm.globals);
   initTable(&vm.strings);
+  initTable(&vm.useStrings);
 
   vm.initString = NULL;
-  vm.initString = copyString("init", 4);
+  vm.initString = copyString("init", 4, &vm.strings);
 
   registerNatives();
 }
@@ -67,6 +70,7 @@ void freeVM() {
   freeTable(&vm.listMethods);
   freeTable(&vm.strings);
   freeTable(&vm.globals);
+  freeTable(&vm.useStrings);
   vm.initString = NULL;
   freeObjects();
 }
@@ -651,8 +655,8 @@ static InterpretResult run() {
 #undef BINARY_OP
 }
 
-InterpretResult interpret(const char *source) {
-  ObjFunction *function = compile(source);
+InterpretResult interpret(const char *source, const char *file) {
+  ObjFunction *function = compile(source, file);
   if (function == NULL)
     return INTERPRET_COMPILE_ERROR;
 

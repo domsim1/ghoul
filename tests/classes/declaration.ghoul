@@ -1,0 +1,22 @@
+:;testClass {
+  init() {
+    this.val = 4;
+  }
+
+  returnVal() {
+    -> 4;
+  }
+}
+
+:test = testClass();
+
+print "$expected$";
+print "<class testClass>";
+print 4;
+print "<fn returnVal>";
+print 4;
+print "$actual$";
+print test;
+print test.val;
+print test.returnVal;
+print test.returnVal();

@@ -62,6 +62,12 @@ typedef enum {
   TYPE_SCRIPT,
 } FunctionType;
 
+typedef struct LoopContext {
+  struct LoopContext *previous;
+  int breaks[UINT8_COUNT];
+  int breakCount;
+} LoopContext;
+
 typedef struct Compiler {
   struct Compiler *enclosing;
   ObjFunction *function;
@@ -82,6 +88,7 @@ typedef struct ClassCompiler {
 Parser parser;
 Compiler *current = NULL;
 ClassCompiler *currentClass = NULL;
+LoopContext *currentLoop = NULL;
 
 static char actualpath[PATH_MAX + 1];
 
@@ -230,6 +237,20 @@ static void patchJump(int offset) {
   currentChunk()->code[offset + 1] = jump & 0xff;
 }
 
+static void startLoop(LoopContext *loopContext) {
+  loopContext->breakCount = 0;
+  loopContext->previous = currentLoop;
+  currentLoop = loopContext;
+}
+static void endLoop() { currentLoop = currentLoop->previous; }
+
+static void patchBreakJumps() {
+  while (currentLoop->breakCount > 0) {
+    int loopBreak = currentLoop->breaks[--currentLoop->breakCount];
+    patchJump(loopBreak);
+  }
+}
+
 static void initCompiler(Compiler *compiler, FunctionType type,
                          const char *file) {
   compiler->enclosing = current;
@@ -348,7 +369,7 @@ static uint8_t argumentList() {
   if (!check(TOKEN_RIGHT_PAREN)) {
     do {
       expression();
-      if (argCount == 255) {
+      if (argCount == UINT8_MAX) {
         error("Can't have more than 255 arguments.");
       }
       argCount++;
@@ -653,6 +674,7 @@ ParseRule rules[] = {
     [TOKEN_TRUE] = {literal, NULL, PREC_NONE},
     [TOKEN_VAR] = {NULL, NULL, PREC_NONE},
     [TOKEN_WHILE] = {NULL, NULL, PREC_NONE},
+    [TOKEN_BREAK] = {NULL, NULL, PREC_NONE},
     [TOKEN_USE] = {NULL, NULL, PREC_NONE},
     [TOKEN_ERROR] = {NULL, NULL, PREC_NONE},
     [TOKEN_EOF] = {NULL, NULL, PREC_NONE},
@@ -943,14 +965,19 @@ static void forStatement() {
     patchJump(bodyJump);
   }
 
+  LoopContext loopContext;
+  startLoop(&loopContext);
+
   statement();
   emitLoop(loopStart);
 
   if (exitJump != -1) {
+    patchBreakJumps();
     patchJump(exitJump);
     emitByte(OP_POP);
   }
 
+  endLoop();
   endScope();
 }
 
@@ -977,10 +1004,14 @@ static void returnStatement() {
 }
 
 static void whileStatment() {
+
   int loopStart = currentChunk()->count;
   consume(TOKEN_LEFT_PAREN, "Expect '(' after while.");
   expression();
   consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+
+  LoopContext loopContext;
+  startLoop(&loopContext);
 
   int exitJump = emitJump(OP_JUMP_IF_FALSE);
   emitByte(OP_POP);
@@ -988,7 +1019,23 @@ static void whileStatment() {
   emitLoop(loopStart);
 
   patchJump(exitJump);
+  patchBreakJumps();
+  endLoop();
   emitByte(OP_POP);
+}
+
+static void breakStatement() {
+  if (currentLoop == NULL) {
+    errorAt(&parser.previous, "Can only break within loop.");
+    consume(TOKEN_SEMICOLON, "Expect ';' after break.");
+    return;
+  }
+  if (currentLoop->breakCount > UINT8_MAX) {
+    errorAt(&parser.previous,
+            "Can't have more than 255 breaks within a single loop.");
+  }
+  currentLoop->breaks[currentLoop->breakCount++] = emitJump(OP_JUMP);
+  consume(TOKEN_SEMICOLON, "Expect ';' after break.");
 }
 
 static void ifStatement() {
@@ -1061,6 +1108,8 @@ static void statement() {
     returnStatement();
   } else if (match(TOKEN_WHILE)) {
     whileStatment();
+  } else if (match(TOKEN_BREAK)) {
+    breakStatement();
   } else if (match(TOKEN_LEFT_BRACE)) {
     beginScope();
     block();

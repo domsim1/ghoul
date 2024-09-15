@@ -33,6 +33,7 @@ typedef enum {
   TOKEN_FOR,
   TOKEN_FUN,
   TOKEN_IF,
+  TOKEN_BREAK,
   TOKEN_NIL,
   TOKEN_OR,
   TOKEN_PRINT,

@@ -131,6 +131,9 @@ static bool callValue(Value callee, int argCount) {
     case OBJ_NATIVE: {
       NativeFn native = AS_NATIVE(callee);
       Value result = native(argCount, vm.stackTop - argCount);
+      if (!result) {
+        return false;
+      }
       vm.stackTop -= argCount + 1;
       push(result);
       return true;
@@ -157,7 +160,7 @@ static bool callObjNative(NativeFn native, int argCount) {
 static bool invokeFromList(ObjString *name, int argCount) {
   Value value;
   if (!tableGet(&vm.listMethods, name, &value)) {
-    runtimeError("Undefined list method '%s'.", name->chars);
+    runtimeError("Undefined property '%s'.", name->chars);
     return false;
   }
   return callObjNative(AS_NATIVE(value), argCount);
@@ -166,7 +169,7 @@ static bool invokeFromList(ObjString *name, int argCount) {
 static bool invokeFromString(ObjString *name, int argCount) {
   Value value;
   if (!tableGet(&vm.listMethods, name, &value)) {
-    runtimeError("Undefined string method '%s'.", name->chars);
+    runtimeError("Undefined property '%s'.", name->chars);
     return false;
   }
   return callObjNative(AS_NATIVE(value), argCount);
@@ -348,7 +351,7 @@ static InterpretResult run() {
       ObjString *name = READ_STRING();
       Value value;
       if (!tableGet(&vm.globals, name, &value)) {
-        runtimeError("Undefined variable '%s'.", name->chars);
+        runtimeError("Undefined '%s'.", name->chars);
         return INTERPRET_RUNTIME_ERROR;
       }
       push(value);
@@ -358,7 +361,7 @@ static InterpretResult run() {
       ObjString *name = READ_STRING();
       if (tableSet(&vm.globals, name, peek(0))) {
         tableDelete(&vm.globals, name);
-        runtimeError("Undefined variable '%s'.", name->chars);
+        runtimeError("Undefined '%s'.", name->chars);
         return INTERPRET_RUNTIME_ERROR;
       }
       break;

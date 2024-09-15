@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
@@ -7,7 +8,7 @@
 
 static bool checkArgCount(int argCount, int expectedCount) {
   if (argCount != expectedCount) {
-    runtimeError("Expected %d argugments but got %d.", expectedCount, argCount);
+    runtimeError("Expected %d argument but got %d.", expectedCount, argCount);
     return false;
   }
   return true;
@@ -36,6 +37,20 @@ static Value clockNative(int argCount, Value *args) {
   return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
 }
 
+static Value exitNative(int argCount, Value *args) {
+  if (argCount == 0) {
+    exit(0);
+  }
+  if (!checkArgCount(argCount, 1)) {
+    return 0;
+  }
+  if (!IS_NUMBER(args[0])) {
+    runtimeError("Argument must be a number.");
+    return 0;
+  }
+  exit(AS_NUMBER(args[0]));
+}
+
 static Value pushListNative(int argCount, Value *args) {
   if (!checkArgCount(argCount - 1, 1)) {
     return 0;
@@ -52,7 +67,7 @@ static Value deleteListNative(int argCount, Value *args) {
   }
 
   if (!IS_NUMBER(args[1])) {
-    runtimeError("Argugment must be number");
+    runtimeError("Argument must be number.");
     return 0;
   }
 
@@ -70,6 +85,7 @@ static Value deleteListNative(int argCount, Value *args) {
 
 void registerNatives() {
   defineNative("clock", clockNative);
+  defineNative("exit", exitNative);
 
   defineListNative("push", pushListNative);
   defineListNative("remove", deleteListNative);

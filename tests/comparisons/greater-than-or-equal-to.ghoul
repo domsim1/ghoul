@@ -1,0 +1,10 @@
+print "$expected$";
+print true;
+print false;
+print true;
+print false;
+print "$actual$";
+print 10 >= 0;
+print 10 >= 11;
+print 10 >= 10;
+print 10 >= 11;

@@ -1,0 +1,14 @@
+print "$expected$";
+print true;
+print false;
+print true;
+print false;
+print false;
+print false;
+print "$actual$";
+print 10 == 10;
+print 5 == 10;
+print "cat" == "cat";
+print "dog" == "cat";
+print "10" == 10;
+print 420 == "69";

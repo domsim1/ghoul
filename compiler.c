@@ -105,11 +105,17 @@ static void errorAt(Token *token, const char *message) {
   parser.hadError = true;
 }
 
+static void error(const char *message) { errorAt(&parser.previous, message); }
+
+static void errorAtCurrent(const char *message) {
+  errorAt(&parser.current, message);
+}
+
 static char *readFile(const char *path) {
   FILE *file = fopen(path, "rb");
   if (file == NULL) {
-    fprintf(stderr, "Could not open file \"%s\".\n", path);
-    exit(74);
+    errorAt(&parser.previous, "Could not open file");
+    return NULL;
   }
 
   fseek(file, 0L, SEEK_END);
@@ -118,24 +124,18 @@ static char *readFile(const char *path) {
 
   char *buffer = (char *)malloc(fileSize + 1);
   if (buffer == NULL) {
-    fprintf(stderr, "Not enough memory to read \"%s\".\n", path);
-    exit(74);
+    errorAt(&parser.previous, "Not enough memory to read file.");
+    return NULL;
   }
   size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
   if (bytesRead < fileSize) {
-    fprintf(stderr, "Could not read file \"%s\".\n", path);
-    exit(74);
+    errorAt(&parser.previous, "Could not read file.");
+    return NULL;
   }
   buffer[bytesRead] = '\0';
 
   fclose(file);
   return buffer;
-}
-
-static void error(const char *message) { errorAt(&parser.previous, message); }
-
-static void errorAtCurrent(const char *message) {
-  errorAt(&parser.current, message);
 }
 
 static void advance() {
@@ -795,8 +795,8 @@ static void use() {
 
   char *resolvePathRes = realpath(filePath->chars, actualpath);
   if (resolvePathRes == NULL) {
-    fprintf(stderr, "Failed to resolve file path.");
-    exit(74);
+    errorAt(&useFile, "Failed to resolve file path.");
+    return;
   }
 
   int pathLength = strlen(actualpath);
@@ -818,6 +818,9 @@ static void use() {
 
   Scanner oldScanner;
   const char *source = readFile(realFilePath->chars);
+  if (source == NULL) {
+    return;
+  }
   const char *oldFile = current->file;
   current->file = realFilePath->chars;
 

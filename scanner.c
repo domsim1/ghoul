@@ -64,13 +64,9 @@ static void skipWhitespace() {
       scanner.line++;
       advance();
       break;
-    case '/':
-      if (peekNext() == '/') {
-        while (peek() != '\n' && !isAtEnd())
-          advance();
-      } else {
-        return;
-      }
+    case '#':
+      while (peek() != '\n' && !isAtEnd())
+        advance();
       break;
     default:
       return;

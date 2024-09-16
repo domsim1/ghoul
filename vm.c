@@ -3,6 +3,7 @@
 #include <string.h>
 #include <time.h>
 
+#include "chunk.h"
 #include "common.h"
 #include "compiler.h"
 #include "debug.h"
@@ -303,6 +304,16 @@ static InterpretResult run() {
     double a = AS_NUMBER(pop());                                               \
     push(valueType(a op b));                                                   \
   } while (false)
+#define BITWISE_OP(valueType, op)                                              \
+  do {                                                                         \
+    if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {                          \
+      runtimeError("Operands must be numbers.");                               \
+      return INTERPRET_RUNTIME_ERROR;                                          \
+    }                                                                          \
+    int b = (int)AS_NUMBER(pop());                                             \
+    int a = (int)AS_NUMBER(pop());                                             \
+    push(valueType((double)(a op b)));                                         \
+  } while (false)
 
   for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
@@ -483,6 +494,21 @@ static InterpretResult run() {
     case OP_DIVIDE:
       BINARY_OP(NUMBER_VAL, /);
       break;
+    case OP_BITWISE_AND:
+      BITWISE_OP(NUMBER_VAL, &);
+      break;
+    case OP_BITWISE_OR:
+      BITWISE_OP(NUMBER_VAL, |);
+      break;
+    case OP_BITWISE_LEFT_SHIFT:
+      BITWISE_OP(NUMBER_VAL, <<);
+      break;
+    case OP_BITWISE_RIGHT_SHIFT:
+      BITWISE_OP(NUMBER_VAL, >>);
+      break;
+    case OP_BITWISE_OR_EQUAL:
+      BITWISE_OP(NUMBER_VAL, |=);
+      break;
     case OP_NOT:
       push(BOOL_VAL(isFalsey(pop())));
       break;
@@ -656,6 +682,7 @@ static InterpretResult run() {
 #undef READ_CONSTANT_SHORT
 #undef READ_STRING
 #undef BINARY_OP
+#undef BITWISE_OP
 }
 
 InterpretResult interpret(const char *source, const char *file) {

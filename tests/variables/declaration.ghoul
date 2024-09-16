@@ -2,14 +2,17 @@
 :numB = 10.5;
 :str = "test";
 :bool = true;
+:_apple = "apple";
 
 print "$expected$";
 print 10;
 print 10.5;
 print "test";
 print true;
+print "apple";
 print "$actual$";
 print numA;
 print numB;
 print str;
 print bool;
+print _apple;

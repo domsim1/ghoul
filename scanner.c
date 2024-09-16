@@ -224,13 +224,9 @@ Token scanToken() {
                      : match(';') ? TOKEN_CLASS
                                   : TOKEN_VAR);
   case '&':
-    return makeToken(match('&')   ? TOKEN_AND
-                     : match('=') ? TOKEN_BITWISE_AND_EQUAL
-                                  : TOKEN_BITWISE_AND);
+    return makeToken(match('&') ? TOKEN_AND : TOKEN_BITWISE_AND);
   case '|':
-    return makeToken(match('|')   ? TOKEN_OR
-                     : match('=') ? TOKEN_BITWISE_OR_EQUAL
-                                  : TOKEN_BITWISE_OR);
+    return makeToken(match('|') ? TOKEN_OR : TOKEN_BITWISE_OR);
   }
 
   return errorToken("Unexpected character.");

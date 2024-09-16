@@ -86,8 +86,6 @@ static TokenType checkKeyword(int start, int length, const char *rest,
 
 static TokenType identifierType() {
   switch (scanner.start[0]) {
-  case 'a':
-    return checkKeyword(1, 2, "nd", TOKEN_AND);
   case 'b':
     return checkKeyword(1, 4, "reak", TOKEN_BREAK);
   case 'e':
@@ -106,8 +104,6 @@ static TokenType identifierType() {
     return checkKeyword(1, 1, "f", TOKEN_IF);
   case 'n':
     return checkKeyword(1, 2, "il", TOKEN_NIL);
-  case 'o':
-    return checkKeyword(1, 1, "r", TOKEN_OR);
   case 'p':
     return checkKeyword(1, 4, "rint", TOKEN_PRINT);
   case 's':
@@ -227,6 +223,10 @@ Token scanToken() {
     return makeToken(match(':')   ? TOKEN_FUN
                      : match(';') ? TOKEN_CLASS
                                   : TOKEN_VAR);
+  case '&':
+    return makeToken(match('&') ? TOKEN_AND : TOKEN_BITWISE_AND);
+  case '|':
+    return makeToken(match('|') ? TOKEN_OR : TOKEN_BITWISE_OR);
   }
 
   return errorToken("Unexpected character.");

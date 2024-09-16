@@ -320,6 +320,23 @@ static void parsePrecedence(Precedence precedence);
 static uint8_t identifierConstant(Token *name);
 static int resolveLocal(Compiler *compiler, Token *name);
 
+static bool isAssignment(uint8_t *binaryOp) {
+  TokenType operatorType = parser.current.type;
+
+  switch (operatorType) {
+  case TOKEN_EQUAL:
+    *binaryOp = OP_NIL;
+    break;
+  case TOKEN_BITWISE_AND_EQUAL:
+    *binaryOp = OP_BITWISE_AND;
+    break;
+  default:
+    return false;
+  }
+  advance();
+  return true;
+}
+
 static void binary(bool canAssign) {
   TokenType operatorType = parser.previous.type;
   ParseRule *rule = getRule(operatorType);
@@ -371,12 +388,6 @@ static void binary(bool canAssign) {
   case TOKEN_BITWISE_RIGHT_SHIFT:
     emitByte(OP_BITWISE_RIGHT_SHIFT);
     break;
-  case TOKEN_BITWISE_AND_EQUAL:
-    emitByte(OP_BITWISE_AND);
-    break;
-  case TOKEN_BITWISE_OR_EQUAL:
-    emitByte(OP_BITWISE_OR);
-    break;
   default:
     return;
   }
@@ -405,10 +416,20 @@ static void call(bool canAssign) {
 static void dot(bool canAssign) {
   consume(TOKEN_IDENTIFIER, "Expect property name after '.'.");
   uint8_t name = identifierConstant(&parser.previous);
+  uint8_t binaryOp;
 
-  if (canAssign && match(TOKEN_EQUAL)) {
-    expression();
-    emitBytes(OP_SET_PROPERTY, name);
+  if (canAssign && isAssignment(&binaryOp)) {
+    if (binaryOp == OP_NIL) {
+      expression();
+      emitBytes(OP_SET_PROPERTY, name);
+    } else {
+      emitBytes(currentChunk()->code[currentChunk()->count - 2],
+                currentChunk()->code[currentChunk()->count - 1]);
+      emitBytes(OP_GET_PROPERTY, name);
+      expression();
+      emitByte(binaryOp);
+      emitBytes(OP_SET_PROPERTY, name);
+    }
   } else if (match(TOKEN_LEFT_PAREN)) {
     uint8_t argCount = argumentList();
     emitBytes(OP_INVOKE, name);
@@ -513,7 +534,7 @@ static int resolveUpvalue(Compiler *compiler, Token *name) {
 }
 
 static void namedVariable(Token name, bool canAssign) {
-  uint8_t getOp, setOp;
+  uint8_t getOp, setOp, binaryOp;
   int arg = resolveLocal(current, &name);
 
   if (arg != -1) {
@@ -528,9 +549,16 @@ static void namedVariable(Token name, bool canAssign) {
     setOp = OP_SET_GLOBAL;
   }
 
-  if (canAssign && match(TOKEN_EQUAL)) {
-    expression();
-    emitBytes(setOp, (uint8_t)arg);
+  if (canAssign && isAssignment(&binaryOp)) {
+    if (binaryOp == OP_NIL) {
+      expression();
+      emitBytes(setOp, (uint8_t)arg);
+    } else {
+      emitBytes(getOp, (uint8_t)arg);
+      expression();
+      emitByte(binaryOp);
+      emitBytes(setOp, (uint8_t)arg);
+    }
   } else {
     emitBytes(getOp, (uint8_t)arg);
   }
@@ -599,9 +627,22 @@ static void list(bool canAssign) {
 static void subscript(bool canAssign) {
   parsePrecedence(PREC_OR);
   consume(TOKEN_RIGHT_BRACKET, "Expect ']' after index.");
-  if (canAssign && match(TOKEN_EQUAL)) {
-    expression();
-    emitByte(OP_STORE_SUBSCR);
+
+  uint8_t binaryOp;
+  if (canAssign && isAssignment(&binaryOp)) {
+    if (binaryOp == OP_NIL) {
+      expression();
+      emitByte(OP_STORE_SUBSCR);
+    } else {
+      emitBytes(currentChunk()->code[currentChunk()->count - 4],
+                currentChunk()->code[currentChunk()->count - 3]);
+      emitBytes(currentChunk()->code[currentChunk()->count - 4],
+                currentChunk()->code[currentChunk()->count - 3]);
+      emitByte(OP_INDEX_SUBSCR);
+      expression();
+      emitByte(binaryOp);
+      emitByte(OP_STORE_SUBSCR);
+    }
   } else {
     emitByte(OP_INDEX_SUBSCR);
   }
@@ -663,11 +704,11 @@ ParseRule rules[] = {
     [TOKEN_MINUS] = {unary, binary, PREC_TERM},
     [TOKEN_PLUS] = {NULL, binary, PREC_TERM},
     [TOKEN_BITWISE_AND] = {NULL, binary, PREC_TERM},
-    [TOKEN_BITWISE_AND_EQUAL] = {NULL, binary, PREC_TERM},
     [TOKEN_BITWISE_LEFT_SHIFT] = {NULL, binary, PREC_TERM},
     [TOKEN_BITWISE_RIGHT_SHIFT] = {NULL, binary, PREC_TERM},
     [TOKEN_BITWISE_OR] = {NULL, binary, PREC_TERM},
-    [TOKEN_BITWISE_OR_EQUAL] = {NULL, binary, PREC_TERM},
+    [TOKEN_BITWISE_AND_EQUAL] = {NULL, NULL, PREC_NONE},
+    [TOKEN_BITWISE_OR_EQUAL] = {NULL, NULL, PREC_NONE},
     [TOKEN_SEMICOLON] = {NULL, NULL, PREC_NONE},
     [TOKEN_SLASH] = {NULL, binary, PREC_FACTOR},
     [TOKEN_STAR] = {NULL, binary, PREC_FACTOR},
@@ -720,7 +761,8 @@ static void parsePrecedence(Precedence precedence) {
     ParseFn infixRule = getRule(parser.previous.type)->infix;
     infixRule(canAssign);
   }
-  if (canAssign && match(TOKEN_EQUAL)) {
+  uint8_t temp;
+  if (canAssign && isAssignment(&temp)) {
     error("Invalid assignment target.");
   }
 }

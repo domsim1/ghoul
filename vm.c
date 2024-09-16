@@ -506,9 +506,6 @@ static InterpretResult run() {
     case OP_BITWISE_RIGHT_SHIFT:
       BITWISE_OP(NUMBER_VAL, >>);
       break;
-    case OP_BITWISE_OR_EQUAL:
-      BITWISE_OP(NUMBER_VAL, |=);
-      break;
     case OP_NOT:
       push(BOOL_VAL(isFalsey(pop())));
       break;

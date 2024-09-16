@@ -1,0 +1,18 @@
+print "$expected$";
+print 15;
+print -9;
+print -5;
+print -1;
+print 15;
+print -9;
+print -5;
+print -1;
+print "$actual$";
+print 10 | 7;
+print -10 | 7;
+print 10 | -7;
+print -10 | -7;
+print 10.26 | 7.77;
+print -10.99 | 7.27;
+print 10.12 | -7.90;
+print -10.75 | -7.26;

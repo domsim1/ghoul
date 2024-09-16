@@ -1,0 +1,18 @@
+:testOne = 10;
+testOne |= 7;
+:testTwo = -10;
+testTwo |= 7;
+:testThree = 10;
+testThree |= -7;
+:testFour = -10;
+testFour |= -7;
+print "$expected$";
+print 15;
+print -9;
+print -5;
+print -1;
+print "$actual$";
+print testOne;
+print testTwo;
+print testThree;
+print testFour;

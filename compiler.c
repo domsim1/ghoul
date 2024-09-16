@@ -359,6 +359,24 @@ static void binary(bool canAssign) {
   case TOKEN_SLASH:
     emitByte(OP_DIVIDE);
     break;
+  case TOKEN_BITWISE_AND:
+    emitByte(OP_BITWISE_AND);
+    break;
+  case TOKEN_BITWISE_OR:
+    emitByte(OP_BITWISE_OR);
+    break;
+  case TOKEN_BITWISE_LEFT_SHIFT:
+    emitByte(OP_BITWISE_LEFT_SHIFT);
+    break;
+  case TOKEN_BITWISE_RIGHT_SHIFT:
+    emitByte(OP_BITWISE_RIGHT_SHIFT);
+    break;
+  case TOKEN_BITWISE_AND_EQUAL:
+    emitByte(OP_BITWISE_AND);
+    break;
+  case TOKEN_BITWISE_OR_EQUAL:
+    emitByte(OP_BITWISE_OR);
+    break;
   default:
     return;
   }
@@ -644,6 +662,12 @@ ParseRule rules[] = {
     [TOKEN_DOT] = {NULL, dot, PREC_CALL},
     [TOKEN_MINUS] = {unary, binary, PREC_TERM},
     [TOKEN_PLUS] = {NULL, binary, PREC_TERM},
+    [TOKEN_BITWISE_AND] = {NULL, binary, PREC_TERM},
+    [TOKEN_BITWISE_AND_EQUAL] = {NULL, binary, PREC_TERM},
+    [TOKEN_BITWISE_LEFT_SHIFT] = {NULL, binary, PREC_TERM},
+    [TOKEN_BITWISE_RIGHT_SHIFT] = {NULL, binary, PREC_TERM},
+    [TOKEN_BITWISE_OR] = {NULL, binary, PREC_TERM},
+    [TOKEN_BITWISE_OR_EQUAL] = {NULL, binary, PREC_TERM},
     [TOKEN_SEMICOLON] = {NULL, NULL, PREC_NONE},
     [TOKEN_SLASH] = {NULL, binary, PREC_FACTOR},
     [TOKEN_STAR] = {NULL, binary, PREC_FACTOR},

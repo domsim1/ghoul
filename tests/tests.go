@@ -116,7 +116,7 @@ func getRes(fileData string, fileName string) bool {
 	anyWrong := false
 	for i := range expected {
 		if expected[i] != actual[i] {
-			println(fmt.Sprintf("\033[31mtest failed:\033[0m test failled in %s; expected: \033[32m%s\033[0m; but got: \033[31m%s\033[0m", fileName, expected[i], actual[i]))
+			println(fmt.Sprintf("\033[31mtest failed:\033[0m test failled in %s, on comparison %d; expected: \033[32m%s\033[0m; but got: \033[31m%s\033[0m", fileName, i+1, expected[i], actual[i]))
 			anyWrong = true
 		}
 	}

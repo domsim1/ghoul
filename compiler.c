@@ -263,12 +263,20 @@ static void initCompiler(Compiler *compiler, FunctionType type,
   compiler->localCount = 0;
   compiler->scopeDepth = 0;
   compiler->function = newFunction();
-  compiler->file = file;
   current = compiler;
   if (type != TYPE_SCRIPT) {
     current->function->name =
         copyString(parser.previous.start, parser.previous.length, &vm.strings);
   }
+
+  int pathLength = strlen(file);
+  uint32_t hash = hashString(file, pathLength);
+  char *heapChars = ALLOCATE(char, pathLength + 1);
+  memcpy(heapChars, file, pathLength);
+  heapChars[pathLength] = '\0';
+  ObjString *realFilePath =
+      allocateString(heapChars, pathLength, hash, &vm.useStrings);
+  compiler->file = realFilePath->chars;
 
   Local *local = &current->locals[current->localCount++];
   local->depth = 0;
@@ -911,7 +919,7 @@ static void method() {
   emitBytes(OP_METHOD, constant);
 }
 
-static void use() {
+static void useStatement() {
   consume(TOKEN_STRING, "Expect file path.");
   Token useFile = parser.previous;
 
@@ -1184,9 +1192,7 @@ static void synchronize() {
 }
 
 static void declaration() {
-  if (match(TOKEN_USE)) {
-    use();
-  } else if (match(TOKEN_CLASS)) {
+  if (match(TOKEN_CLASS)) {
     classDeclaration();
   } else if (match(TOKEN_FUN)) {
     funDeclaration();
@@ -1217,6 +1223,8 @@ static void statement() {
     beginScope();
     block();
     endScope();
+  } else if (match(TOKEN_USE)) {
+    useStatement();
   } else {
     expressionStatment();
   }

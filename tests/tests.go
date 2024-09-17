@@ -6,18 +6,25 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 )
 
 func main() {
 	files := getFiles()
 	println("-------------")
+	var wg sync.WaitGroup
 	for _, f := range files {
 		res := run(f)
-		if getRes(res, f) {
-			println("\033[32msuccess:\033[0m test passed in", f)
-		}
-		println("-------------")
+		wg.Add(1)
+		go func(res string, f string) {
+			defer wg.Done()
+			if getRes(res, f) {
+				println("\033[32msuccess:\033[0m test passed in", f)
+			}
+			println("-------------")
+		}(res, f)
 	}
+	wg.Wait()
 }
 
 func getFiles() []string {

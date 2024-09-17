@@ -202,21 +202,29 @@ Token scanToken() {
   case '.':
     return makeToken(TOKEN_DOT);
   case '-':
-    return makeToken(match('>') ? TOKEN_RETURN : TOKEN_MINUS);
+    return makeToken(match('>')   ? TOKEN_RETURN
+                     : match('=') ? TOKEN_MINUS_EQUAL
+                                  : TOKEN_MINUS);
   case '+':
-    return makeToken(TOKEN_PLUS);
+    return makeToken(match('=') ? TOKEN_PLUS_EQUAL : TOKEN_PLUS);
   case '/':
-    return makeToken(TOKEN_SLASH);
+    return makeToken(match('=') ? TOKEN_SLASH_EQUAL : TOKEN_SLASH);
   case '*':
-    return makeToken(TOKEN_STAR);
+    return makeToken(match('=') ? TOKEN_STAR_EQUAL : TOKEN_STAR);
   case '!':
     return makeToken(match('=') ? TOKEN_BANG_EQUAL : TOKEN_BANG);
   case '=':
     return makeToken(match('=') ? TOKEN_EQUAL_EQUAL : TOKEN_EQUAL);
   case '<':
-    return makeToken(match('=') ? TOKEN_LESS_EQUAL : TOKEN_LESS);
+    return makeToken(match('=')   ? TOKEN_LESS_EQUAL
+                     : match('<') ? match('=') ? TOKEN_BITWISE_LEFT_SHIFT_EQUAL
+                                               : TOKEN_BITWISE_RIGHT_SHIFT
+                                  : TOKEN_LESS);
   case '>':
-    return makeToken(match('=') ? TOKEN_GREATER_EQUAL : TOKEN_GREATER);
+    return makeToken(match('=')   ? TOKEN_GREATER_EQUAL
+                     : match('>') ? match('=') ? TOKEN_BITWISE_RIGHT_SHIFT_EQUAL
+                                               : TOKEN_BITWISE_RIGHT_SHIFT
+                                  : TOKEN_GREATER);
   case '"':
     return string();
   case ':':
@@ -224,9 +232,17 @@ Token scanToken() {
                      : match(';') ? TOKEN_CLASS
                                   : TOKEN_VAR);
   case '&':
-    return makeToken(match('&') ? TOKEN_AND : TOKEN_BITWISE_AND);
+    return makeToken(match('&')   ? TOKEN_AND
+                     : match('=') ? TOKEN_BITWISE_AND_EQUAL
+                                  : TOKEN_BITWISE_AND);
   case '|':
-    return makeToken(match('|') ? TOKEN_OR : TOKEN_BITWISE_OR);
+    return makeToken(match('|')   ? TOKEN_OR
+                     : match('=') ? TOKEN_BITWISE_OR_EQUAL
+                                  : TOKEN_BITWISE_OR);
+  case '^':
+    return makeToken(match('=') ? TOKEN_BITWISE_XOR_EQUAL : TOKEN_BITWISE_XOR);
+  case '~':
+    return makeToken(TOKEN_BITWISE_NOT);
   }
 
   return errorToken("Unexpected character.");

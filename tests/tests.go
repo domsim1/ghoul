@@ -10,6 +10,7 @@ import (
 
 func main() {
 	files := getFiles()
+	println("-------------")
 	for _, f := range files {
 		res := run(f)
 		if getRes(res, f) {
@@ -72,8 +73,9 @@ func run(filepath string) string {
 
 func getRes(fileData string, fileName string) bool {
 	data := strings.Split(fileData, "\n")
-	expected := ""
-	actual := ""
+	data = data[:len(data)-1]
+	expected := make([]string, 0)
+	actual := make([]string, 0)
 	expectedFound := false
 	actualFound := false
 	for _, line := range data {
@@ -89,10 +91,12 @@ func getRes(fileData string, fileName string) bool {
 			continue
 		}
 		if actualFound && expectedFound {
-			actual += line
+			actual = append(actual, line)
+			continue
 		}
 		if expectedFound && !actualFound {
-			expected += line
+			expected = append(expected, line)
+			continue
 		}
 	}
 	if !expectedFound {
@@ -104,10 +108,21 @@ func getRes(fileData string, fileName string) bool {
 		return false
 	}
 
-	result := expected == actual
-	if !result {
-		println(fmt.Sprintf("\033[31mtest failed:\033[0m test failled in %s", fileName))
-		return result
+	if len(expected) != len(actual) {
+		println(fmt.Sprintf("\033[31mtest failed:\033[0m expected length is not equal to actual length in %s; expected is %d, actual is %d", fileName, len(expected), len(actual)))
+		return false
 	}
-	return result
+
+	anyWrong := false
+	for i := range expected {
+		if expected[i] != actual[i] {
+			println(fmt.Sprintf("\033[31mtest failed:\033[0m test failled in %s, on comparison %d; expected: \033[32m%s\033[0m; but got: \033[31m%s\033[0m", fileName, i+1, expected[i], actual[i]))
+			anyWrong = true
+		}
+	}
+	if anyWrong {
+		return false
+	}
+
+	return true
 }

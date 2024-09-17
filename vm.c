@@ -396,6 +396,14 @@ static InterpretResult run() {
       push(NUMBER_VAL(-AS_NUMBER(pop())));
       break;
     }
+    case OP_BITWISE_NOT: {
+      if (!IS_NUMBER(peek(0))) {
+        runtimeError("Operand must be a number.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      push(NUMBER_VAL((double)~(int)AS_NUMBER(pop())));
+      break;
+    }
     case OP_GET_UPVALUE: {
       uint8_t slot = READ_BYTE();
       push(*frame->closure->upvalues[slot]->location);
@@ -499,6 +507,9 @@ static InterpretResult run() {
       break;
     case OP_BITWISE_OR:
       BITWISE_OP(NUMBER_VAL, |);
+      break;
+    case OP_BITWISE_XOR:
+      BITWISE_OP(NUMBER_VAL, ^);
       break;
     case OP_BITWISE_LEFT_SHIFT:
       BITWISE_OP(NUMBER_VAL, <<);

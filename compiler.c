@@ -26,8 +26,12 @@ typedef enum {
   PREC_ASSIGNMENT,
   PREC_OR,
   PREC_AND,
+  PREC_BITWISE_OR,
+  PREC_BITWISE_XOR,
+  PREC_BITWISE_AND,
   PREC_EQUALITY,
   PREC_COMPARISION,
+  PREC_BITWIES_SHIFT,
   PREC_TERM,
   PREC_FACTOR,
   PREC_UNARY,
@@ -330,6 +334,30 @@ static bool isAssignment(uint8_t *binaryOp) {
   case TOKEN_BITWISE_AND_EQUAL:
     *binaryOp = OP_BITWISE_AND;
     break;
+  case TOKEN_BITWISE_OR_EQUAL:
+    *binaryOp = OP_BITWISE_OR;
+    break;
+  case TOKEN_BITWISE_XOR_EQUAL:
+    *binaryOp = OP_BITWISE_XOR;
+    break;
+  case TOKEN_BITWISE_RIGHT_SHIFT_EQUAL:
+    *binaryOp = OP_BITWISE_RIGHT_SHIFT;
+    break;
+  case TOKEN_BITWISE_LEFT_SHIFT_EQUAL:
+    *binaryOp = OP_BITWISE_LEFT_SHIFT;
+    break;
+  case TOKEN_PLUS_EQUAL:
+    *binaryOp = OP_ADD;
+    break;
+  case TOKEN_MINUS_EQUAL:
+    *binaryOp = OP_SUBTRACT;
+    break;
+  case TOKEN_STAR_EQUAL:
+    *binaryOp = OP_MULTIPLY;
+    break;
+  case TOKEN_SLASH_EQUAL:
+    *binaryOp = OP_DIVIDE;
+    break;
   default:
     return false;
   }
@@ -381,6 +409,9 @@ static void binary(bool canAssign) {
     break;
   case TOKEN_BITWISE_OR:
     emitByte(OP_BITWISE_OR);
+    break;
+  case TOKEN_BITWISE_XOR:
+    emitByte(OP_BITWISE_XOR);
     break;
   case TOKEN_BITWISE_LEFT_SHIFT:
     emitByte(OP_BITWISE_LEFT_SHIFT);
@@ -595,6 +626,9 @@ static void unary(bool canAssign) {
   case TOKEN_MINUS:
     emitByte(OP_NEGATE);
     break;
+  case TOKEN_BITWISE_NOT:
+    emitByte(OP_BITWISE_NOT);
+    break;
   default:
     exit(1);
     return;
@@ -703,12 +737,15 @@ ParseRule rules[] = {
     [TOKEN_DOT] = {NULL, dot, PREC_CALL},
     [TOKEN_MINUS] = {unary, binary, PREC_TERM},
     [TOKEN_PLUS] = {NULL, binary, PREC_TERM},
-    [TOKEN_BITWISE_AND] = {NULL, binary, PREC_TERM},
-    [TOKEN_BITWISE_LEFT_SHIFT] = {NULL, binary, PREC_TERM},
-    [TOKEN_BITWISE_RIGHT_SHIFT] = {NULL, binary, PREC_TERM},
-    [TOKEN_BITWISE_OR] = {NULL, binary, PREC_TERM},
+    [TOKEN_BITWISE_NOT] = {unary, NULL, PREC_UNARY},
+    [TOKEN_BITWISE_AND] = {NULL, binary, PREC_BITWISE_AND},
+    [TOKEN_BITWISE_OR] = {NULL, binary, PREC_BITWISE_XOR},
+    [TOKEN_BITWISE_XOR] = {NULL, binary, PREC_BITWISE_OR},
+    [TOKEN_BITWISE_LEFT_SHIFT] = {NULL, binary, PREC_BITWIES_SHIFT},
+    [TOKEN_BITWISE_RIGHT_SHIFT] = {NULL, binary, PREC_BITWIES_SHIFT},
     [TOKEN_BITWISE_AND_EQUAL] = {NULL, NULL, PREC_NONE},
     [TOKEN_BITWISE_OR_EQUAL] = {NULL, NULL, PREC_NONE},
+    [TOKEN_BITWISE_XOR_EQUAL] = {NULL, NULL, PREC_NONE},
     [TOKEN_SEMICOLON] = {NULL, NULL, PREC_NONE},
     [TOKEN_SLASH] = {NULL, binary, PREC_FACTOR},
     [TOKEN_STAR] = {NULL, binary, PREC_FACTOR},

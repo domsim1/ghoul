@@ -6,18 +6,26 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
+	"time"
 )
 
 func main() {
 	files := getFiles()
 	println("-------------")
+	var wg sync.WaitGroup
 	for _, f := range files {
-		res := run(f)
-		if getRes(res, f) {
-			println("\033[32msuccess:\033[0m test passed in", f)
-		}
-		println("-------------")
+		wg.Add(1)
+		go func(f string) {
+			defer wg.Done()
+			res := run(f)
+			if getRes(res, f) {
+				println("\033[32msuccess:\033[0m test passed in", f)
+			}
+			println("-------------")
+		}(f)
 	}
+	wg.Wait()
 }
 
 func getFiles() []string {
@@ -60,7 +68,6 @@ func run(filepath string) string {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	cmd := exec.Command(path, filepath)
 	out, err := cmd.CombinedOutput()
 	if err != nil {

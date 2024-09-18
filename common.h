@@ -15,4 +15,8 @@
 
 #define UINT8_COUNT (UINT8_MAX + 1)
 
+#ifdef WIN32
+#define realpath(N, R) _fullpath((R), (N), PATH_MAX)
+#endif
+
 #endif

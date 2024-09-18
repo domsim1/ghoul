@@ -32,7 +32,7 @@
 :test = testClassTwo();
 
 print "$expected$";
-print "testClassTwo instance";
+print "<instance testClassTwo>";
 print "<fn returnString>";
 print "<fn returnVal>";
 print "<fn newfunction>";

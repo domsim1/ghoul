@@ -4,9 +4,7 @@
 #include <time.h>
 
 #include "chunk.h"
-#include "common.h"
 #include "compiler.h"
-#include "debug.h"
 #include "memory.h"
 #include "native.h"
 #include "object.h"
@@ -158,24 +156,6 @@ static bool callObjNative(NativeFn native, int argCount) {
   return true;
 }
 
-static bool invokeFromList(ObjString *name, int argCount) {
-  Value value;
-  if (!tableGet(&vm.listMethods, name, &value)) {
-    runtimeError("Undefined property '%s'.", name->chars);
-    return false;
-  }
-  return callObjNative(AS_NATIVE(value), argCount);
-}
-
-static bool invokeFromString(ObjString *name, int argCount) {
-  Value value;
-  if (!tableGet(&vm.listMethods, name, &value)) {
-    runtimeError("Undefined property '%s'.", name->chars);
-    return false;
-  }
-  return callObjNative(AS_NATIVE(value), argCount);
-}
-
 static bool invokeFromClass(ObjClass *klass, ObjString *name, int argCount) {
   Value method;
   if (!tableGet(&klass->methods, name, &method)) {
@@ -189,12 +169,6 @@ static bool invoke(ObjString *name, int argCount) {
   Value receiver = peek(argCount);
 
   if (!IS_INSTANCE(receiver)) {
-    if (IS_LIST(receiver)) {
-      return invokeFromList(name, argCount);
-    }
-    if (IS_STRING(receiver)) {
-      return invokeFromString(name, argCount);
-    }
     runtimeError("Only instances have methods.");
     return false;
   }
@@ -276,6 +250,7 @@ static void concatenate() {
   char *chars = ALLOCATE(char, length + 1);
   memcpy(chars, a->chars, a->length);
   memcpy(chars + a->length, b->chars, b->length);
+  chars[length] = '\0';
 
   ObjString *result = takeString(chars, length);
   pop();

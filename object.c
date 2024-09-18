@@ -188,7 +188,7 @@ void printObject(Value value) {
     printFunction(AS_BOUND_METHOD(value)->method->function);
     break;
   case OBJ_CLASS:
-    printf("%s", AS_CLASS(value)->name->chars);
+    printf("<class %s>", AS_CLASS(value)->name->chars);
     break;
   case OBJ_CLOSURE:
     printFunction(AS_CLOSURE(value)->function);
@@ -197,10 +197,10 @@ void printObject(Value value) {
     printFunction(AS_FUNCTION(value));
     break;
   case OBJ_INSTANCE:
-    printf("%s instance", AS_INSTANCE(value)->klass->name->chars);
+    printf("<instance %s>", AS_INSTANCE(value)->klass->name->chars);
     break;
   case OBJ_NATIVE:
-    printf("<native fn>");
+    printf("<native fn %s>", AS_FUNCTION(value)->name->chars);
     break;
   case OBJ_LIST:
     printList(AS_LIST(value));
@@ -209,7 +209,7 @@ void printObject(Value value) {
     printf("%s", AS_CSTRING(value));
     break;
   case OBJ_UPVALUE:
-    printf("upvalue");
+    printf("<upvalue>");
     break;
   }
 }

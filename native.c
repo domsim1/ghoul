@@ -22,14 +22,6 @@ static void defineNative(const char *name, NativeFn function) {
   pop();
 }
 
-static void defineListNative(const char *name, NativeFn function) {
-  push(OBJ_VAL(copyString(name, (int)strlen(name), &vm.strings)));
-  push(OBJ_VAL(newNative(function)));
-  tableSet(&vm.listMethods, AS_STRING(vm.stack[0]), vm.stack[1]);
-  pop();
-  pop();
-}
-
 static Value clockNative(int argCount, Value *args) {
   if (!checkArgCount(argCount, 0)) {
     return 0;
@@ -52,9 +44,12 @@ static Value exitNative(int argCount, Value *args) {
 }
 
 static Value pushListNative(int argCount, Value *args) {
-  if (!checkArgCount(argCount - 1, 1)) {
+  if (!checkArgCount(argCount, 2)) {
     return 0;
   };
+  if (!IS_LIST(args[0])) {
+    runtimeError("Argument must be a list.");
+  }
   ObjList *list = AS_LIST(args[0]);
   Value item = args[1];
   pushToList(list, item);
@@ -62,8 +57,12 @@ static Value pushListNative(int argCount, Value *args) {
 }
 
 static Value deleteListNative(int argCount, Value *args) {
-  if (!checkArgCount(argCount - 1, 1)) {
+  if (!checkArgCount(argCount, 2)) {
     return 0;
+  }
+
+  if (!IS_LIST(args[0])) {
+    runtimeError("First argument must be a list.");
   }
 
   if (!IS_NUMBER(args[1])) {
@@ -87,6 +86,6 @@ void registerNatives() {
   defineNative("clock", clockNative);
   defineNative("exit", exitNative);
 
-  defineListNative("push", pushListNative);
-  defineListNative("remove", deleteListNative);
+  defineNative("push", pushListNative);
+  defineNative("remove", deleteListNative);
 }

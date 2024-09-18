@@ -35,7 +35,6 @@ typedef enum {
   OBJ_INSTANCE,
   OBJ_NATIVE,
   OBJ_LIST,
-  OBJ_MODULE,
   OBJ_STRING,
   OBJ_UPVALUE,
 } ObjType;
@@ -99,6 +98,12 @@ typedef struct {
   Value receiver;
   ObjClosure *method;
 } ObjBoundMethod;
+
+typedef struct {
+  Obj obj;
+  Table methods;
+  Table fields;
+} ObjModule;
 
 typedef struct {
   Obj obj;

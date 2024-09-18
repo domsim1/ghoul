@@ -15,7 +15,7 @@
 :test = testClass();
 
 print "$expected$";
-print "testClass instance";
+print "<instance testClass>";
 print 4;
 print "<fn returnVal>";
 print 4;

@@ -7,25 +7,34 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
-	"time"
 )
 
 func main() {
 	files := getFiles()
+	println("running tests...")
 	println("-------------")
+	resChan := make(chan string)
 	var wg sync.WaitGroup
 	for _, f := range files {
 		wg.Add(1)
 		go func(f string) {
 			defer wg.Done()
+			resBuffer := ""
 			res := run(f)
-			if getRes(res, f) {
-				println("\033[32msuccess:\033[0m test passed in", f)
+			if getRes(res, f, &resBuffer) {
+				resBuffer = fmt.Sprintf("%s\033[32msuccess:\033[0m test passed in %s\n", resBuffer, f)
 			}
-			println("-------------")
+			resBuffer = fmt.Sprintf("%s%s\n", resBuffer, "-------------")
+			resChan <- resBuffer
 		}(f)
 	}
-	wg.Wait()
+	go func() {
+		wg.Wait()
+		close(resChan)
+	}()
+	for res := range resChan {
+		print(res)
+	}
 }
 
 func getFiles() []string {
@@ -78,7 +87,7 @@ func run(filepath string) string {
 	return outstring
 }
 
-func getRes(fileData string, fileName string) bool {
+func getRes(fileData string, fileName string, resBuffer *string) bool {
 	data := strings.Split(fileData, "\n")
 	data = data[:len(data)-1]
 	expected := make([]string, 0)
@@ -107,23 +116,23 @@ func getRes(fileData string, fileName string) bool {
 		}
 	}
 	if !expectedFound {
-		println(fmt.Sprintf("\033[31mtest failed:\033[0m no $expected$ in %s", fileName))
+		*resBuffer = fmt.Sprintf("%s\033[31mtest failed:\033[0m no $expected$ in %s\n", *resBuffer, fileName)
 		return false
 	}
 	if !actualFound {
-		println(fmt.Sprintf("\033[31mtest failed:\033[0m no $actual$ in %s", fileName))
+		*resBuffer = fmt.Sprintf("%s\033[31mtest failed:\033[0m no $actual$ in %s\n", *resBuffer, fileName)
 		return false
 	}
 
 	if len(expected) != len(actual) {
-		println(fmt.Sprintf("\033[31mtest failed:\033[0m expected length is not equal to actual length in %s; expected is %d, actual is %d", fileName, len(expected), len(actual)))
+		*resBuffer = fmt.Sprintf("%s\033[31mtest failed:\033[0m expected length is not equal to actual length in %s; expected is %d, actual is %d\n", *resBuffer, fileName, len(expected), len(actual))
 		return false
 	}
 
 	anyWrong := false
 	for i := range expected {
 		if expected[i] != actual[i] {
-			println(fmt.Sprintf("\033[31mtest failed:\033[0m test failled in %s, on comparison %d; expected: \033[32m%s\033[0m; but got: \033[31m%s\033[0m", fileName, i+1, expected[i], actual[i]))
+			*resBuffer = fmt.Sprintf("%s\033[31mtest failed:\033[0m test failled in %s, on comparison %d; expected: \033[32m%s\033[0m; but got: \033[31m%s\033[0m\n", *resBuffer, fileName, i+1, expected[i], actual[i])
 			anyWrong = true
 		}
 	}

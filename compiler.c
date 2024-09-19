@@ -34,6 +34,7 @@ typedef enum {
   PREC_BITWIES_SHIFT,
   PREC_TERM,
   PREC_FACTOR,
+  PREC_EXPONENTIATION,
   PREC_UNARY,
   PREC_CALL,
   PREC_PRIMARY,
@@ -390,6 +391,9 @@ static bool isAssignment(uint8_t *binaryOp) {
   case TOKEN_PERCENTAGE_EQUAL:
     *binaryOp = OP_MOD;
     break;
+  case TOKEN_STAR_STAR_EQUAL:
+    *binaryOp = OP_EXPONENTIATION;
+    break;
   default:
     return false;
   }
@@ -438,6 +442,9 @@ static void binary(bool canAssign) {
     break;
   case TOKEN_PERCENTAGE:
     emitByte(OP_MOD);
+    break;
+  case TOKEN_STAR_STAR:
+    emitByte(OP_EXPONENTIATION);
     break;
   case TOKEN_BITWISE_AND:
     emitByte(OP_BITWISE_AND);
@@ -784,8 +791,10 @@ ParseRule rules[] = {
     [TOKEN_SEMICOLON] = {NULL, NULL, PREC_NONE},
     [TOKEN_SLASH] = {NULL, binary, PREC_FACTOR},
     [TOKEN_PERCENTAGE] = {NULL, binary, PREC_FACTOR},
-    [TOKEN_PERCENTAGE_EQUAL] = {NULL, NULL, PREC_FACTOR},
+    [TOKEN_PERCENTAGE_EQUAL] = {NULL, NULL, PREC_NONE},
     [TOKEN_STAR] = {NULL, binary, PREC_FACTOR},
+    [TOKEN_STAR_STAR] = {NULL, binary, PREC_EXPONENTIATION},
+    [TOKEN_STAR_STAR_EQUAL] = {NULL, NULL, PREC_NONE},
     [TOKEN_BANG] = {unary, NULL, PREC_NONE},
     [TOKEN_BANG_EQUAL] = {NULL, binary, PREC_EQUALITY},
     [TOKEN_EQUAL] = {NULL, NULL, PREC_NONE},

@@ -32,6 +32,7 @@ typedef enum {
   OP_MULTIPLY,
   OP_DIVIDE,
   OP_MOD,
+  OP_EXPONENTIATION,
   OP_NOT,
   OP_NEGATE,
   OP_BITWISE_NOT,

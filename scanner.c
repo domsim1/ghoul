@@ -212,7 +212,10 @@ Token scanToken() {
   case '/':
     return makeToken(match('=') ? TOKEN_SLASH_EQUAL : TOKEN_SLASH);
   case '*':
-    return makeToken(match('=') ? TOKEN_STAR_EQUAL : TOKEN_STAR);
+    return makeToken(match('=') ? TOKEN_STAR_EQUAL
+                     : match('*')
+                         ? match('=') ? TOKEN_STAR_STAR_EQUAL : TOKEN_STAR_STAR
+                         : TOKEN_STAR);
   case '%':
     return makeToken(match('=') ? TOKEN_PERCENTAGE_EQUAL : TOKEN_PERCENTAGE);
   case '!':

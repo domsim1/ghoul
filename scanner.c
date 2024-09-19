@@ -88,6 +88,8 @@ static TokenType identifierType() {
   switch (scanner.start[0]) {
   case 'b':
     return checkKeyword(1, 4, "reak", TOKEN_BREAK);
+  case 'c':
+    return checkKeyword(1, 7, "ontinue", TOKEN_CONTINUE);
   case 'e':
     return checkKeyword(1, 3, "lse", TOKEN_ELSE);
   case 'f':

@@ -2,3 +2,4 @@ ghoul
 tests/ghoul
 .DS_Store
 test.ghoul
+build/

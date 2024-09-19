@@ -66,10 +66,21 @@ typedef enum {
   TYPE_SCRIPT,
 } FunctionType;
 
+typedef enum {
+  TYPE_BREAK,
+  TYPE_CONTINUE,
+} FlowType;
+
+typedef struct {
+  int location;
+  FlowType type;
+} FlowStatement;
+
+FlowStatement flowStatements[UINT8_COUNT];
+
 typedef struct LoopContext {
   struct LoopContext *previous;
-  int breaks[UINT8_COUNT];
-  int breakCount;
+  int statementCount;
 } LoopContext;
 
 typedef struct Compiler {
@@ -242,16 +253,26 @@ static void patchJump(int offset) {
 }
 
 static void startLoop(LoopContext *loopContext) {
-  loopContext->breakCount = 0;
+  loopContext->statementCount = 0;
   loopContext->previous = currentLoop;
   currentLoop = loopContext;
 }
 static void endLoop() { currentLoop = currentLoop->previous; }
 
-static void patchBreakJumps() {
-  while (currentLoop->breakCount > 0) {
-    int loopBreak = currentLoop->breaks[--currentLoop->breakCount];
-    patchJump(loopBreak);
+static void patchFlowJumps(int loopStart) {
+
+  while (currentLoop->statementCount > 0) {
+    FlowStatement *statement = &flowStatements[--currentLoop->statementCount];
+    if (statement->type == TYPE_BREAK) {
+      patchJump(statement->location);
+    } else if (statement->type == TYPE_CONTINUE) {
+      int loopOffset = statement->location - loopStart + 2;
+      if (loopOffset > UINT16_MAX) {
+        error("Too much code to jump over.");
+      }
+      currentChunk()->code[statement->location] = (loopOffset >> 8) & 0xff;
+      currentChunk()->code[statement->location + 1] = loopOffset & 0xff;
+    }
   }
 }
 
@@ -1083,7 +1104,7 @@ static void forStatement() {
   emitLoop(loopStart);
 
   if (exitJump != -1) {
-    patchBreakJumps();
+    patchFlowJumps(loopStart);
     patchJump(exitJump);
     emitByte(OP_POP);
   }
@@ -1130,22 +1151,40 @@ static void whileStatment() {
   emitLoop(loopStart);
 
   patchJump(exitJump);
-  patchBreakJumps();
+  patchFlowJumps(loopStart);
   endLoop();
   emitByte(OP_POP);
 }
 
-static void breakStatement() {
+static void continueStatement() {
   if (currentLoop == NULL) {
-    errorAt(&parser.previous, "Can only break within loop.");
+    errorAt(&parser.previous, "Can only continue within a loop.");
     consume(TOKEN_SEMICOLON, "Expect ';' after break.");
     return;
   }
-  if (currentLoop->breakCount > UINT8_MAX) {
+  if (currentLoop->statementCount > UINT8_MAX) {
     errorAt(&parser.previous,
-            "Can't have more than 255 breaks within a single loop.");
+            "Can't have more than 255 flow statements within a single loop.");
   }
-  currentLoop->breaks[currentLoop->breakCount++] = emitJump(OP_JUMP);
+  FlowStatement *statement = &flowStatements[currentLoop->statementCount++];
+  statement->location = emitJump(OP_LOOP);
+  statement->type = TYPE_CONTINUE;
+  consume(TOKEN_SEMICOLON, "Expect ';' after break.");
+}
+
+static void breakStatement() {
+  if (currentLoop == NULL) {
+    errorAt(&parser.previous, "Can only break within a loop.");
+    consume(TOKEN_SEMICOLON, "Expect ';' after break.");
+    return;
+  }
+  if (currentLoop->statementCount > UINT8_MAX) {
+    errorAt(&parser.previous,
+            "Can't have more than 255 flow statements within a single loop.");
+  }
+  FlowStatement *statement = &flowStatements[currentLoop->statementCount++];
+  statement->location = emitJump(OP_JUMP);
+  statement->type = TYPE_BREAK;
   consume(TOKEN_SEMICOLON, "Expect ';' after break.");
 }
 
@@ -1219,6 +1258,8 @@ static void statement() {
     whileStatment();
   } else if (match(TOKEN_BREAK)) {
     breakStatement();
+  } else if (match(TOKEN_CONTINUE)) {
+    continueStatement();
   } else if (match(TOKEN_LEFT_BRACE)) {
     beginScope();
     block();

@@ -423,7 +423,7 @@ static void binary(bool canAssign) {
     emitByte(OP_MOD);
     break;
   case TOKEN_STAR_STAR:
-    emitByte(OP_MULTIPLY);
+    emitByte(OP_EXPONENTIATION);
     break;
   case TOKEN_BITWISE_AND:
     emitByte(OP_BITWISE_AND);

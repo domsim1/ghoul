@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -9,6 +10,10 @@
 #include "native.h"
 #include "object.h"
 #include "vm.h"
+
+#ifdef DEBUG_PRINT_CODE
+#include "debug.h"
+#endif
 
 VM vm;
 
@@ -476,6 +481,15 @@ static InterpretResult run() {
       break;
     case OP_DIVIDE:
       BINARY_OP(NUMBER_VAL, /);
+      break;
+    case OP_MOD:
+      if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
+        runtimeError("Operands must be numbers.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      double b = AS_NUMBER(pop());
+      double a = AS_NUMBER(pop());
+      push(NUMBER_VAL(fmod(a, b)));
       break;
     case OP_BITWISE_AND:
       BITWISE_OP(NUMBER_VAL, &);

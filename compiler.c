@@ -387,6 +387,9 @@ static bool isAssignment(uint8_t *binaryOp) {
   case TOKEN_SLASH_EQUAL:
     *binaryOp = OP_DIVIDE;
     break;
+  case TOKEN_PERCENTAGE_EQUAL:
+    *binaryOp = OP_MOD;
+    break;
   default:
     return false;
   }
@@ -432,6 +435,9 @@ static void binary(bool canAssign) {
     break;
   case TOKEN_SLASH:
     emitByte(OP_DIVIDE);
+    break;
+  case TOKEN_PERCENTAGE:
+    emitByte(OP_MOD);
     break;
   case TOKEN_BITWISE_AND:
     emitByte(OP_BITWISE_AND);
@@ -777,6 +783,8 @@ ParseRule rules[] = {
     [TOKEN_BITWISE_XOR_EQUAL] = {NULL, NULL, PREC_NONE},
     [TOKEN_SEMICOLON] = {NULL, NULL, PREC_NONE},
     [TOKEN_SLASH] = {NULL, binary, PREC_FACTOR},
+    [TOKEN_PERCENTAGE] = {NULL, binary, PREC_FACTOR},
+    [TOKEN_PERCENTAGE_EQUAL] = {NULL, NULL, PREC_FACTOR},
     [TOKEN_STAR] = {NULL, binary, PREC_FACTOR},
     [TOKEN_BANG] = {unary, NULL, PREC_NONE},
     [TOKEN_BANG_EQUAL] = {NULL, binary, PREC_EQUALITY},

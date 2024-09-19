@@ -135,6 +135,8 @@ int disassembleInstruction(Chunk *chunk, int offset) {
     return simpleInstruction("OP_DIVIDE", offset);
   case OP_MOD:
     return simpleInstruction("OP_MOD", offset);
+  case OP_EXPONENTIATION:
+    return simpleInstruction("OP_EXPONENTIATION", offset);
   case OP_NOT:
     return simpleInstruction("OP_NOT", offset);
   case OP_PRINT:

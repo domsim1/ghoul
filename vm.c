@@ -9,6 +9,7 @@
 #include "memory.h"
 #include "native.h"
 #include "object.h"
+#include "value.h"
 #include "vm.h"
 
 #ifdef DEBUG_PRINT_CODE
@@ -294,6 +295,16 @@ static InterpretResult run() {
     int a = (int)AS_NUMBER(pop());                                             \
     push(valueType((double)(a op b)));                                         \
   } while (false)
+#define MATH_OP(valueType, op)                                                 \
+  do {                                                                         \
+    if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {                          \
+      runtimeError("Operands must be numbers.");                               \
+      return INTERPRET_RUNTIME_ERROR;                                          \
+    }                                                                          \
+    int b = (int)AS_NUMBER(pop());                                             \
+    int a = (int)AS_NUMBER(pop());                                             \
+    push(valueType((double)(op(a, b))));                                       \
+  } while (false)
 
   for (;;) {
 #ifdef DEBUG_TRACE_EXECUTION
@@ -483,13 +494,10 @@ static InterpretResult run() {
       BINARY_OP(NUMBER_VAL, /);
       break;
     case OP_MOD:
-      if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {
-        runtimeError("Operands must be numbers.");
-        return INTERPRET_RUNTIME_ERROR;
-      }
-      double b = AS_NUMBER(pop());
-      double a = AS_NUMBER(pop());
-      push(NUMBER_VAL(fmod(a, b)));
+      MATH_OP(NUMBER_VAL, fmod);
+      break;
+    case OP_EXPONENTIATION:
+      MATH_OP(NUMBER_VAL, pow);
       break;
     case OP_BITWISE_AND:
       BITWISE_OP(NUMBER_VAL, &);
@@ -680,6 +688,7 @@ static InterpretResult run() {
 #undef READ_STRING
 #undef BINARY_OP
 #undef BITWISE_OP
+#undef MATH_OP
 }
 
 InterpretResult interpret(const char *source, const char *file) {

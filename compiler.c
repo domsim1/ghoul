@@ -807,7 +807,6 @@ ParseRule rules[] = {
     [TOKEN_STRING] = {string, NULL, PREC_NONE},
     [TOKEN_NUMBER] = {number, NULL, PREC_NONE},
     [TOKEN_AND] = {NULL, and_, PREC_AND},
-    [TOKEN_CLASS] = {NULL, NULL, PREC_NONE},
     [TOKEN_ELSE] = {NULL, NULL, PREC_NONE},
     [TOKEN_FALSE] = {literal, NULL, PREC_NONE},
     [TOKEN_FOR] = {NULL, NULL, PREC_NONE},
@@ -1238,7 +1237,6 @@ static void synchronize() {
     if (parser.previous.type == TOKEN_SEMICOLON)
       return;
     switch (parser.current.type) {
-    case TOKEN_CLASS:
     case TOKEN_COLON:
     case TOKEN_FOR:
     case TOKEN_IF:

@@ -235,9 +235,7 @@ Token scanToken() {
   case '"':
     return string();
   case ':':
-    return makeToken(match(':')   ? TOKEN_COLON_COLON
-                     : match(';') ? TOKEN_CLASS
-                                  : TOKEN_COLON);
+    return makeToken(match(':') ? TOKEN_COLON_COLON : TOKEN_COLON);
   case '&':
     return makeToken(match('&')   ? TOKEN_AND
                      : match('=') ? TOKEN_BITWISE_AND_EQUAL

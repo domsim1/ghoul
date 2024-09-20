@@ -1,4 +1,4 @@
-:;testClass {
+:testClass {
   init() {
     this.val = 4;
     this._val = 6;

@@ -1,4 +1,4 @@
-:;testClass {
+:testClass {
   init() {
     this.val = 4;
     this.val2 = 5;
@@ -13,7 +13,7 @@
   }
 }
 
-:;testClassTwo < testClass {
+:testClassTwo < testClass {
   init() {
     super.init();
     this.val2 = 7;

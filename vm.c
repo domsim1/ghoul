@@ -301,9 +301,9 @@ static InterpretResult run() {
       runtimeError("Operands must be numbers.");                               \
       return INTERPRET_RUNTIME_ERROR;                                          \
     }                                                                          \
-    int b = (int)AS_NUMBER(pop());                                             \
-    int a = (int)AS_NUMBER(pop());                                             \
-    push(valueType((double)(op(a, b))));                                       \
+    double b = AS_NUMBER(pop());                                               \
+    double a = AS_NUMBER(pop());                                               \
+    push(valueType(op(a, b)));                                                 \
   } while (false)
 
   for (;;) {

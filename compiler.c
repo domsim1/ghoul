@@ -811,7 +811,6 @@ ParseRule rules[] = {
     [TOKEN_ELSE] = {NULL, NULL, PREC_NONE},
     [TOKEN_FALSE] = {literal, NULL, PREC_NONE},
     [TOKEN_FOR] = {NULL, NULL, PREC_NONE},
-    [TOKEN_FUN] = {NULL, NULL, PREC_NONE},
     [TOKEN_IF] = {NULL, NULL, PREC_NONE},
     [TOKEN_NIL] = {literal, NULL, PREC_NONE},
     [TOKEN_OR] = {NULL, or_, PREC_OR},
@@ -820,7 +819,7 @@ ParseRule rules[] = {
     [TOKEN_SUPER] = {super_, NULL, PREC_NONE},
     [TOKEN_THIS] = {this_, NULL, PREC_NONE},
     [TOKEN_TRUE] = {literal, NULL, PREC_NONE},
-    [TOKEN_VAR] = {NULL, NULL, PREC_NONE},
+    [TOKEN_COLON] = {NULL, NULL, PREC_NONE},
     [TOKEN_WHILE] = {NULL, NULL, PREC_NONE},
     [TOKEN_BREAK] = {NULL, NULL, PREC_NONE},
     [TOKEN_USE] = {NULL, NULL, PREC_NONE},
@@ -880,9 +879,7 @@ static void declareVariable() {
   addLocal(*name);
 }
 
-static uint8_t parseVariable(const char *errorMessage) {
-  consume(TOKEN_IDENTIFIER, errorMessage);
-
+static uint8_t parseVariable() {
   declareVariable();
   if (current->scopeDepth > 0)
     return 0;
@@ -927,7 +924,8 @@ static void function(FunctionType type) {
       if (current->function->arity > 255) {
         errorAtCurrent("Can't have more than 255 parameters.");
       }
-      uint8_t constant = parseVariable("Expect parameter name.");
+      consume(TOKEN_IDENTIFIER, "Expect parameter identifier.");
+      uint8_t constant = parseVariable();
       defineVariable(constant);
     } while (match(TOKEN_COMMA));
   }
@@ -1011,7 +1009,6 @@ static void useStatement() {
 }
 
 static void classDeclaration() {
-  consume(TOKEN_IDENTIFIER, "Expect class name.");
   Token className = parser.previous;
   uint8_t nameConstant = identifierConstant(&parser.previous);
   declareVariable();
@@ -1056,23 +1053,33 @@ static void classDeclaration() {
   currentClass = currentClass->enclosing;
 }
 
-static void funDeclaration() {
-  uint8_t global = parseVariable("Expect function name.");
+static void funDeclaration(uint8_t global) {
   markInitialized();
   function(TYPE_FUNCTION);
   defineVariable(global);
 }
 
 static void varDeclaration() {
-  uint8_t global = parseVariable("Expect variable name.");
+  consume(TOKEN_IDENTIFIER, "Expect declaration identifier.");
+
+  if (check(TOKEN_LEFT_BRACE) || check(TOKEN_LESS)) {
+    classDeclaration();
+    return;
+  }
+
+  uint8_t global = parseVariable();
+  if (check(TOKEN_LEFT_PAREN)) {
+    funDeclaration(global);
+    return;
+  }
 
   if (match(TOKEN_EQUAL)) {
     expression();
   } else {
     emitByte(OP_NIL);
   }
-  consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
 
+  consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
   defineVariable(global);
 }
 
@@ -1087,7 +1094,7 @@ static void forStatement() {
   consume(TOKEN_LEFT_PAREN, "Expect '(' after 'for'.");
   if (match(TOKEN_SEMICOLON)) {
 
-  } else if (match(TOKEN_VAR)) {
+  } else if (match(TOKEN_COLON)) {
     varDeclaration();
   } else {
     expressionStatment();
@@ -1232,8 +1239,7 @@ static void synchronize() {
       return;
     switch (parser.current.type) {
     case TOKEN_CLASS:
-    case TOKEN_FUN:
-    case TOKEN_VAR:
+    case TOKEN_COLON:
     case TOKEN_FOR:
     case TOKEN_IF:
     case TOKEN_WHILE:
@@ -1248,11 +1254,7 @@ static void synchronize() {
 }
 
 static void declaration() {
-  if (match(TOKEN_CLASS)) {
-    classDeclaration();
-  } else if (match(TOKEN_FUN)) {
-    funDeclaration();
-  } else if (match(TOKEN_VAR)) {
+  if (match(TOKEN_COLON)) {
     varDeclaration();
   } else {
     statement();

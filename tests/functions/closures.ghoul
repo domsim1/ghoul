@@ -1,8 +1,8 @@
-::createAdder(numA) {
-  ::newAdder(numB) {
-    -> numA + numB;
+:createAdder(numA) {
+  :newAdder(numB) {
+    ->numA + numB;
   }
-  -> newAdder;
+  ->newAdder;
 }
 
 :addFive = createAdder(5);

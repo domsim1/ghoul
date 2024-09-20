@@ -1,15 +1,15 @@
-::testEmpty() {}
+:testEmpty() {}
 
-::testReturn() {
-  -> 10;
+:testReturn() {
+  ->10;
 }
 
-::testArgument(test) {
-  -> test;
+:testArgument(test) {
+  ->test;
 }
 
-::testArguments(a, b) {
-  -> a + b;
+:testArguments(a, b) {
+  ->a + b;
 }
 
 print "$expected$";

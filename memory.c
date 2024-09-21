@@ -2,6 +2,7 @@
 
 #include "compiler.h"
 #include "memory.h"
+#include "object.h"
 #include "vm.h"
 
 #ifdef DEBUG_LOG_GC
@@ -84,6 +85,11 @@ static void blackenObject(Obj *object) {
     markObject((Obj *)bound->method);
     break;
   }
+  case OBJ_MODULE: {
+    ObjModule *module = (ObjModule *)object;
+    markObject((Obj *)module->name);
+    markTable(&module->methods);
+  }
   case OBJ_CLASS: {
     ObjClass *klass = (ObjClass *)object;
     markObject((Obj *)klass->name);
@@ -134,6 +140,12 @@ static void freeObject(Obj *object) {
   case OBJ_BOUND_METHOD:
     FREE(ObjBoundMethod, object);
     break;
+  case OBJ_MODULE: {
+    ObjModule *module = (ObjModule *)object;
+    freeTable(&module->methods);
+    FREE(ObjModule, object);
+    break;
+  }
   case OBJ_CLASS: {
     ObjClass *klass = (ObjClass *)object;
     freeTable(&klass->methods);

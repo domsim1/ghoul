@@ -44,7 +44,7 @@ static void defineNativeModuleMethod(ObjModule *module, const char *name,
   ObjNative *native = newNative(function);
   Value nativeFn = OBJ_VAL(native);
   push(nativeFn);
-  tableSet(&module->methods, AS_STRING(id), nativeFn);
+  tableSet(&module->fields, AS_STRING(id), nativeFn);
   pop();
   pop();
   pop();

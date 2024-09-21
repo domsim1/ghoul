@@ -45,7 +45,7 @@ ObjBoundMethod *newBoundMethod(Value receiver, ObjClosure *method) {
 ObjModule *newModule(ObjString *name) {
   ObjModule *module = ALLOCATE_OBJ(ObjModule, OBJ_MODULE);
   module->name = name;
-  initTable(&module->methods);
+  initTable(&module->fields);
   return module;
 }
 

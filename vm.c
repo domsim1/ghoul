@@ -174,7 +174,7 @@ static bool invokeFromClass(ObjClass *klass, ObjString *name, int argCount) {
 
 static bool invokeFromModule(ObjModule *module, ObjString *name, int argCount) {
   Value method;
-  if (!tableGet(&module->methods, name, &method)) {
+  if (!tableGet(&module->fields, name, &method)) {
     runtimeError("Undefined property '%s'.", name->chars);
     return false;
   }
@@ -254,7 +254,7 @@ static void defineMethod(ObjString *name) {
     return;
   }
   ObjModule *module = AS_MODULE(peek(1));
-  tableSet(&module->methods, name, method);
+  tableSet(&module->fields, name, method);
   pop();
 }
 
@@ -439,7 +439,7 @@ static InterpretResult run() {
         ObjString *name = READ_STRING();
 
         Value method;
-        if (!tableGet(&module->methods, name, &method)) {
+        if (!tableGet(&module->fields, name, &method)) {
           runtimeError("Undefined property '%s'.", name->chars);
           return false;
         }

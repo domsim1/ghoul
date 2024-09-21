@@ -2,5 +2,6 @@
 #define ghoul_native_h
 
 void registerNatives();
+void registerListNatives();
 
 #endif

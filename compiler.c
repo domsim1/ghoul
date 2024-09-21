@@ -7,6 +7,7 @@
 #include "common.h"
 #include "compiler.h"
 #include "memory.h"
+#include "native.h"
 #include "scanner.h"
 #include "table.h"
 
@@ -955,14 +956,40 @@ static void method(bool canInit) {
   emitBytes(OP_METHOD, constant);
 }
 
+static bool checkModuleName(int start, int length, const char *rest,
+                            ObjString *moduleName) {
+  return moduleName->length == start + length &&
+         memcmp(moduleName->chars + start, rest, length) == 0;
+}
+
+static bool matchUseModule(ObjString *moduleName) {
+  if (moduleName->length < 3) {
+    return false;
+  }
+
+  switch (moduleName->chars[0]) {
+  case 'L':
+    if (checkModuleName(1, 3, "ist", moduleName)) {
+      registerListNatives();
+      return true;
+    }
+  }
+  return false;
+}
+
 static void useStatement() {
   consume(TOKEN_STRING, "Expect file path.");
   Token useFile = parser.previous;
 
-  ObjString *filePath = copyString(parser.previous.start + 1,
-                                   parser.previous.length - 2, &vm.strings);
+  ObjString *usePath = copyString(parser.previous.start + 1,
+                                  parser.previous.length - 2, &vm.strings);
 
-  char *resolvePathRes = realpath(filePath->chars, actualpath);
+  if (matchUseModule(usePath)) {
+    consume(TOKEN_SEMICOLON, "Expect ';' after use statement.");
+    return;
+  }
+
+  char *resolvePathRes = realpath(usePath->chars, actualpath);
   if (resolvePathRes == NULL) {
     errorAt(&useFile, "Failed to resolve file path.");
     return;

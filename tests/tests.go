@@ -20,7 +20,7 @@ func main() {
 		go func(f string) {
 			defer wg.Done()
 			resBuffer := ""
-			res := run(f)
+			res := run(f, &resBuffer)
 			if getRes(res, f, &resBuffer) {
 				resBuffer = fmt.Sprintf("%s\033[32msuccess:\033[0m test passed in %s\n", resBuffer, f)
 			}
@@ -72,7 +72,7 @@ func getFiles() []string {
 	return files
 }
 
-func run(filepath string) string {
+func run(filepath string, resBuffer *string) string {
 	path, err := exec.LookPath("./ghoul")
 	if err != nil {
 		log.Fatal(err)
@@ -80,7 +80,7 @@ func run(filepath string) string {
 	cmd := exec.Command(path, filepath)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		println(fmt.Sprintf("\033[31merror:\033[0m non zero exit, code %s;\n %s", err, out))
+		*resBuffer = fmt.Sprintf("%s\033[31merror:\033[0m non zero exit, code %s;\n %s\n", *resBuffer, err, out)
 		return ""
 	}
 	outstring := string(out)

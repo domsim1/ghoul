@@ -173,21 +173,25 @@ static bool invokeFromClass(ObjClass *klass, ObjString *name, int argCount) {
 
 static bool invoke(ObjString *name, int argCount) {
   Value receiver = peek(argCount);
-
-  if (!IS_INSTANCE(receiver)) {
-    runtimeError("Only instances have methods.");
-    return false;
+  if (IS_INSTANCE(receiver)) {
+    ObjInstance *instance = AS_INSTANCE(receiver);
+    Value value;
+    if (tableGet(&instance->fields, name, &value)) {
+      vm.stackTop[-argCount - 1] = value;
+      return callValue(value, argCount);
+    }
+    return invokeFromClass(instance->klass, name, argCount);
+  } else if (IS_MODULE(receiver)) {
+    ObjModule *module = AS_MODULE(receiver);
+    Value method;
+    if (!tableGet(&module->methods, name, &method)) {
+      runtimeError("Undefined property '%s'.", name->chars);
+      return false;
+    }
+    return call(AS_CLOSURE(method), argCount);
   }
-
-  ObjInstance *instance = AS_INSTANCE(receiver);
-
-  Value value;
-  if (tableGet(&instance->fields, name, &value)) {
-    vm.stackTop[-argCount - 1] = value;
-    return callValue(value, argCount);
-  }
-
-  return invokeFromClass(instance->klass, name, argCount);
+  runtimeError("Only instances and modules have methods.");
+  return false;
 }
 
 static bool bindMethod(ObjClass *klass, ObjString *name) {
@@ -239,8 +243,14 @@ static void closeUpvalues(Value *last) {
 
 static void defineMethod(ObjString *name) {
   Value method = peek(0);
-  ObjClass *klass = AS_CLASS(peek(1));
-  tableSet(&klass->methods, name, method);
+  if (IS_CLASS(peek(1))) {
+    ObjClass *klass = AS_CLASS(peek(1));
+    tableSet(&klass->methods, name, method);
+    pop();
+    return;
+  }
+  ObjModule *module = AS_MODULE(peek(1));
+  tableSet(&module->methods, name, method);
   pop();
 }
 
@@ -406,24 +416,36 @@ static InterpretResult run() {
       break;
     }
     case OP_GET_PROPERTY: {
-      if (!IS_INSTANCE(peek(0))) {
-        runtimeError("Only instances have properties.");
-        return INTERPRET_RUNTIME_ERROR;
-      }
-      ObjInstance *instance = AS_INSTANCE(peek(0));
-      ObjString *name = READ_STRING();
+      if (IS_INSTANCE(peek(0))) {
+        ObjInstance *instance = AS_INSTANCE(peek(0));
+        ObjString *name = READ_STRING();
 
-      Value value;
-      if (tableGet(&instance->fields, name, &value)) {
+        Value value;
+        if (tableGet(&instance->fields, name, &value)) {
+          pop();
+          push(value);
+          break;
+        }
+        if (!bindMethod(instance->klass, name)) {
+          return INTERPRET_RUNTIME_ERROR;
+        }
+        break;
+      } else if (IS_MODULE(peek(0))) {
+        ObjModule *module = AS_MODULE(peek(0));
+        ObjString *name = READ_STRING();
+
+        Value method;
+        if (!tableGet(&module->methods, name, &method)) {
+          runtimeError("Undefined property '%s'.", name->chars);
+          return false;
+        }
+        ObjBoundMethod *bound = newBoundMethod(peek(0), AS_CLOSURE(method));
         pop();
-        push(value);
+        push(OBJ_VAL(bound));
         break;
       }
-
-      if (!bindMethod(instance->klass, name)) {
-        return INTERPRET_RUNTIME_ERROR;
-      }
-      break;
+      runtimeError("Only instances have properties.");
+      return INTERPRET_RUNTIME_ERROR;
     }
     case OP_SET_PROPERTY: {
       if (!IS_INSTANCE(peek(1))) {
@@ -598,6 +620,9 @@ static InterpretResult run() {
       frame = &vm.frames[vm.frameCount - 1];
       break;
     }
+    case OP_MODULE:
+      push(OBJ_VAL(newModule(READ_STRING())));
+      break;
     case OP_CLASS:
       push(OBJ_VAL(newClass(READ_STRING())));
       break;

@@ -1,0 +1,22 @@
+:makeItor() {
+  :counter = -1;
+  :itor() {
+    counter += 1;
+    ->counter;
+  }
+  ->itor;
+}
+
+:itor = makeItor();
+
+print "$expected$";
+print 0;
+print 1;
+print 2;
+print 3;
+print "$actual$";
+print itor();
+print itor();
+print itor();
+print itor();
+

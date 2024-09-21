@@ -34,6 +34,13 @@ ObjBoundMethod *newBoundMethod(Value receiver, ObjClosure *method) {
   return bound;
 }
 
+ObjModule *newModule(ObjString *name) {
+  ObjModule *module = ALLOCATE_OBJ(ObjModule, OBJ_MODULE);
+  module->name = name;
+  initTable(&module->methods);
+  return module;
+}
+
 ObjClass *newClass(ObjString *name) {
   ObjClass *klass = ALLOCATE_OBJ(ObjClass, OBJ_CLASS);
   klass->name = name;
@@ -186,6 +193,9 @@ void printObject(Value value) {
   switch (OBJ_TYPE(value)) {
   case OBJ_BOUND_METHOD:
     printFunction(AS_BOUND_METHOD(value)->method->function);
+    break;
+  case OBJ_MODULE:
+    printf("<module %s>", AS_MODULE(value)->name->chars);
     break;
   case OBJ_CLASS:
     printf("<class %s>", AS_CLASS(value)->name->chars);

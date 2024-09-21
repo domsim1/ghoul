@@ -1,0 +1,20 @@
+:Tree {
+  Branch(msg) {
+    :Leaf {
+      init() {
+        print msg;
+      }
+    }
+    ->Leaf;
+  }
+}
+
+:tree = Tree();
+:leaf = tree.Branch("Hi");
+
+print "$expected$";
+print "<class Leaf>";
+print "Hi";
+print "$actual$";
+print leaf;
+leaf();

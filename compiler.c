@@ -487,7 +487,7 @@ static void call(bool canAssign) {
 }
 
 static void dot(bool canAssign) {
-  consume(TOKEN_IDENTIFIER, "Expect property name after '.'.");
+  consume(TOKEN_IDENTIFIER, "Expect property identifier after '.'.");
   uint8_t name = identifierConstant(&parser.previous);
   uint8_t binaryOp;
 
@@ -732,7 +732,7 @@ static void super_(bool canAssign) {
     error("Can't use 'super' in a class with no superclass.");
   }
   consume(TOKEN_DOT, "Expect '.' after 'super'.");
-  consume(TOKEN_IDENTIFIER, "Expect superclass method name.");
+  consume(TOKEN_IDENTIFIER, "Expect superclass method identifier.");
   uint8_t name = identifierConstant(&parser.previous);
 
   namedVariable(syntheticToken("this"), false);
@@ -819,6 +819,7 @@ ParseRule rules[] = {
     [TOKEN_THIS] = {this_, NULL, PREC_NONE},
     [TOKEN_TRUE] = {literal, NULL, PREC_NONE},
     [TOKEN_COLON] = {NULL, NULL, PREC_NONE},
+    [TOKEN_COLON_COLON] = {NULL, NULL, PREC_NONE},
     [TOKEN_WHILE] = {NULL, NULL, PREC_NONE},
     [TOKEN_BREAK] = {NULL, NULL, PREC_NONE},
     [TOKEN_USE] = {NULL, NULL, PREC_NONE},
@@ -872,7 +873,7 @@ static void declareVariable() {
     }
 
     if (identifierEqual(name, &local->name)) {
-      error("Already a variable with this name in this scope.");
+      error("Already a variable with this identifier in this scope.");
     }
   }
   addLocal(*name);
@@ -916,7 +917,7 @@ static void function(FunctionType type) {
   initCompiler(&compiler, type, current->file);
   beginScope();
 
-  consume(TOKEN_LEFT_PAREN, "Expect '(' after function name.");
+  consume(TOKEN_LEFT_PAREN, "Expect '(' after function identifier.");
   if (!check(TOKEN_RIGHT_PAREN)) {
     do {
       current->function->arity++;
@@ -941,12 +942,12 @@ static void function(FunctionType type) {
   }
 }
 
-static void method() {
-  consume(TOKEN_IDENTIFIER, "Expect method name.");
+static void method(bool canInit) {
+  consume(TOKEN_IDENTIFIER, "Expect method identifier.");
   uint8_t constant = identifierConstant(&parser.previous);
 
   FunctionType type = TYPE_METHOD;
-  if (parser.previous.length == 4 &&
+  if (canInit && parser.previous.length == 4 &&
       memcmp(parser.previous.start, "init", 4) == 0) {
     type = TYPE_INITIALIZER;
   }
@@ -1007,6 +1008,24 @@ static void useStatement() {
   consume(TOKEN_SEMICOLON, "Expect ';' after use statement.");
 }
 
+static void moduleDeclaration() {
+  consume(TOKEN_IDENTIFIER, "Expect identifier for module.");
+  Token moduleName = parser.previous;
+  uint8_t nameConstant = identifierConstant(&parser.previous);
+  declareVariable();
+
+  emitBytes(OP_MODULE, nameConstant);
+  defineVariable(nameConstant);
+
+  namedVariable(moduleName, false);
+  consume(TOKEN_LEFT_BRACE, "Expect '{' before module body.");
+  while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
+    method(false);
+  }
+  consume(TOKEN_RIGHT_BRACE, "Expect '}' before class body.");
+  emitByte(OP_POP);
+}
+
 static void classDeclaration() {
   Token className = parser.previous;
   uint8_t nameConstant = identifierConstant(&parser.previous);
@@ -1021,7 +1040,7 @@ static void classDeclaration() {
   currentClass = &classCompiler;
 
   if (match(TOKEN_LESS)) {
-    consume(TOKEN_IDENTIFIER, "Expect superclass name.");
+    consume(TOKEN_IDENTIFIER, "Expect superclass identifier.");
     variable(false);
 
     if (identifierEqual(&className, &parser.previous)) {
@@ -1040,7 +1059,7 @@ static void classDeclaration() {
   namedVariable(className, false);
   consume(TOKEN_LEFT_BRACE, "Expect '{' before class body.");
   while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
-    method();
+    method(true);
   }
   consume(TOKEN_RIGHT_BRACE, "Expect '}' before class body.");
   emitByte(OP_POP);
@@ -1254,6 +1273,8 @@ static void synchronize() {
 static void declaration() {
   if (match(TOKEN_COLON)) {
     varDeclaration();
+  } else if (match(TOKEN_COLON_COLON)) {
+    moduleDeclaration();
   } else {
     statement();
   }

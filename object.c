@@ -26,6 +26,14 @@ static Obj *allocateObject(size_t size, ObjType type) {
   return object;
 }
 
+ObjBoundNative *newBoundNative(Value receiver, ObjNative *native) {
+  ObjBoundNative *bound = ALLOCATE_OBJ(ObjBoundNative, OBJ_BOUND_NATIVE);
+
+  bound->receiver = receiver;
+  bound->native = native;
+  return bound;
+}
+
 ObjBoundMethod *newBoundMethod(Value receiver, ObjClosure *method) {
   ObjBoundMethod *bound = ALLOCATE_OBJ(ObjBoundMethod, OBJ_BOUND_METHOD);
 
@@ -194,6 +202,9 @@ void printObject(Value value) {
   case OBJ_BOUND_METHOD:
     printFunction(AS_BOUND_METHOD(value)->method->function);
     break;
+  case OBJ_BOUND_NATIVE:
+    printf("<bound native fn>");
+    break;
   case OBJ_MODULE:
     printf("<module %s>", AS_MODULE(value)->name->chars);
     break;
@@ -210,7 +221,7 @@ void printObject(Value value) {
     printf("<instance %s>", AS_INSTANCE(value)->klass->name->chars);
     break;
   case OBJ_NATIVE:
-    printf("<native fn %s>", AS_FUNCTION(value)->name->chars);
+    printf("<native fn>");
     break;
   case OBJ_LIST:
     printList(AS_LIST(value));

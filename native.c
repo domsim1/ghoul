@@ -22,6 +22,30 @@ static void defineNative(const char *name, NativeFn function) {
   pop();
 }
 
+static ObjModule *defineModule(const char *name) {
+  ObjString *identifier = copyString(name, (int)strlen(name), &vm.strings);
+  push(OBJ_VAL(identifier));
+  ObjModule *module = newModule(identifier);
+  push(OBJ_VAL(module));
+  tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
+  pop();
+  pop();
+  return module;
+}
+
+static void defineNativeModuleMethod(ObjModule *module, const char *name,
+                                     NativeFn function) {
+  ObjString *identifier = copyString(name, (int)strlen(name), &vm.strings);
+  push(OBJ_VAL(module));
+  push(OBJ_VAL(identifier));
+  ObjNative *native = newNative(function);
+  push(OBJ_VAL(native));
+  tableSet(&module->methods, AS_STRING(vm.stack[1]), vm.stack[2]);
+  pop();
+  pop();
+  pop();
+}
+
 static Value clockNative(int argCount, Value *args) {
   if (!checkArgCount(argCount, 0)) {
     return 0;
@@ -83,9 +107,12 @@ static Value deleteListNative(int argCount, Value *args) {
 }
 
 void registerNatives() {
-  defineNative("clock", clockNative);
+  // defineNative("clock", clockNative);
   defineNative("exit", exitNative);
 
   defineNative("push", pushListNative);
   defineNative("remove", deleteListNative);
+
+  ObjModule *tickModule = defineModule("Tick");
+  defineNativeModuleMethod(tickModule, "Tock", clockNative);
 }

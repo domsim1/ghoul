@@ -119,6 +119,18 @@ static bool callValue(Value callee, int argCount) {
       vm.stackTop[-argCount - 1] = bound->receiver;
       return call(bound->method, argCount);
     }
+    case OBJ_BOUND_NATIVE: {
+      ObjBoundNative *bound = AS_BOUND_NATIVE(callee);
+      vm.stackTop[-argCount - 1] = bound->receiver;
+      NativeFn native = bound->native->function;
+      Value result = native(argCount, vm.stackTop - argCount);
+      if (!result) {
+        return false;
+      }
+      vm.stackTop -= argCount + 1;
+      push(result);
+      return true;
+    }
     case OBJ_CLASS: {
       ObjClass *klass = AS_CLASS(callee);
       vm.stackTop[-argCount - 1] = OBJ_VAL(newInstance(klass));
@@ -151,17 +163,6 @@ static bool callValue(Value callee, int argCount) {
   return false;
 }
 
-static bool callObjNative(NativeFn native, int argCount) {
-  argCount = argCount + 1;
-  Value result = native(argCount, vm.stackTop - argCount);
-  if (!result) {
-    return false;
-  }
-  vm.stackTop -= argCount;
-  push(result);
-  return true;
-}
-
 static bool invokeFromClass(ObjClass *klass, ObjString *name, int argCount) {
   Value method;
   if (!tableGet(&klass->methods, name, &method)) {
@@ -169,6 +170,15 @@ static bool invokeFromClass(ObjClass *klass, ObjString *name, int argCount) {
     return false;
   }
   return call(AS_CLOSURE(method), argCount);
+}
+
+static bool invokeFromModule(ObjModule *module, ObjString *name, int argCount) {
+  Value method;
+  if (!tableGet(&module->methods, name, &method)) {
+    runtimeError("Undefined property '%s'.", name->chars);
+    return false;
+  }
+  return callValue(method, argCount);
 }
 
 static bool invoke(ObjString *name, int argCount) {
@@ -182,13 +192,7 @@ static bool invoke(ObjString *name, int argCount) {
     }
     return invokeFromClass(instance->klass, name, argCount);
   } else if (IS_MODULE(receiver)) {
-    ObjModule *module = AS_MODULE(receiver);
-    Value method;
-    if (!tableGet(&module->methods, name, &method)) {
-      runtimeError("Undefined property '%s'.", name->chars);
-      return false;
-    }
-    return call(AS_CLOSURE(method), argCount);
+    return invokeFromModule(AS_MODULE(receiver), name, argCount);
   }
   runtimeError("Only instances and modules have methods.");
   return false;
@@ -438,6 +442,13 @@ static InterpretResult run() {
         if (!tableGet(&module->methods, name, &method)) {
           runtimeError("Undefined property '%s'.", name->chars);
           return false;
+        }
+        if (IS_NATIVE(method)) {
+          ObjBoundNative *bound =
+              newBoundNative(peek(0), (ObjNative *)AS_OBJ(method));
+          pop();
+          push(OBJ_VAL(bound));
+          break;
         }
         ObjBoundMethod *bound = newBoundMethod(peek(0), AS_CLOSURE(method));
         pop();

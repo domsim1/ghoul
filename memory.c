@@ -85,6 +85,11 @@ static void blackenObject(Obj *object) {
     markObject((Obj *)bound->method);
     break;
   }
+  case OBJ_BOUND_NATIVE: {
+    ObjBoundNative *bound = (ObjBoundNative *)object;
+    markValue(bound->receiver);
+    break;
+  }
   case OBJ_MODULE: {
     ObjModule *module = (ObjModule *)object;
     markObject((Obj *)module->name);

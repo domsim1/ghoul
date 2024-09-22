@@ -169,33 +169,25 @@ static bool invokeFromClass(ObjClass *klass, ObjString *name, int argCount) {
     runtimeError("Undefined property '%s'.", name->chars);
     return false;
   }
-  return call(AS_CLOSURE(method), argCount);
-}
-
-static bool invokeFromModule(ObjModule *module, ObjString *name, int argCount) {
-  Value method;
-  if (!tableGet(&module->fields, name, &method)) {
-    runtimeError("Undefined property '%s'.", name->chars);
-    return false;
+  if (IS_NATIVE(method)) {
+    return callValue(method, argCount);
   }
-  return callValue(method, argCount);
+  return call(AS_CLOSURE(method), argCount);
 }
 
 static bool invoke(ObjString *name, int argCount) {
   Value receiver = peek(argCount);
-  if (IS_INSTANCE(receiver)) {
-    ObjInstance *instance = AS_INSTANCE(receiver);
-    Value value;
-    if (tableGet(&instance->fields, name, &value)) {
-      vm.stackTop[-argCount - 1] = value;
-      return callValue(value, argCount);
-    }
-    return invokeFromClass(instance->klass, name, argCount);
-  } else if (IS_MODULE(receiver)) {
-    return invokeFromModule(AS_MODULE(receiver), name, argCount);
+  if (!IS_INSTANCE(receiver)) {
+    runtimeError("Only instances and modules have methods.");
+    return false;
   }
-  runtimeError("Only instances and modules have methods.");
-  return false;
+  ObjInstance *instance = AS_INSTANCE(receiver);
+  Value value;
+  if (tableGet(&instance->fields, name, &value)) {
+    vm.stackTop[-argCount - 1] = value;
+    return callValue(value, argCount);
+  }
+  return invokeFromClass(instance->klass, name, argCount);
 }
 
 static bool bindMethod(ObjClass *klass, ObjString *name) {
@@ -205,8 +197,15 @@ static bool bindMethod(ObjClass *klass, ObjString *name) {
     return false;
   }
 
-  ObjBoundMethod *bound = newBoundMethod(peek(0), AS_CLOSURE(method));
+  if (IS_NATIVE(method)) {
+    ObjBoundNative *bound =
+        newBoundNative(peek(0), (ObjNative *)AS_OBJ(method));
+    pop();
+    push(OBJ_VAL(bound));
+    return true;
+  }
 
+  ObjBoundMethod *bound = newBoundMethod(peek(0), AS_CLOSURE(method));
   pop();
   push(OBJ_VAL(bound));
   return true;
@@ -247,15 +246,10 @@ static void closeUpvalues(Value *last) {
 
 static void defineMethod(ObjString *name) {
   Value method = peek(0);
-  if (IS_CLASS(peek(1))) {
-    ObjClass *klass = AS_CLASS(peek(1));
-    tableSet(&klass->methods, name, method);
-    pop();
-    return;
-  }
-  ObjModule *module = AS_MODULE(peek(1));
-  tableSet(&module->fields, name, method);
+  ObjClass *klass = AS_CLASS(peek(1));
+  tableSet(&klass->methods, name, method);
   pop();
+  return;
 }
 
 static bool isFalsey(Value value) {
@@ -420,51 +414,32 @@ static InterpretResult run() {
       break;
     }
     case OP_GET_PROPERTY: {
-      if (IS_INSTANCE(peek(0))) {
-        ObjInstance *instance = AS_INSTANCE(peek(0));
-        ObjString *name = READ_STRING();
+      if (!IS_INSTANCE(peek(0))) {
+        runtimeError("Only instances have properties.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      ObjInstance *instance = AS_INSTANCE(peek(0));
+      ObjString *name = READ_STRING();
 
-        Value value;
-        if (tableGet(&instance->fields, name, &value)) {
-          pop();
-          push(value);
-          break;
-        }
-        if (!bindMethod(instance->klass, name)) {
-          return INTERPRET_RUNTIME_ERROR;
-        }
-        break;
-      } else if (IS_MODULE(peek(0))) {
-        ObjModule *module = AS_MODULE(peek(0));
-        ObjString *name = READ_STRING();
-
-        Value method;
-        if (!tableGet(&module->fields, name, &method)) {
-          runtimeError("Undefined property '%s'.", name->chars);
-          return false;
-        }
-        if (IS_NATIVE(method)) {
-          ObjBoundNative *bound =
-              newBoundNative(peek(0), (ObjNative *)AS_OBJ(method));
-          pop();
-          push(OBJ_VAL(bound));
-          break;
-        }
-        ObjBoundMethod *bound = newBoundMethod(peek(0), AS_CLOSURE(method));
+      Value value;
+      if (tableGet(&instance->fields, name, &value)) {
         pop();
-        push(OBJ_VAL(bound));
+        push(value);
         break;
       }
-      runtimeError("Only instances have properties.");
-      return INTERPRET_RUNTIME_ERROR;
+      if (!bindMethod(instance->klass, name)) {
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      break;
     }
     case OP_SET_PROPERTY: {
       if (!IS_INSTANCE(peek(1))) {
         runtimeError("Only instances have fields.");
         return INTERPRET_RUNTIME_ERROR;
       }
+      ObjString *name = READ_STRING();
       ObjInstance *instance = AS_INSTANCE(peek(1));
-      tableSet(&instance->fields, READ_STRING(), peek(0));
+      tableSet(&instance->fields, name, peek(0));
       Value value = pop();
       pop();
       push(value);
@@ -631,9 +606,6 @@ static InterpretResult run() {
       frame = &vm.frames[vm.frameCount - 1];
       break;
     }
-    case OP_MODULE:
-      push(OBJ_VAL(newModule(READ_STRING())));
-      break;
     case OP_CLASS:
       push(OBJ_VAL(newClass(READ_STRING())));
       break;

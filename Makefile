@@ -6,7 +6,7 @@ cfiles := main.c chunk.c memory.c debug.c value.c vm.c compiler.c scanner.c obje
 hfiles := common.h chunk.h compiler.h debug.h memory.h native.h object.h scanner.h table.h value.h vm.h
 
 ghoul: $(cfiles) $(hfiles)
-	$(CC) $(WARN) -o $(EXE) $(cfiles) $(LIBS)
+	$(CC) $(WARN) -g -o $(EXE) $(cfiles) $(LIBS)
 
 .PHONY: test clean
 test: ghoul

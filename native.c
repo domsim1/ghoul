@@ -22,29 +22,32 @@ static void defineNative(const char *name, NativeFn function) {
   pop();
 }
 
-static ObjModule *defineModule(const char *name) {
+static ObjInstance *defineInstance(const char *name) {
   ObjString *identifier = copyString(name, (int)strlen(name), &vm.strings);
   Value id = OBJ_VAL(identifier);
   push(id);
-  ObjModule *module = newModule(identifier);
-  Value mod = OBJ_VAL(module);
-  push(mod);
-  tableSet(&vm.globals, AS_STRING(id), mod);
+  ObjClass *klass = newClass(identifier);
+  push(OBJ_VAL(klass));
+  ObjInstance *instance = newInstance(klass);
+  Value instanceValue = OBJ_VAL(instance);
+  push(instanceValue);
+  tableSet(&vm.globals, AS_STRING(id), instanceValue);
   pop();
   pop();
-  return module;
+  pop();
+  return instance;
 }
 
-static void defineNativeModuleMethod(ObjModule *module, const char *name,
-                                     NativeFn function) {
+static void defineNativeInstanceMethod(ObjInstance *instance, const char *name,
+                                       NativeFn function) {
   ObjString *identifier = copyString(name, (int)strlen(name), &vm.strings);
-  push(OBJ_VAL(module));
+  push(OBJ_VAL(instance));
   Value id = OBJ_VAL(identifier);
   push(id);
   ObjNative *native = newNative(function);
   Value nativeFn = OBJ_VAL(native);
   push(nativeFn);
-  tableSet(&module->fields, AS_STRING(id), nativeFn);
+  tableSet(&instance->klass->methods, AS_STRING(id), nativeFn);
   pop();
   pop();
   pop();
@@ -123,8 +126,8 @@ void registerListNatives() {
   if (isRegistered)
     return;
 
-  ObjModule *listModule = defineModule("List");
-  defineNativeModuleMethod(listModule, "clock", clockNative);
+  ObjInstance *listInstance = defineInstance("List");
+  defineNativeInstanceMethod(listInstance, "clock", clockNative);
 
   isRegistered = true;
 }

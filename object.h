@@ -10,7 +10,6 @@
 
 #define IS_BOUND_NATIVE(value) isObjType(value, OBJ_BOUND_NATIVE)
 #define IS_BOUND_METHOD(value) isObjType(value, OBJ_BOUND_METHOD)
-#define IS_MODULE(value) isObjType(value, OBJ_MODULE)
 #define IS_CLASS(value) isObjType(value, OBJ_CLASS)
 #define IS_CLOSURE(value) isObjType(value, OBJ_CLOSURE)
 #define IS_FUNCTION(value) isObjType(value, OBJ_FUNCTION)
@@ -21,7 +20,6 @@
 
 #define AS_BOUND_NATIVE(value) ((ObjBoundNative *)AS_OBJ(value))
 #define AS_BOUND_METHOD(value) ((ObjBoundMethod *)AS_OBJ(value))
-#define AS_MODULE(value) ((ObjModule *)AS_OBJ(value))
 #define AS_CLASS(value) ((ObjClass *)AS_OBJ(value))
 #define AS_CLOSURE(value) ((ObjClosure *)AS_OBJ(value))
 #define AS_FUNCTION(value) ((ObjFunction *)AS_OBJ(value))
@@ -38,7 +36,6 @@ typedef enum {
   OBJ_CLOSURE,
   OBJ_FUNCTION,
   OBJ_INSTANCE,
-  OBJ_MODULE,
   OBJ_NATIVE,
   OBJ_LIST,
   OBJ_STRING,
@@ -90,12 +87,6 @@ typedef struct {
 typedef struct {
   Obj obj;
   ObjString *name;
-  Table fields;
-} ObjModule;
-
-typedef struct {
-  Obj obj;
-  ObjString *name;
   Table methods;
 } ObjClass;
 
@@ -126,7 +117,6 @@ typedef struct {
 
 ObjBoundMethod *newBoundMethod(Value receiver, ObjClosure *method);
 ObjBoundNative *newBoundNative(Value receiver, ObjNative *native);
-ObjModule *newModule(ObjString *name);
 ObjClass *newClass(ObjString *name);
 ObjClosure *newClosure(ObjFunction *function);
 ObjFunction *newFunction();

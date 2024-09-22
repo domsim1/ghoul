@@ -90,11 +90,6 @@ static void blackenObject(Obj *object) {
     markValue(bound->receiver);
     break;
   }
-  case OBJ_MODULE: {
-    ObjModule *module = (ObjModule *)object;
-    markObject((Obj *)module->name);
-    markTable(&module->fields);
-  }
   case OBJ_CLASS: {
     ObjClass *klass = (ObjClass *)object;
     markObject((Obj *)klass->name);
@@ -148,12 +143,6 @@ static void freeObject(Obj *object) {
   case OBJ_BOUND_NATIVE:
     FREE(ObjBoundNative, object);
     break;
-  case OBJ_MODULE: {
-    ObjModule *module = (ObjModule *)object;
-    freeTable(&module->fields);
-    FREE(ObjModule, object);
-    break;
-  }
   case OBJ_CLASS: {
     ObjClass *klass = (ObjClass *)object;
     freeTable(&klass->methods);

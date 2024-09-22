@@ -402,149 +402,6 @@ static bool isAssignment(uint8_t *binaryOp) {
   return true;
 }
 
-static void binary(bool canAssign) {
-  TokenType operatorType = parser.previous.type;
-  ParseRule *rule = getRule(operatorType);
-  parsePrecedence((Precedence)(rule->precedence + 1));
-
-  switch (operatorType) {
-  case TOKEN_BANG_EQUAL:
-    emitByte(OP_BANG_EQUAL);
-    break;
-  case TOKEN_EQUAL_EQUAL:
-    emitByte(OP_EQUAL);
-    break;
-  case TOKEN_GREATER:
-    emitByte(OP_GREATER);
-    break;
-  case TOKEN_GREATER_EQUAL:
-    emitByte(OP_GREATER_EQUAL);
-    break;
-  case TOKEN_LESS:
-    emitByte(OP_LESS);
-    break;
-  case TOKEN_LESS_EQUAL:
-    emitByte(OP_LESS_EQUAL);
-    break;
-  case TOKEN_BANG:
-    emitByte(OP_NOT);
-    break;
-  case TOKEN_PLUS:
-    emitByte(OP_ADD);
-    break;
-  case TOKEN_MINUS:
-    emitByte(OP_SUBTRACT);
-    break;
-  case TOKEN_STAR:
-    emitByte(OP_MULTIPLY);
-    break;
-  case TOKEN_SLASH:
-    emitByte(OP_DIVIDE);
-    break;
-  case TOKEN_PERCENTAGE:
-    emitByte(OP_MOD);
-    break;
-  case TOKEN_STAR_STAR:
-    emitByte(OP_EXPONENTIATION);
-    break;
-  case TOKEN_BITWISE_AND:
-    emitByte(OP_BITWISE_AND);
-    break;
-  case TOKEN_BITWISE_OR:
-    emitByte(OP_BITWISE_OR);
-    break;
-  case TOKEN_BITWISE_XOR:
-    emitByte(OP_BITWISE_XOR);
-    break;
-  case TOKEN_BITWISE_LEFT_SHIFT:
-    emitByte(OP_BITWISE_LEFT_SHIFT);
-    break;
-  case TOKEN_BITWISE_RIGHT_SHIFT:
-    emitByte(OP_BITWISE_RIGHT_SHIFT);
-    break;
-  default:
-    return;
-  }
-}
-
-static uint8_t argumentList() {
-  uint8_t argCount = 0;
-  if (!check(TOKEN_RIGHT_PAREN)) {
-    do {
-      expression();
-      if (argCount == UINT8_MAX) {
-        error("Can't have more than 255 arguments.");
-      }
-      argCount++;
-    } while (match(TOKEN_COMMA));
-  }
-  consume(TOKEN_RIGHT_PAREN, "Expect ')' after arguments.");
-  return argCount;
-}
-
-static void call(bool canAssign) {
-  uint8_t argCount = argumentList();
-  emitBytes(OP_CALL, argCount);
-}
-
-static void dot(bool canAssign) {
-  consume(TOKEN_IDENTIFIER, "Expect property identifier after '.'.");
-  uint8_t name = identifierConstant(&parser.previous);
-  uint8_t binaryOp;
-
-  if (canAssign && isAssignment(&binaryOp)) {
-    if (binaryOp == OP_NIL) {
-      expression();
-      emitBytes(OP_SET_PROPERTY, name);
-    } else {
-      emitBytes(currentChunk()->code[currentChunk()->count - 2],
-                currentChunk()->code[currentChunk()->count - 1]);
-      emitBytes(OP_GET_PROPERTY, name);
-      expression();
-      emitByte(binaryOp);
-      emitBytes(OP_SET_PROPERTY, name);
-    }
-  } else if (match(TOKEN_LEFT_PAREN)) {
-    uint8_t argCount = argumentList();
-    emitBytes(OP_INVOKE, name);
-    emitByte(argCount);
-  } else {
-    emitBytes(OP_GET_PROPERTY, name);
-  }
-}
-
-static void literal(bool canAssign) {
-  switch (parser.previous.type) {
-  case TOKEN_FALSE:
-    emitByte(OP_FALSE);
-    break;
-  case TOKEN_NIL:
-    emitByte(OP_NIL);
-    break;
-  case TOKEN_TRUE:
-    emitByte(OP_TRUE);
-    break;
-  default:
-    exit(1); // unreachable
-    return;
-  }
-}
-
-static void grouping(bool canAssign) {
-  expression();
-  consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
-}
-
-static void number(bool canAssign) {
-  double value = strtod(parser.previous.start, NULL);
-  emitConstant(NUMBER_VAL(value));
-}
-
-static void string(bool canAssign) {
-  emitConstant(OBJ_VAL(copyString(parser.previous.start + 1,
-                                  parser.previous.length - 2, &vm.strings)));
-}
-
 static uint8_t identifierConstant(Token *name) {
   return makeConstant(
       OBJ_VAL(copyString(name->start, name->length, &vm.strings)));
@@ -649,6 +506,9 @@ static Token syntheticToken(const char *text) {
   return token;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+
 static void this_(bool canAssign) {
   if (currentClass == NULL) {
     error("Can't use 'this' outside of a class.");
@@ -657,25 +517,147 @@ static void this_(bool canAssign) {
   variable(false);
 }
 
-static void unary(bool canAssign) {
+static void binary(bool canAssign) {
   TokenType operatorType = parser.previous.type;
-
-  parsePrecedence(PREC_UNARY);
+  ParseRule *rule = getRule(operatorType);
+  parsePrecedence((Precedence)(rule->precedence + 1));
 
   switch (operatorType) {
+  case TOKEN_BANG_EQUAL:
+    emitByte(OP_BANG_EQUAL);
+    break;
+  case TOKEN_EQUAL_EQUAL:
+    emitByte(OP_EQUAL);
+    break;
+  case TOKEN_GREATER:
+    emitByte(OP_GREATER);
+    break;
+  case TOKEN_GREATER_EQUAL:
+    emitByte(OP_GREATER_EQUAL);
+    break;
+  case TOKEN_LESS:
+    emitByte(OP_LESS);
+    break;
+  case TOKEN_LESS_EQUAL:
+    emitByte(OP_LESS_EQUAL);
+    break;
   case TOKEN_BANG:
     emitByte(OP_NOT);
     break;
-  case TOKEN_MINUS:
-    emitByte(OP_NEGATE);
+  case TOKEN_PLUS:
+    emitByte(OP_ADD);
     break;
-  case TOKEN_BITWISE_NOT:
-    emitByte(OP_BITWISE_NOT);
+  case TOKEN_MINUS:
+    emitByte(OP_SUBTRACT);
+    break;
+  case TOKEN_STAR:
+    emitByte(OP_MULTIPLY);
+    break;
+  case TOKEN_SLASH:
+    emitByte(OP_DIVIDE);
+    break;
+  case TOKEN_PERCENTAGE:
+    emitByte(OP_MOD);
+    break;
+  case TOKEN_STAR_STAR:
+    emitByte(OP_EXPONENTIATION);
+    break;
+  case TOKEN_BITWISE_AND:
+    emitByte(OP_BITWISE_AND);
+    break;
+  case TOKEN_BITWISE_OR:
+    emitByte(OP_BITWISE_OR);
+    break;
+  case TOKEN_BITWISE_XOR:
+    emitByte(OP_BITWISE_XOR);
+    break;
+  case TOKEN_BITWISE_LEFT_SHIFT:
+    emitByte(OP_BITWISE_LEFT_SHIFT);
+    break;
+  case TOKEN_BITWISE_RIGHT_SHIFT:
+    emitByte(OP_BITWISE_RIGHT_SHIFT);
     break;
   default:
-    exit(1);
     return;
   }
+}
+
+static uint8_t argumentList() {
+  uint8_t argCount = 0;
+  if (!check(TOKEN_RIGHT_PAREN)) {
+    do {
+      expression();
+      if (argCount == UINT8_MAX) {
+        error("Can't have more than 255 arguments.");
+      }
+      argCount++;
+    } while (match(TOKEN_COMMA));
+  }
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after arguments.");
+  return argCount;
+}
+
+static void call(bool canAssign) {
+  uint8_t argCount = argumentList();
+  emitBytes(OP_CALL, argCount);
+}
+
+static void dot(bool canAssign) {
+  consume(TOKEN_IDENTIFIER, "Expect property identifier after '.'.");
+  uint8_t name = identifierConstant(&parser.previous);
+
+  uint8_t binaryOp;
+  if (canAssign && isAssignment(&binaryOp)) {
+    if (binaryOp == OP_NIL) {
+      expression();
+      emitBytes(OP_SET_PROPERTY, name);
+    } else {
+      emitBytes(currentChunk()->code[currentChunk()->count - 2],
+                currentChunk()->code[currentChunk()->count - 1]);
+      emitBytes(OP_GET_PROPERTY, name);
+      expression();
+      emitByte(binaryOp);
+      emitBytes(OP_SET_PROPERTY, name);
+    }
+  } else if (match(TOKEN_LEFT_PAREN)) {
+    uint8_t argCount = argumentList();
+    emitBytes(OP_INVOKE, name);
+    emitByte(argCount);
+  } else {
+    emitBytes(OP_GET_PROPERTY, name);
+  }
+}
+
+static void literal(bool canAssign) {
+  switch (parser.previous.type) {
+  case TOKEN_FALSE:
+    emitByte(OP_FALSE);
+    break;
+  case TOKEN_NIL:
+    emitByte(OP_NIL);
+    break;
+  case TOKEN_TRUE:
+    emitByte(OP_TRUE);
+    break;
+  default:
+    exit(1); // unreachable
+    return;
+  }
+}
+
+static void grouping(bool canAssign) {
+  expression();
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
+}
+
+static void number(bool canAssign) {
+  double value = strtod(parser.previous.start, NULL);
+  emitConstant(NUMBER_VAL(value));
+}
+
+static void string(bool canAssign) {
+  emitConstant(OBJ_VAL(copyString(parser.previous.start + 1,
+                                  parser.previous.length - 2, &vm.strings)));
 }
 
 static void list(bool canAssign) {
@@ -769,6 +751,28 @@ static void or_(bool canAssign) {
   patchJump(endJump);
 }
 
+static void unary(bool canAssign) {
+  TokenType operatorType = parser.previous.type;
+
+  parsePrecedence(PREC_UNARY);
+
+  switch (operatorType) {
+  case TOKEN_BANG:
+    emitByte(OP_NOT);
+    break;
+  case TOKEN_MINUS:
+    emitByte(OP_NEGATE);
+    break;
+  case TOKEN_BITWISE_NOT:
+    emitByte(OP_BITWISE_NOT);
+    break;
+  default:
+    exit(1);
+    return;
+  }
+}
+#pragma GCC diagnostic pop
+
 ParseRule rules[] = {
     [TOKEN_LEFT_PAREN] = {grouping, call, PREC_CALL},
     [TOKEN_RIGHT_PAREN] = {NULL, NULL, PREC_NONE},
@@ -820,7 +824,6 @@ ParseRule rules[] = {
     [TOKEN_THIS] = {this_, NULL, PREC_NONE},
     [TOKEN_TRUE] = {literal, NULL, PREC_NONE},
     [TOKEN_COLON] = {NULL, NULL, PREC_NONE},
-    [TOKEN_COLON_COLON] = {NULL, NULL, PREC_NONE},
     [TOKEN_WHILE] = {NULL, NULL, PREC_NONE},
     [TOKEN_BREAK] = {NULL, NULL, PREC_NONE},
     [TOKEN_USE] = {NULL, NULL, PREC_NONE},
@@ -944,7 +947,6 @@ static void function(FunctionType type) {
 }
 
 static void method(bool canInit) {
-  consume(TOKEN_IDENTIFIER, "Expect method identifier.");
   uint8_t constant = identifierConstant(&parser.previous);
 
   FunctionType type = TYPE_METHOD;
@@ -956,20 +958,20 @@ static void method(bool canInit) {
   emitBytes(OP_METHOD, constant);
 }
 
-static bool checkModuleName(int start, int length, const char *rest,
-                            ObjString *moduleName) {
-  return moduleName->length == start + length &&
-         memcmp(moduleName->chars + start, rest, length) == 0;
+static bool checkBuitinName(int start, int length, const char *rest,
+                            ObjString *name) {
+  return name->length == start + length &&
+         memcmp(name->chars + start, rest, length) == 0;
 }
 
-static bool matchUseModule(ObjString *moduleName) {
-  if (moduleName->length < 3) {
+static bool matchUseBuiltin(ObjString *name) {
+  if (name->length != 4) {
     return false;
   }
 
-  switch (moduleName->chars[0]) {
+  switch (name->chars[0]) {
   case 'L':
-    if (checkModuleName(1, 3, "ist", moduleName)) {
+    if (checkBuitinName(1, 3, "ist", name)) {
       registerListNatives();
       return true;
     }
@@ -984,7 +986,7 @@ static void useStatement() {
   ObjString *usePath = copyString(parser.previous.start + 1,
                                   parser.previous.length - 2, &vm.strings);
 
-  if (matchUseModule(usePath)) {
+  if (matchUseBuiltin(usePath)) {
     consume(TOKEN_SEMICOLON, "Expect ';' after use statement.");
     return;
   }
@@ -1035,24 +1037,6 @@ static void useStatement() {
   consume(TOKEN_SEMICOLON, "Expect ';' after use statement.");
 }
 
-static void moduleDeclaration() {
-  consume(TOKEN_IDENTIFIER, "Expect identifier for module.");
-  Token moduleName = parser.previous;
-  uint8_t nameConstant = identifierConstant(&parser.previous);
-  declareVariable();
-
-  emitBytes(OP_MODULE, nameConstant);
-  defineVariable(nameConstant);
-
-  namedVariable(moduleName, false);
-  consume(TOKEN_LEFT_BRACE, "Expect '{' before module body.");
-  while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
-    method(false);
-  }
-  consume(TOKEN_RIGHT_BRACE, "Expect '}' before class body.");
-  emitByte(OP_POP);
-}
-
 static void classDeclaration() {
   Token className = parser.previous;
   uint8_t nameConstant = identifierConstant(&parser.previous);
@@ -1086,6 +1070,7 @@ static void classDeclaration() {
   namedVariable(className, false);
   consume(TOKEN_LEFT_BRACE, "Expect '{' before class body.");
   while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
+    consume(TOKEN_IDENTIFIER, "Expect identifier.");
     method(true);
   }
   consume(TOKEN_RIGHT_BRACE, "Expect '}' before class body.");
@@ -1300,8 +1285,6 @@ static void synchronize() {
 static void declaration() {
   if (match(TOKEN_COLON)) {
     varDeclaration();
-  } else if (match(TOKEN_COLON_COLON)) {
-    moduleDeclaration();
   } else {
     statement();
   }

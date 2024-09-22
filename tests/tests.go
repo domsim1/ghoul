@@ -9,6 +9,8 @@ import (
 	"sync"
 )
 
+var failed = false
+
 func main() {
 	files := getFiles()
 	println("running tests...")
@@ -34,6 +36,9 @@ func main() {
 	}()
 	for res := range resChan {
 		print(res)
+	}
+	if failed {
+		os.Exit(1)
 	}
 }
 
@@ -80,6 +85,7 @@ func run(filepath string, resBuffer *string) string {
 	cmd := exec.Command(path, filepath)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
+		failed = true
 		*resBuffer = fmt.Sprintf("%s\033[31merror:\033[0m non zero exit, code %s;\n %s\n", *resBuffer, err, out)
 		return ""
 	}
@@ -137,6 +143,7 @@ func getRes(fileData string, fileName string, resBuffer *string) bool {
 		}
 	}
 	if anyWrong {
+		failed = true
 		return false
 	}
 

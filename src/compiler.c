@@ -1128,7 +1128,6 @@ static void useStatement() {
   ObjString *realFilePath =
       allocateString(heapChars, pathLength, hash, &vm.useStrings);
 
-  Scanner oldScanner;
   const char *source = readFile(realFilePath->chars);
   if (source == NULL) {
     return;
@@ -1136,8 +1135,8 @@ static void useStatement() {
   const char *oldFile = current->file;
   current->file = realFilePath->chars;
 
+  Scanner oldScanner;
   oldScanner = scanner;
-
   initScanner(source);
   advance();
   while (!match(TOKEN_EOF)) {
@@ -1436,6 +1435,24 @@ static void statement() {
   } else {
     expressionStatment();
   }
+}
+
+void eval(const char *source) {
+  const char *oldFile = current->file;
+  current->file = "<native>";
+
+  Scanner oldScanner;
+  oldScanner = scanner;
+  initScanner(source);
+  advance();
+  while (!match(TOKEN_EOF)) {
+    declaration();
+  }
+
+  current->file = oldFile;
+  scanner = oldScanner;
+  scanner.current--;
+  advance();
 }
 
 ObjFunction *compile(const char *source, const char *file) {

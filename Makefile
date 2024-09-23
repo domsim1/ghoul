@@ -2,11 +2,11 @@ CC=cc
 WARN=-Wall -Wextra
 EXE=ghoul
 LIBS=-lreadline -lm
-cfiles := main.c chunk.c memory.c debug.c value.c vm.c compiler.c scanner.c object.c table.c native.c
-hfiles := common.h chunk.h compiler.h debug.h memory.h native.h object.h scanner.h table.h value.h vm.h
+cfiles := src/*.c
+hfiles := src/*.h
 
 ghoul: $(cfiles) $(hfiles)
-	$(CC) $(WARN) -g -o $(EXE) $(cfiles) $(LIBS)
+	$(CC) $(WARN) -o $(EXE) $(cfiles) $(LIBS)
 
 .PHONY: test clean
 test: ghoul

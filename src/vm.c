@@ -92,6 +92,8 @@ Value pop() {
 
 static Value peek(int distance) { return vm.stackTop[-1 - distance]; }
 
+static ObjUpvalue *captureUpvalue(Value *local);
+
 static bool call(ObjClosure *closure, int argCount) {
   if (argCount != closure->function->arity) {
     runtimeError("Expected %d argugments but got %d.", closure->function->arity,

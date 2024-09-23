@@ -13,8 +13,18 @@ print true;
 print true;
 print true;
 print false;
+print "muffin";
 print "$actual$";
 print test;
 print testTwo;
 print testThree;
 print testFour;
+if (false) {
+  print "egg";
+} else if (false) {
+  print "tree";
+} else if (true) {
+  print "muffin";
+} else {
+  print "cake";
+}

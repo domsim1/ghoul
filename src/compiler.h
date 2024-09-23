@@ -6,5 +6,6 @@
 
 ObjFunction *compile(const char *source, const char *file);
 void markCompilerRoots();
+void eval(const char *source);
 
 #endif

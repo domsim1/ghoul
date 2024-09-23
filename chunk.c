@@ -42,21 +42,6 @@ const char *getLineFileName(Chunk *chunk, int line) {
   return chunk->file[line];
 }
 
-void writeConstant(Chunk *chunk, Value value, int line, const char *file) {
-  int valueIndex = addConstant(chunk, value);
-  if (valueIndex > 255) {
-    if (valueIndex > 65535) {
-      exit(1);
-    }
-    writeChunk(chunk, OP_CONSTANT_SHORT, line, file);
-    writeChunk(chunk, (valueIndex >> 8) & 0xFF, line, file);
-    writeChunk(chunk, valueIndex & 0xFF, line, file);
-    return;
-  }
-  writeChunk(chunk, OP_CONSTANT, line, file);
-  writeChunk(chunk, valueIndex, line, file);
-}
-
 int addConstant(Chunk *chunk, Value value) {
   push(value);
   writeValueArray(&chunk->constants, value);

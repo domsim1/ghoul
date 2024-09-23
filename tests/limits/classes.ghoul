@@ -1,0 +1,552 @@
+:BigClass {
+  init(){
+    this.x0 = 0;
+    this.x1 = 0;
+    this.x2 = 0;
+    this.x3 = 0;
+    this.x4 = 0;
+    this.x5 = 0;
+    this.x6 = 0;
+    this.x7 = 0;
+    this.x8 = 0;
+    this.x9 = 0;
+    this.x10 = 0;
+    this.x11 = 0;
+    this.x12 = 0;
+    this.x13 = 0;
+    this.x14 = 0;
+    this.x15 = 0;
+    this.x16 = 0;
+    this.x17 = 0;
+    this.x18 = 0;
+    this.x19 = 0;
+    this.x20 = 0;
+    this.x21 = 0;
+    this.x22 = 0;
+    this.x23 = 0;
+    this.x24 = 0;
+    this.x25 = 0;
+    this.x26 = 0;
+    this.x27 = 0;
+    this.x28 = 0;
+    this.x29 = 0;
+    this.x30 = 0;
+    this.x31 = 0;
+    this.x32 = 0;
+    this.x33 = 0;
+    this.x34 = 0;
+    this.x35 = 0;
+    this.x36 = 0;
+    this.x37 = 0;
+    this.x38 = 0;
+    this.x39 = 0;
+    this.x40 = 0;
+    this.x41 = 0;
+    this.x42 = 0;
+    this.x43 = 0;
+    this.x44 = 0;
+    this.x45 = 0;
+    this.x46 = 0;
+    this.x47 = 0;
+    this.x48 = 0;
+    this.x49 = 0;
+    this.x50 = 0;
+    this.x51 = 0;
+    this.x52 = 0;
+    this.x53 = 0;
+    this.x54 = 0;
+    this.x55 = 0;
+    this.x56 = 0;
+    this.x57 = 0;
+    this.x58 = 0;
+    this.x59 = 0;
+    this.x60 = 0;
+    this.x61 = 0;
+    this.x62 = 0;
+    this.x63 = 0;
+    this.x64 = 0;
+    this.x65 = 0;
+    this.x66 = 0;
+    this.x67 = 0;
+    this.x68 = 0;
+    this.x69 = 0;
+    this.x70 = 0;
+    this.x71 = 0;
+    this.x72 = 0;
+    this.x73 = 0;
+    this.x74 = 0;
+    this.x75 = 0;
+    this.x76 = 0;
+    this.x77 = 0;
+    this.x78 = 0;
+    this.x79 = 0;
+    this.x80 = 0;
+    this.x81 = 0;
+    this.x82 = 0;
+    this.x83 = 0;
+    this.x84 = 0;
+    this.x85 = 0;
+    this.x86 = 0;
+    this.x87 = 0;
+    this.x88 = 0;
+    this.x89 = 0;
+    this.x90 = 0;
+    this.x91 = 0;
+    this.x92 = 0;
+    this.x93 = 0;
+    this.x94 = 0;
+    this.x95 = 0;
+    this.x96 = 0;
+    this.x97 = 0;
+    this.x98 = 0;
+    this.x99 = 0;
+    this.x100 = 0;
+    this.x101 = 0;
+    this.x102 = 0;
+    this.x103 = 0;
+    this.x104 = 0;
+    this.x105 = 0;
+    this.x106 = 0;
+    this.x107 = 0;
+    this.x108 = 0;
+    this.x109 = 0;
+    this.x110 = 0;
+    this.x111 = 0;
+    this.x112 = 0;
+    this.x113 = 0;
+    this.x114 = 0;
+    this.x115 = 0;
+    this.x116 = 0;
+    this.x117 = 0;
+    this.x118 = 0;
+    this.x119 = 0;
+    this.x120 = 0;
+    this.x121 = 0;
+    this.x122 = 0;
+    this.x123 = 0;
+    this.x124 = 0;
+    this.x125 = 0;
+    this.x126 = 0;
+    this.x127 = 0;
+    this.x128 = 0;
+    this.x129 = 0;
+    this.x130 = 0;
+    this.x131 = 0;
+    this.x132 = 0;
+    this.x133 = 0;
+    this.x134 = 0;
+    this.x135 = 0;
+    this.x136 = 0;
+    this.x137 = 0;
+    this.x138 = 0;
+    this.x139 = 0;
+    this.x140 = 0;
+    this.x141 = 0;
+    this.x142 = 0;
+    this.x143 = 0;
+    this.x144 = 0;
+    this.x145 = 0;
+    this.x146 = 0;
+    this.x147 = 0;
+    this.x148 = 0;
+    this.x149 = 0;
+    this.x150 = 0;
+    this.x151 = 0;
+    this.x152 = 0;
+    this.x153 = 0;
+    this.x154 = 0;
+    this.x155 = 0;
+    this.x156 = 0;
+    this.x157 = 0;
+    this.x158 = 0;
+    this.x159 = 0;
+    this.x160 = 0;
+    this.x161 = 0;
+    this.x162 = 0;
+    this.x163 = 0;
+    this.x164 = 0;
+    this.x165 = 0;
+    this.x166 = 0;
+    this.x167 = 0;
+    this.x168 = 0;
+    this.x169 = 0;
+    this.x170 = 0;
+    this.x171 = 0;
+    this.x172 = 0;
+    this.x173 = 0;
+    this.x174 = 0;
+    this.x175 = 0;
+    this.x176 = 0;
+    this.x177 = 0;
+    this.x178 = 0;
+    this.x179 = 0;
+    this.x180 = 0;
+    this.x181 = 0;
+    this.x182 = 0;
+    this.x183 = 0;
+    this.x184 = 0;
+    this.x185 = 0;
+    this.x186 = 0;
+    this.x187 = 0;
+    this.x188 = 0;
+    this.x189 = 0;
+    this.x190 = 0;
+    this.x191 = 0;
+    this.x192 = 0;
+    this.x193 = 0;
+    this.x194 = 0;
+    this.x195 = 0;
+    this.x196 = 0;
+    this.x197 = 0;
+    this.x198 = 0;
+    this.x199 = 0;
+    this.x200 = 0;
+    this.x201 = 0;
+    this.x202 = 0;
+    this.x203 = 0;
+    this.x204 = 0;
+    this.x205 = 0;
+    this.x206 = 0;
+    this.x207 = 0;
+    this.x208 = 0;
+    this.x209 = 0;
+    this.x210 = 0;
+    this.x211 = 0;
+    this.x212 = 0;
+    this.x213 = 0;
+    this.x214 = 0;
+    this.x215 = 0;
+    this.x216 = 0;
+    this.x217 = 0;
+    this.x218 = 0;
+    this.x219 = 0;
+    this.x220 = 0;
+    this.x221 = 0;
+    this.x222 = 0;
+    this.x223 = 0;
+    this.x224 = 0;
+    this.x225 = 0;
+    this.x226 = 0;
+    this.x227 = 0;
+    this.x228 = 0;
+    this.x229 = 0;
+    this.x230 = 0;
+    this.x231 = 0;
+    this.x232 = 0;
+    this.x233 = 0;
+    this.x234 = 0;
+    this.x235 = 0;
+    this.x236 = 0;
+    this.x237 = 0;
+    this.x238 = 0;
+    this.x239 = 0;
+    this.x240 = 0;
+    this.x241 = 0;
+    this.x242 = 0;
+    this.x243 = 0;
+    this.x244 = 0;
+    this.x245 = 0;
+    this.x246 = 0;
+    this.x247 = 0;
+    this.x248 = 0;
+    this.x249 = 0;
+    this.x250 = 0;
+    this.x251 = 0;
+    this.x252 = 0;
+    this.x253 = 0;
+    this.x254 = 0;
+    this.x255 = 0;
+    this.x256 = 0;
+    this.x257 = 257;
+  }
+  f0(){}
+  f1(){}
+  f2(){}
+  f3(){}
+  f4(){}
+  f5(){}
+  f6(){}
+  f7(){}
+  f8(){}
+  f9(){}
+  f10(){}
+  f11(){}
+  f12(){}
+  f13(){}
+  f14(){}
+  f15(){}
+  f16(){}
+  f17(){}
+  f18(){}
+  f19(){}
+  f20(){}
+  f21(){}
+  f22(){}
+  f23(){}
+  f24(){}
+  f25(){}
+  f26(){}
+  f27(){}
+  f28(){}
+  f29(){}
+  f30(){}
+  f31(){}
+  f32(){}
+  f33(){}
+  f34(){}
+  f35(){}
+  f36(){}
+  f37(){}
+  f38(){}
+  f39(){}
+  f40(){}
+  f41(){}
+  f42(){}
+  f43(){}
+  f44(){}
+  f45(){}
+  f46(){}
+  f47(){}
+  f48(){}
+  f49(){}
+  f50(){}
+  f51(){}
+  f52(){}
+  f53(){}
+  f54(){}
+  f55(){}
+  f56(){}
+  f57(){}
+  f58(){}
+  f59(){}
+  f60(){}
+  f61(){}
+  f62(){}
+  f63(){}
+  f64(){}
+  f65(){}
+  f66(){}
+  f67(){}
+  f68(){}
+  f69(){}
+  f70(){}
+  f71(){}
+  f72(){}
+  f73(){}
+  f74(){}
+  f75(){}
+  f76(){}
+  f77(){}
+  f78(){}
+  f79(){}
+  f80(){}
+  f81(){}
+  f82(){}
+  f83(){}
+  f84(){}
+  f85(){}
+  f86(){}
+  f87(){}
+  f88(){}
+  f89(){}
+  f90(){}
+  f91(){}
+  f92(){}
+  f93(){}
+  f94(){}
+  f95(){}
+  f96(){}
+  f97(){}
+  f98(){}
+  f99(){}
+  f100(){}
+  f101(){}
+  f102(){}
+  f103(){}
+  f104(){}
+  f105(){}
+  f106(){}
+  f107(){}
+  f108(){}
+  f109(){}
+  f110(){}
+  f111(){}
+  f112(){}
+  f113(){}
+  f114(){}
+  f115(){}
+  f116(){}
+  f117(){}
+  f118(){}
+  f119(){}
+  f120(){}
+  f121(){}
+  f122(){}
+  f123(){}
+  f124(){}
+  f125(){}
+  f126(){}
+  f127(){}
+  f128(){}
+  f129(){}
+  f130(){}
+  f131(){}
+  f132(){}
+  f133(){}
+  f134(){}
+  f135(){}
+  f136(){}
+  f137(){}
+  f138(){}
+  f139(){}
+  f140(){}
+  f141(){}
+  f142(){}
+  f143(){}
+  f144(){}
+  f145(){}
+  f146(){}
+  f147(){}
+  f148(){}
+  f149(){}
+  f150(){}
+  f151(){}
+  f152(){}
+  f153(){}
+  f154(){}
+  f155(){}
+  f156(){}
+  f157(){}
+  f158(){}
+  f159(){}
+  f160(){}
+  f161(){}
+  f162(){}
+  f163(){}
+  f164(){}
+  f165(){}
+  f166(){}
+  f167(){}
+  f168(){}
+  f169(){}
+  f170(){}
+  f171(){}
+  f172(){}
+  f173(){}
+  f174(){}
+  f175(){}
+  f176(){}
+  f177(){}
+  f178(){}
+  f179(){}
+  f180(){}
+  f181(){}
+  f182(){}
+  f183(){}
+  f184(){}
+  f185(){}
+  f186(){}
+  f187(){}
+  f188(){}
+  f189(){}
+  f190(){}
+  f191(){}
+  f192(){}
+  f193(){}
+  f194(){}
+  f195(){}
+  f196(){}
+  f197(){}
+  f198(){}
+  f199(){}
+  f200(){}
+  f201(){}
+  f202(){}
+  f203(){}
+  f204(){}
+  f205(){}
+  f206(){}
+  f207(){}
+  f208(){}
+  f209(){}
+  f210(){}
+  f211(){}
+  f212(){}
+  f213(){}
+  f214(){}
+  f215(){}
+  f216(){}
+  f217(){}
+  f218(){}
+  f219(){}
+  f220(){}
+  f221(){}
+  f222(){}
+  f223(){}
+  f224(){}
+  f225(){}
+  f226(){}
+  f227(){}
+  f228(){}
+  f229(){}
+  f230(){}
+  f231(){}
+  f232(){}
+  f233(){}
+  f234(){}
+  f235(){}
+  f236(){}
+  f237(){}
+  f238(){}
+  f239(){}
+  f240(){}
+  f241(){}
+  f242(){}
+  f243(){}
+  f244(){}
+  f245(){}
+  f246(){}
+  f247(){}
+  f248(){}
+  f249(){}
+  f250(){}
+  f251(){}
+  f252(){}
+  f253(){}
+  f254(){}
+  f255(){}
+  f256(){}
+  f257(){}
+  f258(){
+    print "big class";
+  }
+}
+
+:ChildClass < BigClass {
+  init() {
+    super.init();
+  }
+  f257() {
+    print "child class";
+  }
+  f259() {
+    super.f258();
+  }
+}
+
+:class = BigClass();
+:child = ChildClass();
+print "$expected$";
+print 257;
+print "big class";
+print 257;
+print "child class";
+print "big class";
+print 0;
+print "$actual$";
+print class.x257;
+class.f258();
+print child.x257;
+child.f257();
+child.f259();
+print class.x251;

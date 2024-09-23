@@ -14,6 +14,7 @@
 // #define DEBUG_LOG_GC
 
 #define UINT8_COUNT (UINT8_MAX + 1)
+#define UINT16_COUNT (UINT16_MAX + 1)
 
 #ifdef WIN32
 #define realpath(N, R) _fullpath((R), (N), PATH_MAX)

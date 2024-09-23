@@ -178,7 +178,7 @@ static bool invokeFromClass(ObjClass *klass, ObjString *name, int argCount) {
 static bool invoke(ObjString *name, int argCount) {
   Value receiver = peek(argCount);
   if (!IS_INSTANCE(receiver)) {
-    runtimeError("Only instances and modules have methods.");
+    runtimeError("Only instances have methods.");
     return false;
   }
   ObjInstance *instance = AS_INSTANCE(receiver);
@@ -283,6 +283,7 @@ static InterpretResult run() {
 #define READ_CONSTANT_SHORT()                                                  \
   (frame->closure->function->chunk.constants.values[READ_SHORT()])
 #define READ_STRING() AS_STRING(READ_CONSTANT())
+#define READ_STRING_SHORT() AS_STRING(READ_CONSTANT_SHORT())
 #define BINARY_OP(valueType, op)                                               \
   do {                                                                         \
     if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) {                          \
@@ -357,8 +358,23 @@ static InterpretResult run() {
       push(frame->slots[slot]);
       break;
     }
+    case OP_GET_LOCAL_SHORT: {
+      uint16_t slot = READ_SHORT();
+      push(frame->slots[slot]);
+      break;
+    }
     case OP_GET_GLOBAL: {
       ObjString *name = READ_STRING();
+      Value value;
+      if (!tableGet(&vm.globals, name, &value)) {
+        runtimeError("Undefined '%s'.", name->chars);
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      push(value);
+      break;
+    }
+    case OP_GET_GLOBAL_SHORT: {
+      ObjString *name = READ_STRING_SHORT();
       Value value;
       if (!tableGet(&vm.globals, name, &value)) {
         runtimeError("Undefined '%s'.", name->chars);
@@ -376,13 +392,33 @@ static InterpretResult run() {
       }
       break;
     }
+    case OP_SET_GLOBAL_SHORT: {
+      ObjString *name = READ_STRING_SHORT();
+      if (tableSet(&vm.globals, name, peek(0))) {
+        tableDelete(&vm.globals, name);
+        runtimeError("Undefined '%s'.", name->chars);
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      break;
+    }
     case OP_SET_LOCAL: {
       uint8_t slot = READ_BYTE();
       frame->slots[slot] = peek(0);
       break;
     }
+    case OP_SET_LOCAL_SHORT: {
+      uint16_t slot = READ_SHORT();
+      frame->slots[slot] = peek(0);
+      break;
+    }
     case OP_DEFINE_GLOBAL: {
       ObjString *name = READ_STRING();
+      tableSet(&vm.globals, name, peek(0));
+      pop();
+      break;
+    }
+    case OP_DEFINE_GLOBAL_SHORT: {
+      ObjString *name = READ_STRING_SHORT();
       tableSet(&vm.globals, name, peek(0));
       pop();
       break;
@@ -408,8 +444,18 @@ static InterpretResult run() {
       push(*frame->closure->upvalues[slot]->location);
       break;
     }
+    case OP_GET_UPVALUE_SHORT: {
+      uint8_t slot = READ_SHORT();
+      push(*frame->closure->upvalues[slot]->location);
+      break;
+    }
     case OP_SET_UPVALUE: {
       uint8_t slot = READ_BYTE();
+      *frame->closure->upvalues[slot]->location = peek(0);
+      break;
+    }
+    case OP_SET_UPVALUE_SHORT: {
+      uint8_t slot = READ_SHORT();
       *frame->closure->upvalues[slot]->location = peek(0);
       break;
     }
@@ -420,6 +466,25 @@ static InterpretResult run() {
       }
       ObjInstance *instance = AS_INSTANCE(peek(0));
       ObjString *name = READ_STRING();
+
+      Value value;
+      if (tableGet(&instance->fields, name, &value)) {
+        pop();
+        push(value);
+        break;
+      }
+      if (!bindMethod(instance->klass, name)) {
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      break;
+    }
+    case OP_GET_PROPERTY_SHORT: {
+      if (!IS_INSTANCE(peek(0))) {
+        runtimeError("Only instances have properties.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      ObjInstance *instance = AS_INSTANCE(peek(0));
+      ObjString *name = READ_STRING_SHORT();
 
       Value value;
       if (tableGet(&instance->fields, name, &value)) {
@@ -445,8 +510,30 @@ static InterpretResult run() {
       push(value);
       break;
     }
+    case OP_SET_PROPERTY_SHORT: {
+      if (!IS_INSTANCE(peek(1))) {
+        runtimeError("Only instances have fields.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      ObjString *name = READ_STRING_SHORT();
+      ObjInstance *instance = AS_INSTANCE(peek(1));
+      tableSet(&instance->fields, name, peek(0));
+      Value value = pop();
+      pop();
+      push(value);
+      break;
+    }
     case OP_GET_SUPER: {
       ObjString *name = READ_STRING();
+      ObjClass *superclass = AS_CLASS(pop());
+
+      if (!bindMethod(superclass, name)) {
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      break;
+    }
+    case OP_GET_SUPER_SHORT: {
+      ObjString *name = READ_STRING_SHORT();
       ObjClass *superclass = AS_CLASS(pop());
 
       if (!bindMethod(superclass, name)) {
@@ -554,9 +641,26 @@ static InterpretResult run() {
       frame = &vm.frames[vm.frameCount - 1];
       break;
     }
+    case OP_CALL_SHORT: {
+      int argCount = READ_SHORT();
+      if (!callValue(peek(argCount), argCount)) {
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      frame = &vm.frames[vm.frameCount - 1];
+      break;
+    }
     case OP_INVOKE: {
       ObjString *method = READ_STRING();
       int argCount = READ_BYTE();
+      if (!invoke(method, argCount)) {
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      frame = &vm.frames[vm.frameCount - 1];
+      break;
+    }
+    case OP_INVOKE_SHORT: {
+      ObjString *method = READ_STRING_SHORT();
+      int argCount = READ_SHORT();
       if (!invoke(method, argCount)) {
         return INTERPRET_RUNTIME_ERROR;
       }
@@ -573,13 +677,38 @@ static InterpretResult run() {
       frame = &vm.frames[vm.frameCount - 1];
       break;
     }
+    case OP_SUPER_INVOKE_SHORT: {
+      ObjString *method = READ_STRING_SHORT();
+      int argCount = READ_SHORT();
+      ObjClass *superclass = AS_CLASS(pop());
+      if (!invokeFromClass(superclass, method, argCount)) {
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      frame = &vm.frames[vm.frameCount - 1];
+      break;
+    }
     case OP_CLOSURE: {
       ObjFunction *function = AS_FUNCTION(READ_CONSTANT());
       ObjClosure *closure = newClosure(function);
       push(OBJ_VAL(closure));
       for (int i = 0; i < closure->upvalueCount; i++) {
         uint8_t isLocal = READ_BYTE();
-        uint8_t index = READ_BYTE();
+        uint16_t index = READ_SHORT();
+        if (isLocal) {
+          closure->upvalues[i] = captureUpvalue(frame->slots + index);
+        } else {
+          closure->upvalues[i] = frame->closure->upvalues[index];
+        }
+      }
+      break;
+    }
+    case OP_CLOSURE_SHORT: {
+      ObjFunction *function = AS_FUNCTION(READ_CONSTANT_SHORT());
+      ObjClosure *closure = newClosure(function);
+      push(OBJ_VAL(closure));
+      for (int i = 0; i < closure->upvalueCount; i++) {
+        uint8_t isLocal = READ_BYTE();
+        uint16_t index = READ_SHORT();
         if (isLocal) {
           closure->upvalues[i] = captureUpvalue(frame->slots + index);
         } else {
@@ -609,6 +738,9 @@ static InterpretResult run() {
     case OP_CLASS:
       push(OBJ_VAL(newClass(READ_STRING())));
       break;
+    case OP_CLASS_SHORT:
+      push(OBJ_VAL(newClass(READ_STRING_SHORT())));
+      break;
     case OP_INHERIT: {
       Value superclass = peek(1);
       if (!IS_CLASS(superclass)) {
@@ -623,9 +755,29 @@ static InterpretResult run() {
     case OP_METHOD:
       defineMethod(READ_STRING());
       break;
+    case OP_METHOD_SHORT:
+      defineMethod(READ_STRING_SHORT());
+      break;
     case OP_BUILD_LIST: {
       ObjList *list = newList();
       uint8_t itemCount = READ_BYTE();
+
+      push(OBJ_VAL(list));
+      for (int i = itemCount; i > 0; i--) {
+        pushToList(list, peek(i));
+      }
+      pop();
+
+      while (itemCount-- > 0) {
+        pop();
+      }
+
+      push(OBJ_VAL(list));
+      break;
+    }
+    case OP_BUILD_LIST_SHORT: {
+      ObjList *list = newList();
+      uint16_t itemCount = READ_SHORT();
 
       push(OBJ_VAL(list));
       for (int i = itemCount; i > 0; i--) {
@@ -694,6 +846,7 @@ static InterpretResult run() {
 #undef READ_CONSTANT
 #undef READ_CONSTANT_SHORT
 #undef READ_STRING
+#undef READ_STRING_SHORT
 #undef BINARY_OP
 #undef BITWISE_OP
 #undef MATH_OP

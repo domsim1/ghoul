@@ -264,7 +264,7 @@
   ->say158;
 }
 
-print "$expected$";
+print "$expect$";
 print 159;
 print 158;
 print "$actual$";

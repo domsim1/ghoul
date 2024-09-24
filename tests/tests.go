@@ -101,11 +101,11 @@ func getRes(fileData string, fileName string, resBuffer *string) bool {
 	expectedFound := false
 	actualFound := false
 	for _, line := range data {
-		if line == "$expected$" {
+		if line == "$expect$" {
 			expectedFound = true
 			continue
 		}
-		if line != "$expected$" && !expectedFound {
+		if line != "$expect$" && !expectedFound {
 			continue
 		}
 		if line == "$actual$" {
@@ -122,7 +122,7 @@ func getRes(fileData string, fileName string, resBuffer *string) bool {
 		}
 	}
 	if !expectedFound {
-		*resBuffer = fmt.Sprintf("%s\033[31mtest failed:\033[0m no $expected$ in %s\n", *resBuffer, fileName)
+		*resBuffer = fmt.Sprintf("%s\033[31mtest failed:\033[0m no $expect$ in %s\n", *resBuffer, fileName)
 		return false
 	}
 	if !actualFound {

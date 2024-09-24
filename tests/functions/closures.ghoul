@@ -7,8 +7,8 @@
 
 :addFive = createAdder(5);
 
-print "$expected$";
-print "<fn newAdder>";
+print "$expect$";
+print "<fn 'newAdder'>";
 print 10;
 print "$actual$";
 print addFive;

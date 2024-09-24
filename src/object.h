@@ -112,6 +112,8 @@ typedef struct {
   Obj obj;
   int count;
   int capacity;
+  ObjClass *klass;
+  Table fields;
   Value *items;
 } ObjList;
 
@@ -122,7 +124,7 @@ ObjClosure *newClosure(ObjFunction *function);
 ObjFunction *newFunction();
 ObjInstance *newInstance(ObjClass *klass);
 ObjNative *newNative(NativeFn function);
-ObjList *newList();
+ObjList *newList(ObjClass *klass);
 ObjString *takeString(char *chars, int length);
 ObjString *copyString(const char *chars, int length, Table *stringTable);
 ObjUpvalue *newUpvalue(Value *slot);
@@ -131,7 +133,8 @@ void printObject(Value value);
 void pushToList(ObjList *list, Value value);
 void storeToList(ObjList *list, int index, Value value);
 Value indexFromList(ObjList *list, int index);
-void deleteFromList(ObjList *list, int index);
+void deleteFromList(ObjList *list, int start, int end);
+bool isValidListRange(ObjList *list, int start, int end);
 bool isValidListIndex(ObjList *list, int index);
 uint32_t hashString(const char *key, int length);
 ObjString *allocateString(char *chars, int length, uint32_t hash,

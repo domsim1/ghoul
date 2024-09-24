@@ -12,8 +12,8 @@
 :tree = Tree();
 :leaf = tree.Branch("Hi");
 
-print "$expected$";
-print "<class Leaf>";
+print "$expect$";
+print "<class 'Leaf'>";
 print "Hi";
 print "$actual$";
 print leaf;

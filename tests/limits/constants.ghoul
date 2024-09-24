@@ -260,9 +260,9 @@
   print "xfunc";
 }
 
-print "$expected$";
+print "$expect$";
 print 159;
-print "<class xClass>";
+print "<class 'xClass'>";
 print "xfunc";
 print "$actual$";
 print x257;

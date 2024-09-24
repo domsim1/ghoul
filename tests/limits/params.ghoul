@@ -259,7 +259,7 @@ x256,
 x257) {
   print x257;
 }
-print "$expected$";
+print "$expect$";
 print 257;
 print "$actual$";
 func(

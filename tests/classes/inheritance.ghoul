@@ -31,11 +31,11 @@
 
 :test = testClassTwo();
 
-print "$expected$";
-print "<instance testClassTwo>";
-print "<fn returnString>";
-print "<fn returnVal>";
-print "<fn newfunction>";
+print "$expect$";
+print "<instance 'testClassTwo'>";
+print "<fn 'returnString'>";
+print "<fn 'returnVal'>";
+print "<fn 'newfunction'>";
 print 4;
 print 7;
 print 6;

@@ -1,4 +1,4 @@
-print "$expected$";
+print "$expect$";
 print true;
 print false;
 print true;

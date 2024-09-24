@@ -262,7 +262,7 @@
 262,
 ];
 
-print "$expected$";
+print "$expect$";
 print 262;
 print "$actual$";
 print bigList[260];

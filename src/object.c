@@ -83,11 +83,13 @@ ObjNative *newNative(NativeFn function) {
   return native;
 }
 
-ObjList *newList() {
+ObjList *newList(ObjClass *klass) {
   ObjList *list = ALLOCATE_OBJ(ObjList, OBJ_LIST);
   list->items = NULL;
+  list->klass = klass;
   list->count = 0;
   list->capacity = 0;
+  initTable(&list->fields);
   return list;
 }
 
@@ -108,12 +110,25 @@ void storeToList(ObjList *list, int index, Value value) {
 
 Value indexFromList(ObjList *list, int index) { return list->items[index]; }
 
-void deleteFromList(ObjList *list, int index) {
-  for (int i = index; i < list->count - 1; i++) {
-    list->items[i] = list->items[i + 1];
+void deleteFromList(ObjList *list, int start, int end) {
+  int range = end - start + 1;
+
+  for (int i = start; i < list->count - range; i++) {
+    list->items[i] = list->items[i + range];
   }
-  list->items[list->count - 1] = NIL_VAL;
-  list->count--;
+
+  for (int i = list->count - range; i < list->count; i++) {
+    list->items[i] = NIL_VAL;
+  }
+
+  list->count -= range;
+}
+
+bool isValidListRange(ObjList *list, int start, int end) {
+  if (start < 0 || end >= list->count || start > end) {
+    return false;
+  }
+  return true;
 }
 
 bool isValidListIndex(ObjList *list, int index) {
@@ -176,13 +191,20 @@ static void printFunction(ObjFunction *function) {
     printf("<script>");
     return;
   }
-  printf("<fn %s>", function->name->chars);
+  printf("<fn '%s'>", function->name->chars);
 }
 
 static void printList(ObjList *list) {
   printf("[");
   for (int i = 0; i < list->count; i++) {
-    printValue(list->items[i]);
+    Value value = list->items[i];
+    if (IS_STRING(value)) {
+      printf("'");
+      printValue(value);
+      printf("'");
+    } else {
+      printValue(value);
+    }
     if (i < list->count - 1) {
       printf(", ");
     }
@@ -199,7 +221,7 @@ void printObject(Value value) {
     printf("<bound native fn>");
     break;
   case OBJ_CLASS:
-    printf("<class %s>", AS_CLASS(value)->name->chars);
+    printf("<class '%s'>", AS_CLASS(value)->name->chars);
     break;
   case OBJ_CLOSURE:
     printFunction(AS_CLOSURE(value)->function);
@@ -208,7 +230,7 @@ void printObject(Value value) {
     printFunction(AS_FUNCTION(value));
     break;
   case OBJ_INSTANCE:
-    printf("<instance %s>", AS_INSTANCE(value)->klass->name->chars);
+    printf("<instance '%s'>", AS_INSTANCE(value)->klass->name->chars);
     break;
   case OBJ_NATIVE:
     printf("<native fn>");

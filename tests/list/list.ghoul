@@ -1,0 +1,19 @@
+:dataEmpty = [];
+:dataNum = [1,2,3];
+:dataString = ["one", "two", "three"];
+:dataMix = [1, "two"];
+:TestClass {}
+:dataClass = List(TestClass);
+
+print "$expect$";
+print "[]";
+print "[1, 2, 3]";
+print "['one', 'two', 'three']";
+print "[1, 'two']";
+print "[<class 'TestClass'>]";
+print "$actual$";
+print dataEmpty;
+print dataNum;
+print dataString;
+print dataMix;
+print dataClass;

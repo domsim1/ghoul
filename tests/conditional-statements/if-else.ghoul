@@ -8,7 +8,7 @@ if ("test" == "real") testTwo = false; else testTwo = true;
 if (6 == 6) testThree = true; else testThree = false;
 if (true && true) testFour = false; else testFour = true;
 
-print "$expected$";
+print "$expect$";
 print true;
 print true;
 print true;

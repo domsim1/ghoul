@@ -9,7 +9,7 @@
 
 :itor = makeItor();
 
-print "$expected$";
+print "$expect$";
 print 0;
 print 1;
 print 2;

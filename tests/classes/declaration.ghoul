@@ -14,10 +14,10 @@
 
 :test = testClass();
 
-print "$expected$";
-print "<instance testClass>";
+print "$expect$";
+print "<instance 'testClass'>";
 print 4;
-print "<fn returnVal>";
+print "<fn 'returnVal'>";
 print 4;
 print 6;
 print 8;

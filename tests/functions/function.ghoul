@@ -12,8 +12,8 @@
   ->a + b;
 }
 
-print "$expected$";
-print "<fn testEmpty>";
+print "$expect$";
+print "<fn 'testEmpty'>";
 print nil;
 print 10;
 print 15;

@@ -1,7 +1,7 @@
 :a = 10;
 :b = 10;
 
-print "$expected$";
+print "$expect$";
 print 20;
 print 0;
 print 0;

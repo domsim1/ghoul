@@ -33,6 +33,13 @@ static bool checkArgCount(int argCount, int expectedCount) {
 
 static bool checkArgs(int argCount, int expectedCount, Value *args,
                       NativeType type, ...) {
+  if (expectedCount == 0) {
+    if (argCount != 1 && type != NATIVE_VARIADIC) {
+      runtimeError("Expected no arguments but got %d.", argCount - 1);
+      return false;
+    }
+    return true;
+  }
   if (type == NATIVE_NORMAL && !checkArgCount(argCount, expectedCount)) {
     return false;
   } else if (type == NATIVE_VARIADIC && argCount < expectedCount) {
@@ -177,13 +184,13 @@ static Value clockNative(int argCount, Value *args) {
 }
 
 static Value exitNative(int argCount, Value *args) {
-  if (argCount == 0) {
+  if (argCount == 1) {
     exit(0);
   }
-  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_NUMBER)) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
     return 0;
   };
-  exit(AS_NUMBER(args[0]));
+  exit(AS_NUMBER(args[1]));
 }
 
 static Value pushListNative(int argCount, Value *args) {
@@ -192,7 +199,7 @@ static Value pushListNative(int argCount, Value *args) {
   };
   ObjList *list = AS_LIST(args[0]);
   for (int i = 1; i < argCount; i++) {
-    Value item = args[1];
+    Value item = args[i];
     pushToList(list, item);
   }
   return NIL_VAL;
@@ -204,51 +211,76 @@ static Value popListNative(int argCount, Value *args) {
   };
   ObjList *list = AS_LIST(args[0]);
   Value value = list->items[list->count - 1];
-  deleteFromList(list, list->count - 1);
+  deleteFromList(list, list->count - 1, list->count - 1);
   return value;
 }
 
-static Value countNative(int argCount, Value *args) {
-  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
+static Value initListNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 0, args, NATIVE_VARIADIC)) {
     return 0;
   };
-  if (IS_LIST(args[0])) {
-    ObjList *list = AS_LIST(args[0]);
-    double count = (double)list->count;
-    return NUMBER_VAL(count);
-  } else if (IS_STRING(args[0])) {
-    ObjString *str = AS_STRING(args[0]);
-    double count = (double)str->length;
-    return NUMBER_VAL(count);
+  ObjList *list = newList(vm.listKlass);
+  push(OBJ_VAL(list));
+  for (int i = 1; i < argCount; i++) {
+    pushToList(list, args[i]);
   }
+  return pop();
+}
+
+static Value lenListNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_LIST)) {
+    return 0;
+  };
+  ObjList *list = AS_LIST(args[0]);
+  double count = (double)list->count;
+  return NUMBER_VAL(count);
+}
+
+static Value removeListNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_LIST, ARG_NUMBER,
+                 ARG_NUMBER)) {
+    return 0;
+  }
+  ObjList *list = AS_LIST(args[0]);
+  int start = AS_NUMBER(args[1]);
+  int end = AS_NUMBER(args[2]);
+  if (!isValidListRange(list, start, end)) {
+    runtimeError("List range index is out of range.");
+    return 0;
+  }
+  deleteFromList(list, start, end);
   return NIL_VAL;
 }
 
-static Value deleteListNative(int argCount, Value *args) {
-  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_LIST, ARG_NUMBER)) {
+static Value joinListNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_VARIADIC, ARG_LIST, ARG_LIST)) {
     return 0;
   }
-
-  ObjList *list = AS_LIST(args[0]);
-  int index = AS_NUMBER(args[1]);
-
-  if (!isValidListIndex(list, index)) {
-    runtimeError("List index out of range.");
-    return 0;
+  ObjList *list = newList(vm.listKlass);
+  push(OBJ_VAL(list));
+  for (int arg = 0; arg < argCount; arg++) {
+    ObjList *listb = AS_LIST(args[arg]);
+    for (int i = 0; i < listb->count; i++) {
+      pushToList(list, listb->items[i]);
+    }
   }
-
-  deleteFromList(list, index);
-  return NIL_VAL;
+  return OBJ_VAL(list);
 }
 
 void registerNatives() {
-  defineNative("clock", clockNative);
+  defineNative("tick", clockNative);
   defineNative("exit", exitNative);
+}
 
-  defineNative("push", pushListNative);
-  defineNative("pop", popListNative);
-  defineNative("remove", deleteListNative);
-  defineNative("count", countNative);
+ObjClass *createListClass() {
+  ObjClass *listKlass = defineKlass("List");
+  defineNativeKlassMethod(listKlass, "init", initListNative);
+  defineNativeKlassMethod(listKlass, "push", pushListNative);
+  defineNativeKlassMethod(listKlass, "pop", popListNative);
+  defineNativeKlassMethod(listKlass, "len", lenListNative);
+  defineNativeKlassMethod(listKlass, "remove", removeListNative);
+  defineNativeKlassMethod(listKlass, "join", joinListNative);
+  return listKlass;
 }
 
 void registerListNatives() {
@@ -256,7 +288,7 @@ void registerListNatives() {
   if (isRegistered)
     return;
 
-  ObjInstance *listInstance = defineInstance(defineKlass("List"), "List");
+  ObjInstance *listInstance = defineInstance(defineKlass("Lists"), "Lists");
   defineNativeInstanceMethod(listInstance, "clock", clockNative);
 
   isRegistered = true;

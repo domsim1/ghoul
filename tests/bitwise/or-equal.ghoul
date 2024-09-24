@@ -6,7 +6,7 @@ testTwo |= 7;
 testThree |= -7;
 :testFour = -10;
 testFour |= -7;
-print "$expected$";
+print "$expect$";
 print 15;
 print -9;
 print -5;

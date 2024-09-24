@@ -4,7 +4,7 @@
 :bool = true;
 :_apple = "apple";
 
-print "$expected$";
+print "$expect$";
 print 10;
 print 10.5;
 print "test";

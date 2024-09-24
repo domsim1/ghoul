@@ -536,7 +536,7 @@
 
 :class = BigClass();
 :child = ChildClass();
-print "$expected$";
+print "$expect$";
 print 257;
 print "big class";
 print 257;

@@ -14,7 +14,7 @@ strB = false;
 boolA = false;
 boolB = "true";
 
-print "$expected$";
+print "$expect$";
 print 42;
 print 69;
 print "fresh";

@@ -1,0 +1,17 @@
+:createAdder(numA) {
+  ->:(numB) {
+    ->numA + numB;
+  }
+}
+:addFive = createAdder(5);
+
+:runFunc(f) {->f();}
+
+print "$expect$";
+print "<fn 'λ'>";
+print 10;
+print "pizza time";
+print "$actual$";
+print addFive;
+print addFive(5);
+print runFunc(:(){->"pizza time";});

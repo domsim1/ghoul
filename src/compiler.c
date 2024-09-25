@@ -318,8 +318,12 @@ static void initCompiler(Compiler *compiler, FunctionType type,
   compiler->function = newFunction();
   current = compiler;
   if (type != TYPE_SCRIPT) {
-    current->function->name =
-        copyString(parser.previous.start, parser.previous.length, &vm.strings);
+    if (parser.previous.type == TOKEN_COLON) {
+      current->function->name = copyString("λ", 2, &vm.strings);
+    } else {
+      current->function->name = copyString(parser.previous.start,
+                                           parser.previous.length, &vm.strings);
+    }
   }
 
   int pathLength = strlen(file);
@@ -382,6 +386,7 @@ static void statement();
 static void declaration();
 static ParseRule *getRule(TokenType type);
 static void parsePrecedence(Precedence precedence);
+static void function(FunctionType type);
 
 static bool isAssignment(uint8_t *binaryOp) {
   TokenType operatorType = parser.current.type;
@@ -833,6 +838,8 @@ static void super_(bool canAssign) {
   }
 }
 
+static void lambda(bool canAssign) { function(TYPE_FUNCTION); }
+
 static void and_(bool canAssign) {
   int endJump = emitJump(OP_JUMP_IF_FALSE);
 
@@ -925,7 +932,7 @@ ParseRule rules[] = {
     [TOKEN_SUPER] = {super_, NULL, PREC_NONE},
     [TOKEN_THIS] = {this_, NULL, PREC_NONE},
     [TOKEN_TRUE] = {literal, NULL, PREC_NONE},
-    [TOKEN_COLON] = {NULL, NULL, PREC_NONE},
+    [TOKEN_COLON] = {lambda, NULL, PREC_NONE},
     [TOKEN_WHILE] = {NULL, NULL, PREC_NONE},
     [TOKEN_BREAK] = {NULL, NULL, PREC_NONE},
     [TOKEN_USE] = {NULL, NULL, PREC_NONE},
@@ -1232,7 +1239,9 @@ static void varDeclaration() {
     emitByte(OP_NIL);
   }
 
-  consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
+  if (parser.previous.type != TOKEN_RIGHT_BRACE) {
+    consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
+  }
   defineVariable(global);
 }
 
@@ -1346,7 +1355,9 @@ static void returnStatement() {
       error("Can't return a value from an initializer.");
     }
     expression();
-    consume(TOKEN_SEMICOLON, "Expect ';' after return value.");
+    if (parser.previous.type != TOKEN_RIGHT_BRACE) {
+      consume(TOKEN_SEMICOLON, "Expect ';' after return value.");
+    }
     emitByte(OP_RETURN);
   }
 }

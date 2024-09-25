@@ -907,7 +907,6 @@ static InterpretResult run() {
         push(NUMBER_VAL((double)i));
         if (!isValidListIndex(list, i)) {
           pop();
-          pop();
           push(NIL_VAL);
           break;
         }
@@ -919,7 +918,6 @@ static InterpretResult run() {
         int i = (int)AS_NUMBER(peek(0));
         i += 1;
         if (!isValidListIndex(list, i)) {
-          pop();
           pop();
           push(NIL_VAL);
           break;

@@ -11,8 +11,10 @@ ghoul: $(cfiles) $(hfiles)
 .PHONY: test clean
 test: ghoul
 	cp ./ghoul ./tests/ghoul
+	cp -r ./std ./tests/
 	cd ./tests; go run tests.go
 
 clean:
 	rm ./ghoul
+	rm -rf /tests/std
 	rm ./tests/ghoul

@@ -74,6 +74,7 @@ typedef enum {
   OP_BUILD_LIST_SHORT,
   OP_INDEX_SUBSCR,
   OP_STORE_SUBSCR,
+  OP_IN,
 } OpCode;
 
 typedef struct {

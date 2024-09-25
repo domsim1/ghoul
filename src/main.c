@@ -64,8 +64,11 @@ static void runFile(const char *path) {
     exit(70);
 }
 
+static void loadStd() { runFile("std/std.ghoul"); }
+
 int main(int argc, const char *argv[]) {
   initVM();
+  loadStd();
 
   if (argc == 1) {
     repl();

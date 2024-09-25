@@ -63,7 +63,9 @@ void initVM() {
   initTable(&vm.useStrings);
 
   vm.initString = NULL;
+  vm.itorString = NULL;
   vm.initString = copyString("init", 4, &vm.strings);
+  vm.itorString = copyString("_itor", 5, &vm.strings);
   vm.listKlass = createListClass();
 
   registerNatives();
@@ -889,6 +891,20 @@ static InterpretResult run() {
 
       storeToList(list, index, item);
       push(item);
+      break;
+    }
+    case OP_IN: {
+      if (IS_CLOSURE(peek(0))) {
+        push(peek(0));
+        ObjClosure *closure = AS_CLOSURE(peek(0));
+        if (!call(closure, 0)) {
+          return INTERPRET_RUNTIME_ERROR;
+        }
+        frame = &vm.frames[vm.frameCount - 1];
+        break;
+      }
+      runtimeError("Expected itor function.");
+      return INTERPRET_RUNTIME_ERROR;
       break;
     }
     }

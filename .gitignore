@@ -1,5 +1,6 @@
 ghoul
 tests/ghoul
+tests/std/
 .DS_Store
 test.ghoul
 build/

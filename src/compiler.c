@@ -107,6 +107,7 @@ Parser parser;
 Compiler *current = NULL;
 ClassCompiler *currentClass = NULL;
 LoopContext *currentLoop = NULL;
+bool forceAssignment = false;
 
 static char actualpath[PATH_MAX + 1];
 
@@ -539,6 +540,9 @@ static void namedVariable(Token name, bool canAssign) {
       emitByte(setOp);
       emitIndex(arg);
     }
+  } else if (forceAssignment) {
+    emitByte(setOp);
+    emitIndex(arg);
   } else {
     emitByte(getOp);
     emitIndex(arg);
@@ -925,6 +929,7 @@ ParseRule rules[] = {
     [TOKEN_WHILE] = {NULL, NULL, PREC_NONE},
     [TOKEN_BREAK] = {NULL, NULL, PREC_NONE},
     [TOKEN_USE] = {NULL, NULL, PREC_NONE},
+    [TOKEN_IN] = {NULL, NULL, PREC_NONE},
     [TOKEN_ERROR] = {NULL, NULL, PREC_NONE},
     [TOKEN_EOF] = {NULL, NULL, PREC_NONE},
 };
@@ -1237,13 +1242,52 @@ static void expressionStatment() {
   emitByte(OP_POP);
 }
 
+static void genericFor(Token identifier) {
+  expression();
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after for clauses.");
+  int loopStart = currentChunk()->count;
+  emitByte(OP_IN);
+  forceAssignment = true;
+  namedVariable(identifier, true);
+  forceAssignment = false;
+
+  LoopContext loopContext;
+  startLoop(&loopContext);
+
+  int exitJump = emitJump(OP_JUMP_IF_FALSE);
+  emitByte(OP_POP);
+
+  statement();
+  emitLoop(loopStart);
+
+  patchJump(exitJump);
+  patchFlowJumps(loopStart);
+  endLoop();
+  emitByte(OP_POP);
+  emitByte(OP_POP);
+  endScope();
+}
+
 static void forStatement() {
   beginScope();
   consume(TOKEN_LEFT_PAREN, "Expect '(' after 'for'.");
   if (match(TOKEN_SEMICOLON)) {
 
   } else if (match(TOKEN_COLON)) {
-    varDeclaration();
+    consume(TOKEN_IDENTIFIER, "Expect declaration identifier.");
+    Token identifier = parser.previous;
+    uint16_t global = parseVariable();
+    if (match(TOKEN_EQUAL)) {
+      expression();
+    } else if (match(TOKEN_IN)) {
+      emitByte(OP_NIL);
+      defineVariable(global);
+      genericFor(identifier);
+      return;
+    } else {
+      emitByte(OP_NIL);
+    }
+    consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
   } else {
     expressionStatment();
   }
@@ -1308,7 +1352,6 @@ static void returnStatement() {
 }
 
 static void whileStatment() {
-
   int loopStart = currentChunk()->count;
   consume(TOKEN_LEFT_PAREN, "Expect '(' after while.");
   expression();
@@ -1451,8 +1494,6 @@ void eval(const char *source) {
 
   current->file = oldFile;
   scanner = oldScanner;
-  scanner.current--;
-  advance();
 }
 
 ObjFunction *compile(const char *source, const char *file) {

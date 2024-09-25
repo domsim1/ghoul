@@ -251,11 +251,15 @@ int disassembleInstruction(Chunk *chunk, int offset) {
   case OP_METHOD_SHORT:
     return constantShortInstruction("OP_METHOD_SHORT", chunk, offset);
   case OP_BUILD_LIST:
-    return simpleInstruction("OP_BUILD_LIST", offset);
+    return constantInstruction("OP_BUILD_LIST", chunk, offset);
+  case OP_BUILD_LIST_SHORT:
+    return constantShortInstruction("OP_BUILD_LIST", chunk, offset);
   case OP_INDEX_SUBSCR:
     return simpleInstruction("OP_INDEX_SUBSCR", offset);
   case OP_STORE_SUBSCR:
     return simpleInstruction("OP_STORE_SUBSCR", offset);
+  case OP_IN:
+    return simpleInstruction("OP_IN", offset);
   default:
     printf("Unknown opcode %d\n", instruction);
     return offset + 1;

@@ -24,6 +24,7 @@ typedef struct {
   Table useStrings;
   Table strings;
   ObjString *initString;
+  ObjString *itorString;
   ObjUpvalue *openUpvalues;
   ObjClass *listKlass;
 

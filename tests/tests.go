@@ -55,10 +55,13 @@ func getFiles() []string {
 			if len(dot) < 2 {
 				continue
 			}
-			if dot[1] != "ghoul" {
+			if len(dot) > 1 && dot[1] != "ghoul" {
 				continue
 			}
 			files = append(files, file.Name())
+			continue
+		}
+		if file.Name() == "std" {
 			continue
 		}
 		subFiles, err := os.ReadDir(fmt.Sprintf("./%s", file.Name()))
@@ -68,7 +71,7 @@ func getFiles() []string {
 
 		for _, subFile := range subFiles {
 			dot := strings.Split(subFile.Name(), ".")
-			if dot[1] != "ghoul" {
+			if len(dot) > 1 && dot[1] != "ghoul" {
 				continue
 			}
 			files = append(files, fmt.Sprintf("%s/%s", file.Name(), subFile.Name()))

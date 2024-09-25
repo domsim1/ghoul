@@ -280,6 +280,7 @@ ObjClass *createListClass() {
   defineNativeKlassMethod(listKlass, "len", lenListNative);
   defineNativeKlassMethod(listKlass, "remove", removeListNative);
   defineNativeKlassMethod(listKlass, "join", joinListNative);
+
   return listKlass;
 }
 

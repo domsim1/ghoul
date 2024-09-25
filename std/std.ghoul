@@ -1,10 +1,1 @@
-:itor(list) {
-  :i = -1;
-  :g() {
-    i += 1;
-    if (i >= list.len()) ->nil;
-    ->list[i];
-  }
-  ->g;
-}
 

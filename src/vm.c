@@ -63,9 +63,7 @@ void initVM() {
   initTable(&vm.useStrings);
 
   vm.initString = NULL;
-  vm.itorString = NULL;
   vm.initString = copyString("init", 4, &vm.strings);
-  vm.itorString = copyString("_itor", 5, &vm.strings);
   vm.listKlass = createListClass();
 
   registerNatives();
@@ -903,7 +901,38 @@ static InterpretResult run() {
         frame = &vm.frames[vm.frameCount - 1];
         break;
       }
-      runtimeError("Expected itor function.");
+      if (IS_LIST(peek(0))) {
+        ObjList *list = AS_LIST(peek(0));
+        int i = 0;
+        push(NUMBER_VAL((double)i));
+        if (!isValidListIndex(list, i)) {
+          pop();
+          pop();
+          push(NIL_VAL);
+          break;
+        }
+        push(indexFromList(list, i));
+        break;
+      }
+      if (IS_LIST(peek(1)) && IS_NUMBER(peek(0))) {
+        ObjList *list = AS_LIST(peek(1));
+        int i = (int)AS_NUMBER(peek(0));
+        i += 1;
+        if (!isValidListIndex(list, i)) {
+          pop();
+          pop();
+          push(NIL_VAL);
+          break;
+        }
+        pop();
+        push(NUMBER_VAL((double)i));
+        push(indexFromList(list, i));
+        break;
+      }
+      if (IS_NIL(peek(0))) {
+        break;
+      }
+      runtimeError("Only functions and lists can be used after in.");
       return INTERPRET_RUNTIME_ERROR;
       break;
     }

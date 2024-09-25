@@ -1320,10 +1320,10 @@ static void forStatement() {
   emitLoop(loopStart);
 
   if (exitJump != -1) {
-    patchFlowJumps(loopStart);
     patchJump(exitJump);
     emitByte(OP_POP);
   }
+  patchFlowJumps(loopStart);
 
   endLoop();
   endScope();
@@ -1366,15 +1366,16 @@ static void whileStatment() {
   emitLoop(loopStart);
 
   patchJump(exitJump);
+  emitByte(OP_POP);
+
   patchFlowJumps(loopStart);
   endLoop();
-  emitByte(OP_POP);
 }
 
 static void continueStatement() {
   if (currentLoop == NULL) {
     errorAt(&parser.previous, "Can only continue within a loop.");
-    consume(TOKEN_SEMICOLON, "Expect ';' after break.");
+    consume(TOKEN_SEMICOLON, "Expect ';' after continue.");
     return;
   }
   if (currentLoop->statementCount > UINT8_MAX) {
@@ -1384,7 +1385,7 @@ static void continueStatement() {
   FlowStatement *statement = &flowStatements[currentLoop->statementCount++];
   statement->location = emitJump(OP_LOOP);
   statement->type = TYPE_CONTINUE;
-  consume(TOKEN_SEMICOLON, "Expect ';' after break.");
+  consume(TOKEN_SEMICOLON, "Expect ';' after continue.");
 }
 
 static void breakStatement() {
@@ -1478,22 +1479,6 @@ static void statement() {
   } else {
     expressionStatment();
   }
-}
-
-void eval(const char *source) {
-  const char *oldFile = current->file;
-  current->file = "<native>";
-
-  Scanner oldScanner;
-  oldScanner = scanner;
-  initScanner(source);
-  advance();
-  while (!match(TOKEN_EOF)) {
-    declaration();
-  }
-
-  current->file = oldFile;
-  scanner = oldScanner;
 }
 
 ObjFunction *compile(const char *source, const char *file) {

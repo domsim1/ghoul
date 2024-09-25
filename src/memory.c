@@ -208,7 +208,6 @@ static void markRoots() {
 
   markCompilerRoots();
   markObject((Obj *)vm.initString);
-  markObject((Obj *)vm.itorString);
 }
 
 static void traceReferences() {

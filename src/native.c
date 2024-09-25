@@ -1,4 +1,5 @@
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -143,6 +144,20 @@ static ObjClass *defineKlass(const char *name) {
   return klass;
 }
 
+static ObjClosure *findFunction(const char *name) {
+  push(OBJ_VAL(copyString(name, (int)strlen(name), &vm.strings)));
+  Value value;
+  if (!tableGet(&vm.globals, AS_STRING(vm.stack[0]), &value)) {
+    printf("Could not find class with name %s.\n",
+           AS_STRING(vm.stack[0])->chars);
+    exit(81);
+  };
+  ObjClosure *closure = AS_CLOSURE(value);
+  pop();
+  pop();
+  return closure;
+}
+
 static void defineNativeKlassMethod(ObjClass *klass, const char *name,
                                     NativeFn function) {
   push(OBJ_VAL(klass));
@@ -264,7 +279,7 @@ static Value joinListNative(int argCount, Value *args) {
       pushToList(list, listb->items[i]);
     }
   }
-  return OBJ_VAL(list);
+  return OBJ_VAL(pop());
 }
 
 void registerNatives() {

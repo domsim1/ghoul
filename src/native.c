@@ -134,9 +134,9 @@ static ObjInstance *defineInstance(ObjClass *klass, const char *name) {
   return instance;
 }
 
-static ObjClass *defineKlass(const char *name) {
+static ObjClass *defineKlass(const char *name, ObjType base) {
   push(OBJ_VAL(copyString(name, (int)strlen(name), &vm.strings)));
-  push(OBJ_VAL(newClass(AS_STRING(vm.stack[0]))));
+  push(OBJ_VAL(newClass(AS_STRING(vm.stack[0]), base)));
   tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
   ObjClass *klass = AS_CLASS(vm.stack[1]);
   pop();
@@ -204,8 +204,30 @@ static Value exitNative(int argCount, Value *args) {
   }
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
     return 0;
-  };
+  }
   exit(AS_NUMBER(args[1]));
+}
+
+static Value openNative(int argCount, Value *args) {
+  if (argCount == 1) {
+    exit(0);
+  }
+  if (!checkArgs(argCount, 2, args, NATIVE_VARIADIC, ARG_ANY, ARG_STRING)) {
+    return 0;
+  }
+  FILE *file;
+  ObjString *string = AS_STRING(args[1]);
+  if (argCount > 2 && IS_STRING(args[2])) {
+    file = fopen(string->chars, AS_STRING(args[2])->chars);
+  } else {
+    file = fopen(string->chars, "r");
+  }
+  if (file == NULL) {
+    runtimeError("Error opening file.");
+    return 0;
+  }
+
+  return NIL_VAL;
 }
 
 static Value pushListNative(int argCount, Value *args) {
@@ -231,13 +253,24 @@ static Value popListNative(int argCount, Value *args) {
 }
 
 static Value initListNative(int argCount, Value *args) {
-  if (!checkArgs(argCount, 0, args, NATIVE_VARIADIC)) {
+  if (!checkArgs(argCount, 1, args, NATIVE_VARIADIC, ARG_ANY)) {
     return 0;
   };
-  ObjList *list = newList(vm.listKlass);
-  push(OBJ_VAL(list));
-  for (int i = 1; i < argCount; i++) {
-    pushToList(list, args[i]);
+  if (IS_LIST(args[0])) {
+    ObjList *list = AS_LIST(args[0]);
+    push(OBJ_VAL(list));
+    for (int i = 1; i < argCount; i++) {
+      pushToList(list, args[i]);
+    }
+  } else if (IS_CLASS(args[0])) {
+    ObjList *list = newList(AS_CLASS(args[0]));
+    push(OBJ_VAL(list));
+    for (int i = 1; i < argCount; i++) {
+      pushToList(list, args[i]);
+    }
+  } else {
+    runtimeError("Unexpect base for List init.");
+    return 0;
   }
   return pop();
 }
@@ -288,7 +321,7 @@ void registerNatives() {
 }
 
 ObjClass *createListClass() {
-  ObjClass *listKlass = defineKlass("List");
+  ObjClass *listKlass = defineKlass("List", OBJ_LIST);
   defineNativeKlassMethod(listKlass, "init", initListNative);
   defineNativeKlassMethod(listKlass, "push", pushListNative);
   defineNativeKlassMethod(listKlass, "pop", popListNative);
@@ -304,7 +337,8 @@ void registerListNatives() {
   if (isRegistered)
     return;
 
-  ObjInstance *listInstance = defineInstance(defineKlass("Lists"), "Lists");
+  ObjInstance *listInstance =
+      defineInstance(defineKlass("Lists", OBJ_LIST), "Lists");
   defineNativeInstanceMethod(listInstance, "clock", clockNative);
 
   isRegistered = true;

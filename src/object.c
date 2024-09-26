@@ -42,10 +42,11 @@ ObjBoundMethod *newBoundMethod(Value receiver, ObjClosure *method) {
   return bound;
 }
 
-ObjClass *newClass(ObjString *name) {
+ObjClass *newClass(ObjString *name, ObjType base) {
   ObjClass *klass = ALLOCATE_OBJ(ObjClass, OBJ_CLASS);
   klass->name = name;
   initTable(&klass->methods);
+  klass->base = base;
   return klass;
 }
 

@@ -88,6 +88,7 @@ typedef struct {
   Obj obj;
   ObjString *name;
   Table methods;
+  ObjType base;
 } ObjClass;
 
 typedef struct {
@@ -119,7 +120,7 @@ typedef struct {
 
 ObjBoundMethod *newBoundMethod(Value receiver, ObjClosure *method);
 ObjBoundNative *newBoundNative(Value receiver, ObjNative *native);
-ObjClass *newClass(ObjString *name);
+ObjClass *newClass(ObjString *name, ObjType base);
 ObjClosure *newClosure(ObjFunction *function);
 ObjFunction *newFunction();
 ObjInstance *newInstance(ObjClass *klass);

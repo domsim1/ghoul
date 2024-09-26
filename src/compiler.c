@@ -1140,7 +1140,7 @@ static void useStatement() {
   ObjString *realFilePath =
       allocateString(heapChars, pathLength, hash, &vm.useStrings);
 
-  const char *source = readFile(realFilePath->chars);
+  char *source = readFile(realFilePath->chars);
   if (source == NULL) {
     return;
   }
@@ -1155,6 +1155,7 @@ static void useStatement() {
     declaration();
   }
 
+  free(source);
   current->file = oldFile;
   scanner = oldScanner;
   scanner.current--;

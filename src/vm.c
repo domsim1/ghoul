@@ -121,6 +121,17 @@ static bool callNative(NativeFn native, int argCount) {
   return true;
 }
 
+static bool initClass(ObjClass *klass, Value initializer, int argCount) {
+  switch (klass->base) {
+  case OBJ_LIST:
+    vm.stackTop[-argCount - 1] = OBJ_VAL(newList(klass));
+    return call(AS_CLOSURE(initializer), argCount);
+  default:
+    vm.stackTop[-argCount - 1] = OBJ_VAL(newInstance(klass));
+    return call(AS_CLOSURE(initializer), argCount);
+  }
+}
+
 static bool callValue(Value callee, int argCount) {
   if (IS_OBJ(callee)) {
     switch (OBJ_TYPE(callee)) {
@@ -137,13 +148,12 @@ static bool callValue(Value callee, int argCount) {
     }
     case OBJ_CLASS: {
       ObjClass *klass = AS_CLASS(callee);
-      vm.stackTop[-argCount - 1] = OBJ_VAL(newInstance(klass));
       Value initializer;
       if (tableGet(&klass->methods, vm.initString, &initializer)) {
         if (IS_NATIVE(initializer)) {
           return callNative(AS_NATIVE(initializer), argCount);
         }
-        return call(AS_CLOSURE(initializer), argCount);
+        return initClass(klass, initializer, argCount);
       } else if (argCount != 0) {
         runtimeError("Expected 0 argugments but got %d.", argCount);
         return false;
@@ -789,10 +799,10 @@ static InterpretResult run() {
       break;
     }
     case OP_CLASS:
-      push(OBJ_VAL(newClass(READ_STRING())));
+      push(OBJ_VAL(newClass(READ_STRING(), OBJ_CLASS)));
       break;
     case OP_CLASS_SHORT:
-      push(OBJ_VAL(newClass(READ_STRING_SHORT())));
+      push(OBJ_VAL(newClass(READ_STRING_SHORT(), OBJ_CLASS)));
       break;
     case OP_INHERIT: {
       Value superclass = peek(1);
@@ -801,7 +811,9 @@ static InterpretResult run() {
         return INTERPRET_RUNTIME_ERROR;
       }
       ObjClass *subclass = AS_CLASS(peek(0));
-      tableAddAll(&AS_CLASS(superclass)->methods, &subclass->methods);
+      ObjClass *super = AS_CLASS(superclass);
+      tableAddAll(&super->methods, &subclass->methods);
+      subclass->base = super->base;
       pop();
       break;
     }

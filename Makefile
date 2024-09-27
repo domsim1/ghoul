@@ -8,7 +8,7 @@ hfiles := src/*.h
 ghoul: $(cfiles) $(hfiles)
 	$(CC) $(WARN) -o $(EXE) $(cfiles) $(LIBS)
 
-.PHONY: test clean
+.PHONY: test clean bear
 test: ghoul
 	cp ./ghoul ./tests/ghoul
 	cp -r ./std ./tests/
@@ -18,3 +18,6 @@ clean:
 	rm ./ghoul
 	rm -rf /tests/std
 	rm ./tests/ghoul
+
+bear:
+	bear -- make

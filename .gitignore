@@ -4,3 +4,6 @@ tests/std/
 .DS_Store
 test.ghoul
 build/
+compile_commands.json
+.cache/
+

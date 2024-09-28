@@ -2,9 +2,9 @@
 #define ghoul_object_h
 
 #include "chunk.h"
-#include "common.h"
 #include "table.h"
 #include "value.h"
+#include <stdio.h>
 
 #define OBJ_TYPE(value) (AS_OBJ(value)->type)
 
@@ -17,10 +17,11 @@
 #define IS_NATIVE(value) isObjType(value, OBJ_NATIVE)
 #define IS_LIST(value) isObjType(value, OBJ_LIST)
 #define IS_STRING(value) isObjType(value, OBJ_STRING)
+#define IS_FILE(value) isObjType(value, OBJ_FILE)
 
 #define AS_BOUND_NATIVE(value) ((ObjBoundNative *)AS_OBJ(value))
 #define AS_BOUND_METHOD(value) ((ObjBoundMethod *)AS_OBJ(value))
-#define AS_CLASS(value) ((ObjClass *)AS_OBJ(value))
+#define AS_KLASS(value) ((ObjKlass *)AS_OBJ(value))
 #define AS_CLOSURE(value) ((ObjClosure *)AS_OBJ(value))
 #define AS_FUNCTION(value) ((ObjFunction *)AS_OBJ(value))
 #define AS_INSTANCE(value) ((ObjInstance *)AS_OBJ(value))
@@ -28,6 +29,7 @@
 #define AS_LIST(value) ((ObjList *)AS_OBJ(value))
 #define AS_STRING(value) ((ObjString *)AS_OBJ(value))
 #define AS_CSTRING(value) (((ObjString *)AS_OBJ(value))->chars)
+#define AS_FILE(value) ((ObjFile *)AS_OBJ(value))
 
 typedef enum {
   OBJ_BOUND_METHOD,
@@ -40,6 +42,7 @@ typedef enum {
   OBJ_LIST,
   OBJ_STRING,
   OBJ_UPVALUE,
+  OBJ_FILE,
 } ObjType;
 
 struct Obj {
@@ -87,13 +90,13 @@ typedef struct {
 typedef struct {
   Obj obj;
   ObjString *name;
-  Table methods;
   ObjType base;
-} ObjClass;
+  Table methods;
+} ObjKlass;
 
 typedef struct {
   Obj obj;
-  ObjClass *klass;
+  ObjKlass *klass;
   Table fields;
 } ObjInstance;
 
@@ -111,24 +114,33 @@ typedef struct {
 
 typedef struct {
   Obj obj;
+  ObjKlass *klass;
   int count;
   int capacity;
-  ObjClass *klass;
-  Table fields;
   Value *items;
+  Table fields;
 } ObjList;
+
+typedef struct {
+  Obj obj;
+  FILE *file;
+  ObjKlass *klass;
+  Table fields;
+} ObjFile;
 
 ObjBoundMethod *newBoundMethod(Value receiver, ObjClosure *method);
 ObjBoundNative *newBoundNative(Value receiver, ObjNative *native);
-ObjClass *newClass(ObjString *name, ObjType base);
+ObjKlass *newClass(ObjString *name, ObjType base);
 ObjClosure *newClosure(ObjFunction *function);
 ObjFunction *newFunction();
-ObjInstance *newInstance(ObjClass *klass);
+ObjInstance *newInstance(ObjKlass *klass);
 ObjNative *newNative(NativeFn function);
-ObjList *newList(ObjClass *klass);
+ObjList *newList(ObjKlass *klass);
 ObjString *takeString(char *chars, int length);
 ObjString *copyString(const char *chars, int length, Table *stringTable);
+ObjString *copyEscString(const char *chars, int length, Table *stringTable);
 ObjUpvalue *newUpvalue(Value *slot);
+ObjFile *newFile(ObjKlass *klass);
 void printObject(Value value);
 
 void pushToList(ObjList *list, Value value);

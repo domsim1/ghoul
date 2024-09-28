@@ -64,8 +64,8 @@ void initVM() {
 
   vm.initString = NULL;
   vm.initString = copyString("init", 4, &vm.strings);
-  vm.listKlass = createListClass();
 
+  registerBuiltInKlasses();
   registerNatives();
 }
 
@@ -74,7 +74,8 @@ void freeVM() {
   freeTable(&vm.globals);
   freeTable(&vm.useStrings);
   vm.initString = NULL;
-  vm.listKlass = NULL;
+  vm.klass.list = NULL;
+  vm.klass.file = NULL;
   freeObjects();
 }
 
@@ -121,15 +122,18 @@ static bool callNative(NativeFn native, int argCount) {
   return true;
 }
 
-static bool initClass(ObjClass *klass, Value initializer, int argCount) {
+static bool initClass(ObjKlass *klass, Value initializer, int argCount) {
   switch (klass->base) {
   case OBJ_LIST:
     vm.stackTop[-argCount - 1] = OBJ_VAL(newList(klass));
-    return call(AS_CLOSURE(initializer), argCount);
+    break;
+  case OBJ_FILE:
+    vm.stackTop[-argCount - 1] = OBJ_VAL(newFile(klass));
+    break;
   default:
     vm.stackTop[-argCount - 1] = OBJ_VAL(newInstance(klass));
-    return call(AS_CLOSURE(initializer), argCount);
   }
+  return call(AS_CLOSURE(initializer), argCount);
 }
 
 static bool callValue(Value callee, int argCount) {
@@ -147,7 +151,7 @@ static bool callValue(Value callee, int argCount) {
       return callNative(native, argCount);
     }
     case OBJ_CLASS: {
-      ObjClass *klass = AS_CLASS(callee);
+      ObjKlass *klass = AS_KLASS(callee);
       Value initializer;
       if (tableGet(&klass->methods, vm.initString, &initializer)) {
         if (IS_NATIVE(initializer)) {
@@ -158,6 +162,7 @@ static bool callValue(Value callee, int argCount) {
         runtimeError("Expected 0 argugments but got %d.", argCount);
         return false;
       }
+      push(OBJ_VAL(newInstance(klass)));
       return true;
     }
     case OBJ_CLOSURE:
@@ -173,7 +178,7 @@ static bool callValue(Value callee, int argCount) {
   return false;
 }
 
-static bool invokeFromClass(ObjClass *klass, ObjString *name, int argCount) {
+static bool invokeFromClass(ObjKlass *klass, ObjString *name, int argCount) {
   Value method;
   if (!tableGet(&klass->methods, name, &method)) {
     runtimeError("Undefined property '%s'.", name->chars);
@@ -187,29 +192,33 @@ static bool invokeFromClass(ObjClass *klass, ObjString *name, int argCount) {
 
 static bool invoke(ObjString *name, int argCount) {
   Value receiver = peek(argCount);
+  ObjKlass *klass = NULL;
+  Table *fields = NULL;
   if (IS_INSTANCE(receiver)) {
     ObjInstance *instance = AS_INSTANCE(receiver);
-    Value value;
-    if (tableGet(&instance->fields, name, &value)) {
-      vm.stackTop[-argCount - 1] = value;
-      return callValue(value, argCount);
-    }
-    return invokeFromClass(instance->klass, name, argCount);
+    klass = instance->klass;
+    fields = &instance->fields;
   } else if (IS_LIST(receiver)) {
     ObjList *list = AS_LIST(receiver);
-    Value value;
-    if (tableGet(&list->fields, name, &value)) {
-      vm.stackTop[-argCount - 1] = value;
-      return callValue(value, argCount);
-    }
-    return invokeFromClass(list->klass, name, argCount);
+    klass = list->klass;
+    fields = &list->fields;
+  } else if (IS_FILE(receiver)) {
+    ObjFile *file = AS_FILE(receiver);
+    klass = file->klass;
+    fields = &file->fields;
+  } else {
+    runtimeError("Only instances have methods.");
+    return false;
   }
-
-  runtimeError("Only instances have methods.");
-  return false;
+  Value value;
+  if (tableGet(fields, name, &value)) {
+    vm.stackTop[-argCount - 1] = value;
+    return callValue(value, argCount);
+  }
+  return invokeFromClass(klass, name, argCount);
 }
 
-static bool bindMethod(ObjClass *klass, ObjString *name) {
+static bool bindMethod(ObjKlass *klass, ObjString *name) {
   Value method;
   if (!tableGet(&klass->methods, name, &method)) {
     runtimeError("Undefined property '%s'.", name->chars);
@@ -265,7 +274,7 @@ static void closeUpvalues(Value *last) {
 
 static void defineMethod(ObjString *name) {
   Value method = peek(0);
-  ObjClass *klass = AS_CLASS(peek(1));
+  ObjKlass *klass = AS_KLASS(peek(1));
   tableSet(&klass->methods, name, method);
   pop();
   return;
@@ -479,116 +488,108 @@ static InterpretResult run() {
       break;
     }
     case OP_GET_PROPERTY: {
+      ObjKlass *klass = NULL;
+      Table *fields = NULL;
       if (IS_INSTANCE(peek(0))) {
         ObjInstance *instance = AS_INSTANCE(peek(0));
-        ObjString *name = READ_STRING();
-
-        Value value;
-        if (tableGet(&instance->fields, name, &value)) {
-          pop();
-          push(value);
-          break;
-        }
-        if (!bindMethod(instance->klass, name)) {
-          return INTERPRET_RUNTIME_ERROR;
-        }
-        break;
+        klass = instance->klass;
+        fields = &instance->fields;
       } else if (IS_LIST(peek(0))) {
         ObjList *list = AS_LIST(peek(0));
-        ObjString *name = READ_STRING();
-
-        Value value;
-        if (tableGet(&list->fields, name, &value)) {
-          pop();
-          push(value);
-          break;
-        }
-        if (!bindMethod(list->klass, name)) {
-          return INTERPRET_RUNTIME_ERROR;
-        }
+        klass = list->klass;
+        fields = &list->fields;
+      } else if (IS_FILE(peek(0))) {
+        ObjFile *file = AS_FILE(peek(0));
+        klass = file->klass;
+        fields = &file->fields;
+      } else {
+        runtimeError("Only instances have properties.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      ObjString *name = READ_STRING();
+      Value value;
+      if (tableGet(fields, name, &value)) {
+        pop();
+        push(value);
         break;
       }
-      runtimeError("Only instances have properties.");
-      return INTERPRET_RUNTIME_ERROR;
+      if (!bindMethod(klass, name)) {
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      break;
     }
     case OP_GET_PROPERTY_SHORT: {
+      ObjKlass *klass = NULL;
+      Table *fields = NULL;
       if (IS_INSTANCE(peek(0))) {
         ObjInstance *instance = AS_INSTANCE(peek(0));
-        ObjString *name = READ_STRING_SHORT();
-
-        Value value;
-        if (tableGet(&instance->fields, name, &value)) {
-          pop();
-          push(value);
-          break;
-        }
-        if (!bindMethod(instance->klass, name)) {
-          return INTERPRET_RUNTIME_ERROR;
-        }
-        break;
+        klass = instance->klass;
+        fields = &instance->fields;
       } else if (IS_LIST(peek(0))) {
         ObjList *list = AS_LIST(peek(0));
-        ObjString *name = READ_STRING_SHORT();
-
-        Value value;
-        if (tableGet(&list->fields, name, &value)) {
-          pop();
-          push(value);
-          break;
-        }
-        if (!bindMethod(list->klass, name)) {
-          return INTERPRET_RUNTIME_ERROR;
-        }
+        klass = list->klass;
+        fields = &list->fields;
+      } else if (IS_FILE(peek(0))) {
+        ObjFile *file = AS_FILE(peek(0));
+        klass = file->klass;
+        fields = &file->fields;
+      } else {
+        runtimeError("Only instances have properties.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      ObjString *name = READ_STRING_SHORT();
+      Value value;
+      if (tableGet(fields, name, &value)) {
+        pop();
+        push(value);
         break;
       }
-      runtimeError("Only instances have properties.");
-      return INTERPRET_RUNTIME_ERROR;
+      if (!bindMethod(klass, name)) {
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      break;
     }
     case OP_SET_PROPERTY: {
+      Table *fields = NULL;
       if (IS_INSTANCE(peek(1))) {
-        ObjString *name = READ_STRING();
         ObjInstance *instance = AS_INSTANCE(peek(1));
-        tableSet(&instance->fields, name, peek(0));
-        Value value = pop();
-        pop();
-        push(value);
-        break;
+        fields = &instance->fields;
       } else if (IS_LIST(peek(1))) {
-        ObjString *name = READ_STRING();
         ObjList *list = AS_LIST(peek(1));
-        tableSet(&list->fields, name, peek(0));
-        Value value = pop();
-        pop();
-        push(value);
-        break;
+        fields = &list->fields;
+      } else {
+        runtimeError("Only instances have fields.");
+        return INTERPRET_RUNTIME_ERROR;
       }
-      runtimeError("Only instances have fields.");
-      return INTERPRET_RUNTIME_ERROR;
+      ObjString *name = READ_STRING();
+      tableSet(fields, name, peek(0));
+      Value value = pop();
+      pop();
+      push(value);
+      break;
     }
     case OP_SET_PROPERTY_SHORT: {
+      Table *fields = NULL;
       if (IS_INSTANCE(peek(1))) {
-        ObjString *name = READ_STRING_SHORT();
         ObjInstance *instance = AS_INSTANCE(peek(1));
-        tableSet(&instance->fields, name, peek(0));
-        Value value = pop();
-        pop();
-        push(value);
-        break;
+        fields = &instance->fields;
       } else if (IS_LIST(peek(1))) {
-        ObjString *name = READ_STRING_SHORT();
         ObjList *list = AS_LIST(peek(1));
-        tableSet(&list->fields, name, peek(0));
-        Value value = pop();
-        pop();
-        push(value);
-        break;
+        fields = &list->fields;
+      } else {
+        runtimeError("Only instances have fields.");
+        return INTERPRET_RUNTIME_ERROR;
       }
-      runtimeError("Only instances have fields.");
-      return INTERPRET_RUNTIME_ERROR;
+      ObjString *name = READ_STRING_SHORT();
+      tableSet(fields, name, peek(0));
+      Value value = pop();
+      pop();
+      push(value);
+      break;
     }
     case OP_GET_SUPER: {
       ObjString *name = READ_STRING();
-      ObjClass *superclass = AS_CLASS(pop());
+      ObjKlass *superclass = AS_KLASS(pop());
 
       if (!bindMethod(superclass, name)) {
         return INTERPRET_RUNTIME_ERROR;
@@ -597,7 +598,7 @@ static InterpretResult run() {
     }
     case OP_GET_SUPER_SHORT: {
       ObjString *name = READ_STRING_SHORT();
-      ObjClass *superclass = AS_CLASS(pop());
+      ObjKlass *superclass = AS_KLASS(pop());
 
       if (!bindMethod(superclass, name)) {
         return INTERPRET_RUNTIME_ERROR;
@@ -733,7 +734,7 @@ static InterpretResult run() {
     case OP_SUPER_INVOKE: {
       ObjString *method = READ_STRING();
       int argCount = READ_BYTE();
-      ObjClass *superclass = AS_CLASS(pop());
+      ObjKlass *superclass = AS_KLASS(pop());
       if (!invokeFromClass(superclass, method, argCount)) {
         return INTERPRET_RUNTIME_ERROR;
       }
@@ -743,7 +744,7 @@ static InterpretResult run() {
     case OP_SUPER_INVOKE_SHORT: {
       ObjString *method = READ_STRING_SHORT();
       int argCount = READ_SHORT();
-      ObjClass *superclass = AS_CLASS(pop());
+      ObjKlass *superclass = AS_KLASS(pop());
       if (!invokeFromClass(superclass, method, argCount)) {
         return INTERPRET_RUNTIME_ERROR;
       }
@@ -810,8 +811,8 @@ static InterpretResult run() {
         runtimeError("Superclass must be a class.");
         return INTERPRET_RUNTIME_ERROR;
       }
-      ObjClass *subclass = AS_CLASS(peek(0));
-      ObjClass *super = AS_CLASS(superclass);
+      ObjKlass *subclass = AS_KLASS(peek(0));
+      ObjKlass *super = AS_KLASS(superclass);
       tableAddAll(&super->methods, &subclass->methods);
       subclass->base = super->base;
       pop();
@@ -824,7 +825,7 @@ static InterpretResult run() {
       defineMethod(READ_STRING_SHORT());
       break;
     case OP_BUILD_LIST: {
-      ObjList *list = newList(vm.listKlass);
+      ObjList *list = newList(vm.klass.list);
       uint8_t itemCount = READ_BYTE();
 
       push(OBJ_VAL(list));
@@ -841,7 +842,7 @@ static InterpretResult run() {
       break;
     }
     case OP_BUILD_LIST_SHORT: {
-      ObjList *list = newList(vm.listKlass);
+      ObjList *list = newList(vm.klass.list);
       uint16_t itemCount = READ_SHORT();
 
       push(OBJ_VAL(list));

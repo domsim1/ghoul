@@ -1,7 +1,6 @@
 #ifndef ghoul_chunk_h
 #define ghoul_chunk_h
 
-#include "common.h"
 #include "value.h"
 
 typedef enum {

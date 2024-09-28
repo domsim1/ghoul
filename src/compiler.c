@@ -11,6 +11,7 @@
 #include "native.h"
 #include "scanner.h"
 #include "table.h"
+#include "vm.h"
 
 #ifdef DEBUG_PRINT_CODE
 #include "debug.h"
@@ -747,8 +748,8 @@ static void number(bool canAssign) {
 }
 
 static void string(bool canAssign) {
-  emitConstant(OBJ_VAL(copyString(parser.previous.start + 1,
-                                  parser.previous.length - 2, &vm.strings)));
+  emitConstant(OBJ_VAL(copyEscString(parser.previous.start + 1,
+                                     parser.previous.length - 2, &vm.strings)));
 }
 
 static void list(bool canAssign) {

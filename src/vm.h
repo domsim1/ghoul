@@ -15,6 +15,11 @@ typedef struct {
 } CallFrame;
 
 typedef struct {
+  ObjKlass *list;
+  ObjKlass *file;
+} BuiltInKlass;
+
+typedef struct {
   CallFrame frames[FRAMES_MAX];
   int frameCount;
 
@@ -23,9 +28,9 @@ typedef struct {
   Table globals;
   Table useStrings;
   Table strings;
+  BuiltInKlass klass;
   ObjString *initString;
   ObjUpvalue *openUpvalues;
-  ObjClass *listKlass;
 
   size_t bytesAllocated;
   size_t nextGC;

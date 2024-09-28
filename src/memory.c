@@ -91,7 +91,7 @@ static void blackenObject(Obj *object) {
     break;
   }
   case OBJ_CLASS: {
-    ObjClass *klass = (ObjClass *)object;
+    ObjKlass *klass = (ObjKlass *)object;
     markObject((Obj *)klass->name);
     markTable(&klass->methods);
     break;
@@ -126,6 +126,12 @@ static void blackenObject(Obj *object) {
     }
     break;
   }
+  case OBJ_FILE: {
+    ObjFile *file = (ObjFile *)object;
+    markObject((Obj *)file->klass);
+    markTable(&file->fields);
+    break;
+  }
   case OBJ_NATIVE:
   case OBJ_STRING:
     break;
@@ -144,9 +150,9 @@ static void freeObject(Obj *object) {
     FREE(ObjBoundNative, object);
     break;
   case OBJ_CLASS: {
-    ObjClass *klass = (ObjClass *)object;
+    ObjKlass *klass = (ObjKlass *)object;
     freeTable(&klass->methods);
-    FREE(ObjClass, object);
+    FREE(ObjKlass, object);
     break;
   }
   case OBJ_CLOSURE: {
@@ -183,7 +189,15 @@ static void freeObject(Obj *object) {
   case OBJ_LIST: {
     ObjList *list = (ObjList *)object;
     FREE_ARRAY(Value *, list->items, list->count);
+    freeTable(&list->fields);
     FREE(ObjList, object);
+    break;
+  }
+  case OBJ_FILE: {
+    ObjFile *file = (ObjFile *)object;
+    freeTable(&file->fields);
+    FREE(FILE, file->file);
+    FREE(ObjFile, object);
     break;
   }
   }

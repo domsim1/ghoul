@@ -42,8 +42,8 @@ ObjBoundMethod *newBoundMethod(Value receiver, ObjClosure *method) {
   return bound;
 }
 
-ObjClass *newClass(ObjString *name, ObjType base) {
-  ObjClass *klass = ALLOCATE_OBJ(ObjClass, OBJ_CLASS);
+ObjKlass *newClass(ObjString *name, ObjType base) {
+  ObjKlass *klass = ALLOCATE_OBJ(ObjKlass, OBJ_CLASS);
   klass->name = name;
   initTable(&klass->methods);
   klass->base = base;
@@ -71,7 +71,7 @@ ObjFunction *newFunction() {
   return function;
 }
 
-ObjInstance *newInstance(ObjClass *klass) {
+ObjInstance *newInstance(ObjKlass *klass) {
   ObjInstance *instance = ALLOCATE_OBJ(ObjInstance, OBJ_INSTANCE);
   instance->klass = klass;
   initTable(&instance->fields);
@@ -84,7 +84,7 @@ ObjNative *newNative(NativeFn function) {
   return native;
 }
 
-ObjList *newList(ObjClass *klass) {
+ObjList *newList(ObjKlass *klass) {
   ObjList *list = ALLOCATE_OBJ(ObjList, OBJ_LIST);
   list->items = NULL;
   list->klass = klass;
@@ -92,6 +92,14 @@ ObjList *newList(ObjClass *klass) {
   list->capacity = 0;
   initTable(&list->fields);
   return list;
+}
+
+ObjFile *newFile(ObjKlass *klass) {
+  ObjFile *file = ALLOCATE_OBJ(ObjFile, OBJ_FILE);
+  file->file = NULL;
+  file->klass = klass;
+  initTable(&file->fields);
+  return file;
 }
 
 void pushToList(ObjList *list, Value value) {
@@ -179,6 +187,43 @@ ObjString *copyString(const char *chars, int length, Table *stringTable) {
   return allocateString(heapChars, length, hash, stringTable);
 }
 
+ObjString *copyEscString(const char *chars, int length, Table *stringTable) {
+  char escString[length];
+  int escLen = 0;
+  bool escMode = false;
+  for (int i = 0; i < length; i++) {
+    char c = chars[i];
+    if (escMode) {
+      switch (c) {
+      case '"':
+      case '\\':
+        break;
+      case 'n':
+        c = '\n';
+        break;
+      case 'r':
+        c = '\r';
+        break;
+      }
+      escMode = false;
+    } else if (c == '\\') {
+      escMode = true;
+      continue;
+    }
+    escString[escLen++] = c;
+  }
+  uint32_t hash = hashString(escString, escLen);
+  ObjString *interned = tableFindString(stringTable, escString, escLen, hash);
+
+  if (interned != NULL)
+    return interned;
+
+  char *heapChars = ALLOCATE(char, escLen + 1);
+  memcpy(heapChars, escString, escLen);
+  heapChars[escLen] = '\0';
+  return allocateString(heapChars, escLen, hash, stringTable);
+}
+
 ObjUpvalue *newUpvalue(Value *slot) {
   ObjUpvalue *upvalue = ALLOCATE_OBJ(ObjUpvalue, OBJ_UPVALUE);
   upvalue->closed = NIL_VAL;
@@ -222,7 +267,7 @@ void printObject(Value value) {
     printf("<bound native fn>");
     break;
   case OBJ_CLASS:
-    printf("<class '%s'>", AS_CLASS(value)->name->chars);
+    printf("<class '%s'>", AS_KLASS(value)->name->chars);
     break;
   case OBJ_CLOSURE:
     printFunction(AS_CLOSURE(value)->function);
@@ -244,6 +289,9 @@ void printObject(Value value) {
     break;
   case OBJ_UPVALUE:
     printf("<upvalue>");
+    break;
+  case OBJ_FILE:
+    printf("<instance '%s'>", AS_FILE(value)->klass->name->chars);
     break;
   }
 }

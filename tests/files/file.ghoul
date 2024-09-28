@@ -1,0 +1,11 @@
+print "$expect$";
+print "apple";
+print "pie";
+print "$actual$";
+:f = open("./files/folder/test.txt", "w");
+f.write("apple\npie");
+f.close();
+f = open("./files/folder/test.txt", "r");
+print f.read("\n");
+print f.read("\n");
+f.close();

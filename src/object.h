@@ -1,10 +1,10 @@
 #ifndef ghoul_object_h
 #define ghoul_object_h
+#include <stdio.h>
 
 #include "chunk.h"
 #include "table.h"
 #include "value.h"
-#include <stdio.h>
 
 #define OBJ_TYPE(value) (AS_OBJ(value)->type)
 

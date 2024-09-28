@@ -70,6 +70,9 @@ func getFiles() []string {
 		}
 
 		for _, subFile := range subFiles {
+			if subFile.IsDir() {
+				continue
+			}
 			dot := strings.Split(subFile.Name(), ".")
 			if len(dot) > 1 && dot[1] != "ghoul" {
 				continue

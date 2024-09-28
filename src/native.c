@@ -243,7 +243,9 @@ static Value closeFileNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_FILE)) {
     return 0;
   };
-  fclose(AS_FILE(args[0])->file);
+  ObjFile *file = AS_FILE(args[0]);
+  fclose(file->file);
+  file->file = NULL;
   return NIL_VAL;
 }
 

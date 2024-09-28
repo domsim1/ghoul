@@ -196,7 +196,6 @@ static void freeObject(Obj *object) {
   case OBJ_FILE: {
     ObjFile *file = (ObjFile *)object;
     freeTable(&file->fields);
-    FREE(FILE, file->file);
     FREE(ObjFile, object);
     break;
   }

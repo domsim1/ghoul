@@ -17,6 +17,7 @@ typedef struct {
 typedef struct {
   ObjKlass *list;
   ObjKlass *file;
+  ObjKlass *string;
 } BuiltInKlass;
 
 typedef struct {

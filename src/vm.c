@@ -130,6 +130,10 @@ static bool initClass(ObjKlass *klass, Value initializer, int argCount) {
   case OBJ_FILE:
     vm.stackTop[-argCount - 1] = OBJ_VAL(newFile(klass));
     break;
+  case OBJ_STRING:
+    vm.stackTop[-argCount - 1] =
+        OBJ_VAL(copyEscString("", 0, &vm.strings, klass));
+    break;
   default:
     vm.stackTop[-argCount - 1] = OBJ_VAL(newInstance(klass));
   }
@@ -206,6 +210,10 @@ static bool invoke(ObjString *name, int argCount) {
     ObjFile *file = AS_FILE(receiver);
     klass = file->klass;
     fields = &file->fields;
+  } else if (IS_STRING(receiver)) {
+    ObjString *string = AS_STRING(receiver);
+    klass = string->klass;
+    fields = &string->fields;
   } else {
     runtimeError("Only instances have methods.");
     return false;
@@ -502,6 +510,10 @@ static InterpretResult run() {
         ObjFile *file = AS_FILE(peek(0));
         klass = file->klass;
         fields = &file->fields;
+      } else if (IS_STRING(peek(0))) {
+        ObjString *string = AS_STRING(peek(0));
+        klass = string->klass;
+        fields = &string->fields;
       } else {
         runtimeError("Only instances have properties.");
         return INTERPRET_RUNTIME_ERROR;
@@ -533,6 +545,10 @@ static InterpretResult run() {
         ObjFile *file = AS_FILE(peek(0));
         klass = file->klass;
         fields = &file->fields;
+      } else if (IS_STRING(peek(0))) {
+        ObjString *string = AS_STRING(peek(0));
+        klass = string->klass;
+        fields = &string->fields;
       } else {
         runtimeError("Only instances have properties.");
         return INTERPRET_RUNTIME_ERROR;
@@ -865,19 +881,29 @@ static InterpretResult run() {
       }
       double index = AS_NUMBER(pop());
 
-      if (!IS_LIST(peek(0))) {
+      if (IS_LIST(peek(0))) {
+        ObjList *list = AS_LIST(pop());
+
+        if (!isValidListIndex(list, index)) {
+          runtimeError("List index out of range.");
+          return INTERPRET_RUNTIME_ERROR;
+        }
+
+        push(indexFromList(list, index));
+      } else if (IS_STRING(peek(0))) {
+        ObjString *string = AS_STRING(pop());
+
+        if (index > string->length - 1 || index < 0) {
+          runtimeError("String index out of range.");
+          return INTERPRET_RUNTIME_ERROR;
+        }
+
+        push(OBJ_VAL(
+            copyString(string->chars + (int)index, index, &vm.strings)));
+      } else {
         runtimeError("Invalid type to index into.");
         return INTERPRET_RUNTIME_ERROR;
       }
-      ObjList *list = AS_LIST(pop());
-
-      if (!isValidListIndex(list, index)) {
-        runtimeError("List index out of range.");
-        return INTERPRET_RUNTIME_ERROR;
-      }
-
-      Value result = indexFromList(list, index);
-      push(result);
       break;
     }
     case OP_STORE_SUBSCR: {
@@ -889,19 +915,20 @@ static InterpretResult run() {
       }
       int index = AS_NUMBER(pop());
 
-      if (!IS_LIST(peek(0))) {
-        runtimeError("Invalid type to index into.");
+      if (IS_LIST(peek(0))) {
+        ObjList *list = AS_LIST(pop());
+
+        if (!isValidListIndex(list, index)) {
+          runtimeError("List index out of range.");
+          return INTERPRET_RUNTIME_ERROR;
+        }
+
+        storeToList(list, index, item);
+        push(item);
+      } else {
+        runtimeError("Invalid type to update by index.");
         return INTERPRET_RUNTIME_ERROR;
       }
-      ObjList *list = AS_LIST(pop());
-
-      if (!isValidListIndex(list, index)) {
-        runtimeError("List index out of range.");
-        return INTERPRET_RUNTIME_ERROR;
-      }
-
-      storeToList(list, index, item);
-      push(item);
       break;
     }
     case OP_IN: {
@@ -912,9 +939,7 @@ static InterpretResult run() {
           return INTERPRET_RUNTIME_ERROR;
         }
         frame = &vm.frames[vm.frameCount - 1];
-        break;
-      }
-      if (IS_LIST(peek(0))) {
+      } else if (IS_LIST(peek(0))) {
         ObjList *list = AS_LIST(peek(0));
         int i = 0;
         push(NUMBER_VAL((double)i));
@@ -924,9 +949,7 @@ static InterpretResult run() {
           break;
         }
         push(indexFromList(list, i));
-        break;
-      }
-      if (IS_LIST(peek(1)) && IS_NUMBER(peek(0))) {
+      } else if (IS_LIST(peek(1)) && IS_NUMBER(peek(0))) {
         ObjList *list = AS_LIST(peek(1));
         int i = (int)AS_NUMBER(peek(0));
         i += 1;
@@ -938,13 +961,38 @@ static InterpretResult run() {
         pop();
         push(NUMBER_VAL((double)i));
         push(indexFromList(list, i));
+      } else if (IS_STRING(peek(0))) {
+        ObjString *string = AS_STRING(peek(0));
+        int i = 0;
+        push(NUMBER_VAL((double)i));
+        if (i > string->length - 1) {
+          pop();
+          push(NIL_VAL);
+          break;
+        }
+        ObjString *ch = copyString(string->chars, 1, &vm.strings);
+        ch->klass = string->klass;
+        push(OBJ_VAL(ch));
+      } else if (IS_STRING(peek(1)) && IS_NUMBER(peek(0))) {
+        ObjString *string = AS_STRING(peek(1));
+        int i = (int)AS_NUMBER(peek(0));
+        i += 1;
+        if (i > string->length - 1) {
+          pop();
+          push(NIL_VAL);
+          break;
+        }
+        pop();
+        push(NUMBER_VAL((double)i));
+        ObjString *ch = copyString(string->chars + i, 1, &vm.strings);
+        ch->klass = string->klass;
+        push(OBJ_VAL(ch));
+      } else if (IS_NIL(peek(0))) {
         break;
+      } else {
+        runtimeError("Only functions, strings and lists can be used after in.");
+        return INTERPRET_RUNTIME_ERROR;
       }
-      if (IS_NIL(peek(0))) {
-        break;
-      }
-      runtimeError("Only functions and lists can be used after in.");
-      return INTERPRET_RUNTIME_ERROR;
       break;
     }
     }

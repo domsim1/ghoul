@@ -1,0 +1,26 @@
+:a = String("hi test");
+
+:b = String("a:b:c");
+
+:c < String{
+  addTest() {
+    -> this + "test";
+  }
+}
+:d = c("hi ");
+
+
+print "$expect$";
+print "hi test";
+print "i";
+print 7;
+print "['a', 'b', 'c']";
+print "hi ";
+print "hi test";
+print "$actual$";
+print a;
+print a[1];
+print a.len();
+print b.split(":");
+print d;
+print d.addTest();

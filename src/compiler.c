@@ -332,8 +332,8 @@ static void initCompiler(Compiler *compiler, FunctionType type,
   char *heapChars = ALLOCATE(char, pathLength + 1);
   memcpy(heapChars, file, pathLength);
   heapChars[pathLength] = '\0';
-  ObjString *realFilePath =
-      allocateString(heapChars, pathLength, hash, &vm.useStrings);
+  ObjString *realFilePath = allocateString(heapChars, pathLength, hash,
+                                           &vm.useStrings, vm.klass.string);
   compiler->file = realFilePath->chars;
 
   Local *local = &current->locals[current->localCount++];
@@ -749,7 +749,8 @@ static void number(bool canAssign) {
 
 static void string(bool canAssign) {
   emitConstant(OBJ_VAL(copyEscString(parser.previous.start + 1,
-                                     parser.previous.length - 2, &vm.strings)));
+                                     parser.previous.length - 2, &vm.strings,
+                                     vm.klass.string)));
 }
 
 static void list(bool canAssign) {
@@ -1138,8 +1139,8 @@ static void useStatement() {
   char *heapChars = ALLOCATE(char, pathLength + 1);
   memcpy(heapChars, actualpath, pathLength);
   heapChars[pathLength] = '\0';
-  ObjString *realFilePath =
-      allocateString(heapChars, pathLength, hash, &vm.useStrings);
+  ObjString *realFilePath = allocateString(heapChars, pathLength, hash,
+                                           &vm.useStrings, vm.klass.string);
 
   char *source = readFile(realFilePath->chars);
   if (source == NULL) {

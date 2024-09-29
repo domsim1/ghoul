@@ -1,0 +1,9 @@
+print "$expect$";
+print "t";
+print "e";
+print "s";
+print "t";
+print "$actual$";
+for (:val in "test") {
+  print val;
+}

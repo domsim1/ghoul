@@ -66,10 +66,19 @@ typedef struct {
   NativeFn function;
 } ObjNative;
 
+typedef struct {
+  Obj obj;
+  ObjString *name;
+  ObjType base;
+  Table methods;
+} ObjKlass;
+
 struct ObjString {
   Obj obj;
   int length;
   uint32_t hash;
+  ObjKlass *klass;
+  Table fields;
   char *chars;
 };
 
@@ -86,13 +95,6 @@ typedef struct {
   ObjUpvalue **upvalues;
   int upvalueCount;
 } ObjClosure;
-
-typedef struct {
-  Obj obj;
-  ObjString *name;
-  ObjType base;
-  Table methods;
-} ObjKlass;
 
 typedef struct {
   Obj obj;
@@ -138,7 +140,8 @@ ObjNative *newNative(NativeFn function);
 ObjList *newList(ObjKlass *klass);
 ObjString *takeString(char *chars, int length);
 ObjString *copyString(const char *chars, int length, Table *stringTable);
-ObjString *copyEscString(const char *chars, int length, Table *stringTable);
+ObjString *copyEscString(const char *chars, int length, Table *stringTable,
+                         ObjKlass *klass);
 ObjUpvalue *newUpvalue(Value *slot);
 ObjFile *newFile(ObjKlass *klass);
 void printObject(Value value);
@@ -151,7 +154,7 @@ bool isValidListRange(ObjList *list, int start, int end);
 bool isValidListIndex(ObjList *list, int index);
 uint32_t hashString(const char *key, int length);
 ObjString *allocateString(char *chars, int length, uint32_t hash,
-                          Table *stringTable);
+                          Table *stringTable, ObjKlass *klass);
 
 static inline bool isObjType(Value value, ObjType type) {
   return IS_OBJ(value) && AS_OBJ(value)->type == type;

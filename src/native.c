@@ -389,6 +389,89 @@ static Value joinListNative(int argCount, Value *args) {
   return OBJ_VAL(pop());
 }
 
+static Value initStringNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_VARIADIC, ARG_ANY)) {
+    return 0;
+  };
+  ObjString *string = NULL;
+  if (IS_STRING(args[0])) {
+    string = AS_STRING(args[0]);
+  } else if (IS_CLASS(args[0])) {
+    if (argCount == 1) {
+      string = copyEscString("", 0, &vm.strings, AS_KLASS(args[0]));
+    } else if (argCount == 2) {
+      if (IS_STRING(args[1])) {
+        string = AS_STRING(args[1]);
+        string->klass = AS_KLASS(args[0]);
+      } else if (IS_NUMBER(args[1])) {
+        int d_len = snprintf(NULL, 0, "%g", AS_NUMBER(args[1]));
+        char d_str[d_len + 1];
+        sprintf(d_str, "%g", AS_NUMBER(args[1]));
+        string = copyEscString(d_str, d_len, &vm.strings, AS_KLASS(args[0]));
+
+      } else {
+        runtimeError("Expected argument to be string or number.");
+        return 0;
+      }
+    } else {
+      runtimeError("Expected 1 argument but got %d.", argCount);
+      return 0;
+    }
+  } else {
+    runtimeError("Unexpect base for String init.");
+    return 0;
+  }
+
+  return OBJ_VAL(string);
+}
+
+static Value lenStringNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_STRING)) {
+    return 0;
+  };
+  ObjString *string = AS_STRING(args[0]);
+  double count = (double)string->length;
+  return NUMBER_VAL(count);
+}
+
+static Value containsStringNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_STRING, ARG_STRING)) {
+    return 0;
+  };
+
+  char *string = AS_CSTRING(args[0]);
+  char *term = AS_CSTRING(args[1]);
+
+  return (strstr(string, term) != NULL) ? TRUE_VAL : FALSE_VAL;
+}
+
+static Value splitStringNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_STRING, ARG_STRING)) {
+    return 0;
+  };
+  ObjString *string = AS_STRING(args[0]);
+  char *term = AS_CSTRING(args[1]);
+  ObjList *list = newList(vm.klass.list);
+  push(OBJ_VAL(list));
+  char *lastSplit = string->chars;
+  ObjString *str = NULL;
+
+  while (true) {
+    char *cp = strstr(lastSplit, term);
+    if (cp == NULL) {
+      str = copyString(lastSplit,
+                       (int)(&string->chars[string->length] - lastSplit),
+                       &vm.strings);
+      pushToList(list, OBJ_VAL(str));
+      return pop();
+    }
+
+    str = copyString(lastSplit, (int)(cp - lastSplit), &vm.strings);
+    pushToList(list, OBJ_VAL(str));
+    lastSplit = cp + 1;
+  }
+}
+
 static ObjKlass *createFileClass() {
   ObjKlass *fileKlass = defineKlass("File", OBJ_FILE);
   defineNativeKlassMethod(fileKlass, "init", initFileNative);
@@ -411,6 +494,16 @@ static ObjKlass *createListClass() {
   return listKlass;
 }
 
+static ObjKlass *createStringClass() {
+  ObjKlass *stringKlass = defineKlass("String", OBJ_STRING);
+  defineNativeKlassMethod(stringKlass, "init", initStringNative);
+  defineNativeKlassMethod(stringKlass, "len", lenStringNative);
+  defineNativeKlassMethod(stringKlass, "contains", containsStringNative);
+  defineNativeKlassMethod(stringKlass, "split", splitStringNative);
+
+  return stringKlass;
+}
+
 void registerNatives() {
   defineNative("tick", clockNative);
   defineNative("exit", exitNative);
@@ -420,6 +513,7 @@ void registerNatives() {
 void registerBuiltInKlasses() {
   vm.klass.list = createListClass();
   vm.klass.file = createFileClass();
+  vm.klass.string = createStringClass();
 }
 
 void registerListNatives() {

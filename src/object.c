@@ -148,11 +148,13 @@ bool isValidListIndex(ObjList *list, int index) {
 }
 
 ObjString *allocateString(char *chars, int length, uint32_t hash,
-                          Table *stringTable) {
+                          Table *stringTable, ObjKlass *klass) {
   ObjString *string = ALLOCATE_OBJ(ObjString, OBJ_STRING);
   string->length = length;
   string->hash = hash;
   string->chars = chars;
+  string->klass = klass;
+  initTable(&string->fields);
 
   push(OBJ_VAL(string));
   tableSet(stringTable, string, NIL_VAL);
@@ -171,7 +173,7 @@ uint32_t hashString(const char *key, int length) {
 
 ObjString *takeString(char *chars, int length) {
   uint32_t hash = hashString(chars, length);
-  return allocateString(chars, length, hash, &vm.strings);
+  return allocateString(chars, length, hash, &vm.strings, vm.klass.string);
 }
 
 ObjString *copyString(const char *chars, int length, Table *stringTable) {
@@ -184,10 +186,11 @@ ObjString *copyString(const char *chars, int length, Table *stringTable) {
   char *heapChars = ALLOCATE(char, length + 1);
   memcpy(heapChars, chars, length);
   heapChars[length] = '\0';
-  return allocateString(heapChars, length, hash, stringTable);
+  return allocateString(heapChars, length, hash, stringTable, vm.klass.string);
 }
 
-ObjString *copyEscString(const char *chars, int length, Table *stringTable) {
+ObjString *copyEscString(const char *chars, int length, Table *stringTable,
+                         ObjKlass *klass) {
   char escString[length];
   int escLen = 0;
   bool escMode = false;
@@ -221,7 +224,7 @@ ObjString *copyEscString(const char *chars, int length, Table *stringTable) {
   char *heapChars = ALLOCATE(char, escLen + 1);
   memcpy(heapChars, escString, escLen);
   heapChars[escLen] = '\0';
-  return allocateString(heapChars, escLen, hash, stringTable);
+  return allocateString(heapChars, escLen, hash, stringTable, klass);
 }
 
 ObjUpvalue *newUpvalue(Value *slot) {

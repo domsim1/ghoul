@@ -55,6 +55,7 @@ typedef struct {
   Obj obj;
   int arity;
   int upvalueCount;
+  bool variadic;
   Chunk chunk;
   ObjString *name;
 } ObjFunction;

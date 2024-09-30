@@ -1,0 +1,15 @@
+print "$expect$";
+print 50;
+print "$actual$";
+:chain(item, *funcs) {
+  :res = item;
+  for (:fn in funcs) {
+    res = fn(res);
+  }
+  ->res;
+}
+
+:add10(a) {
+  ->a + 10;
+}
+print chain(10, add10, add10, add10, add10);

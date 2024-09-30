@@ -65,6 +65,8 @@ void initVM() {
   vm.initString = NULL;
   vm.initString = copyString("init", 4, &vm.strings);
 
+  vm.keep = NULL;
+
   registerBuiltInKlasses();
   registerNatives();
 }
@@ -76,6 +78,8 @@ void freeVM() {
   vm.initString = NULL;
   vm.klass.list = NULL;
   vm.klass.file = NULL;
+  vm.klass.string = NULL;
+  vm.keep = NULL;
   freeObjects();
 }
 
@@ -94,10 +98,27 @@ static Value peek(int distance) { return vm.stackTop[-1 - distance]; }
 static ObjUpvalue *captureUpvalue(Value *local);
 
 static bool call(ObjClosure *closure, int argCount) {
-  if (argCount != closure->function->arity) {
-    runtimeError("Expected %d argugments but got %d.", closure->function->arity,
-                 argCount);
-    return false;
+  if (!closure->function->variadic) {
+    if (argCount != closure->function->arity) {
+      runtimeError("Expected %d argugments but got %d.",
+                   closure->function->arity, argCount);
+      return false;
+    }
+  } else {
+    if (argCount < closure->function->arity - 1) {
+      runtimeError("Expected at least %d argugments but got %d.",
+                   closure->function->arity - 1, argCount);
+      return false;
+    }
+    ObjList *variadicArgs = newList(vm.klass.list);
+    vm.keep = (Obj *)variadicArgs;
+    while (argCount > closure->function->arity - 1) {
+      argCount--;
+      pushToList(variadicArgs, pop());
+    }
+    push(OBJ_VAL(variadicArgs));
+    vm.keep = NULL;
+    argCount++;
   }
 
   if (vm.frameCount == FRAMES_MAX) {

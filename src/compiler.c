@@ -1045,9 +1045,19 @@ static void function(FunctionType type) {
       if (current->function->arity > UINT16_MAX) {
         errorAtCurrent("Can't have more than 65535 parameters.");
       }
-      consume(TOKEN_IDENTIFIER, "Expect parameter identifier.");
-      uint16_t constant = parseVariable();
-      defineVariable(constant);
+      if (match(TOKEN_STAR)) {
+        current->function->variadic = true;
+        consume(TOKEN_IDENTIFIER, "Expect parameter identifier.");
+        uint16_t constant = parseVariable();
+        defineVariable(constant);
+        if (check(TOKEN_COMMA)) {
+          errorAtCurrent("Variadic parameter must be the last patameter.");
+        }
+      } else {
+        consume(TOKEN_IDENTIFIER, "Expect parameter identifier.");
+        uint16_t constant = parseVariable();
+        defineVariable(constant);
+      }
     } while (match(TOKEN_COMMA));
   }
   consume(TOKEN_RIGHT_PAREN, "Expect ')' after parameters.");

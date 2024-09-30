@@ -219,6 +219,14 @@ static void markRoots() {
   markTable(&vm.globals);
   markTable(&vm.useStrings);
 
+  markObject((Obj *)vm.klass.list);
+  markObject((Obj *)vm.klass.file);
+  markObject((Obj *)vm.klass.string);
+
+  if (vm.keep != NULL) {
+    markObject(vm.keep);
+  }
+
   markCompilerRoots();
   markObject((Obj *)vm.initString);
 }

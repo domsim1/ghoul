@@ -42,8 +42,8 @@ ObjBoundMethod *newBoundMethod(Value receiver, ObjClosure *method) {
   return bound;
 }
 
-ObjKlass *newClass(ObjString *name, ObjType base) {
-  ObjKlass *klass = ALLOCATE_OBJ(ObjKlass, OBJ_CLASS);
+ObjKlass *newKlass(ObjString *name, ObjType base) {
+  ObjKlass *klass = ALLOCATE_OBJ(ObjKlass, OBJ_KLASS);
   klass->name = name;
   initTable(&klass->methods);
   klass->base = base;
@@ -270,7 +270,7 @@ void printObject(Value value) {
   case OBJ_BOUND_NATIVE:
     printf("<bound native fn>");
     break;
-  case OBJ_CLASS:
+  case OBJ_KLASS:
     printf("<class '%s'>", AS_KLASS(value)->name->chars);
     break;
   case OBJ_CLOSURE:

@@ -90,7 +90,7 @@ static void blackenObject(Obj *object) {
     markValue(bound->receiver);
     break;
   }
-  case OBJ_CLASS: {
+  case OBJ_KLASS: {
     ObjKlass *klass = (ObjKlass *)object;
     markObject((Obj *)klass->name);
     markTable(&klass->methods);
@@ -149,7 +149,7 @@ static void freeObject(Obj *object) {
   case OBJ_BOUND_NATIVE:
     FREE(ObjBoundNative, object);
     break;
-  case OBJ_CLASS: {
+  case OBJ_KLASS: {
     ObjKlass *klass = (ObjKlass *)object;
     freeTable(&klass->methods);
     FREE(ObjKlass, object);
@@ -219,16 +219,16 @@ static void markRoots() {
   markTable(&vm.globals);
   markTable(&vm.useStrings);
 
-  markObject((Obj *)vm.klass.list);
-  markObject((Obj *)vm.klass.file);
-  markObject((Obj *)vm.klass.string);
+  // don't need to mark VM builtin classes, they are in globals
 
   if (vm.keep != NULL) {
     markObject(vm.keep);
   }
 
   markCompilerRoots();
-  markObject((Obj *)vm.initString);
+  markObject((Obj *)vm.string.init);
+  markObject((Obj *)vm.string.isError);
+  markObject((Obj *)vm.string.message);
 }
 
 static void traceReferences() {

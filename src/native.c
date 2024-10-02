@@ -27,7 +27,9 @@ typedef enum {
 
 static bool checkArgCount(int argCount, int expectedCount) {
   if (argCount != expectedCount) {
-    runtimeError("Expected %d argument but got %d.", expectedCount, argCount);
+    runtimeError("Expected %d argument but got %d.", expectedCount - 1,
+                 argCount - 1);
+    vm.shouldPanic = true;
     return false;
   }
   return true;
@@ -38,6 +40,7 @@ static bool checkArgs(int argCount, int expectedCount, Value *args,
   if (expectedCount == 0) {
     if (argCount != 1 && type != NATIVE_VARIADIC) {
       runtimeError("Expected no arguments but got %d.", argCount - 1);
+      vm.shouldPanic = true;
       return false;
     }
     return true;
@@ -45,7 +48,9 @@ static bool checkArgs(int argCount, int expectedCount, Value *args,
   if (type == NATIVE_NORMAL && !checkArgCount(argCount, expectedCount)) {
     return false;
   } else if (type == NATIVE_VARIADIC && argCount < expectedCount) {
-    runtimeError("Expected %d argument but got %d.", expectedCount, argCount);
+    runtimeError("Expected %d argument but got %d.", expectedCount - 1,
+                 argCount - 1);
+    vm.shouldPanic = true;
     return false;
   }
 
@@ -58,6 +63,7 @@ static bool checkArgs(int argCount, int expectedCount, Value *args,
     case ARG_NUMBER:
       if (!IS_NUMBER(args[i])) {
         runtimeError("Expected argument %d to be a number.", i + 1);
+        vm.shouldPanic = true;
         va_end(expectedArgs);
         return false;
       }
@@ -65,6 +71,7 @@ static bool checkArgs(int argCount, int expectedCount, Value *args,
     case ARG_STRING:
       if (!IS_STRING(args[i])) {
         runtimeError("Expected argument %d to be a string.", i + 1);
+        vm.shouldPanic = true;
         va_end(expectedArgs);
         return false;
       }
@@ -72,6 +79,7 @@ static bool checkArgs(int argCount, int expectedCount, Value *args,
     case ARG_LIST:
       if (!IS_LIST(args[i])) {
         runtimeError("Expected argument %d to be a list.", i + 1);
+        vm.shouldPanic = true;
         va_end(expectedArgs);
         return false;
       }
@@ -79,13 +87,15 @@ static bool checkArgs(int argCount, int expectedCount, Value *args,
     case ARG_CLOSURE:
       if (!IS_CLOSURE(args[i])) {
         runtimeError("Expected argument %d to be a closure.", i + 1);
+        vm.shouldPanic = true;
         va_end(expectedArgs);
         return false;
       }
       break;
     case ARG_KLASS:
-      if (!IS_CLASS(args[i])) {
+      if (!IS_KLASS(args[i])) {
         runtimeError("Expected argument %d to be a class.", i + 1);
+        vm.shouldPanic = true;
         va_end(expectedArgs);
         return false;
       }
@@ -94,6 +104,7 @@ static bool checkArgs(int argCount, int expectedCount, Value *args,
     case ARG_INSTANCE:
       if (!IS_INSTANCE(args[i])) {
         runtimeError("Expected argument %d to be an instance.", i + 1);
+        vm.shouldPanic = true;
         va_end(expectedArgs);
         return false;
       }
@@ -101,6 +112,7 @@ static bool checkArgs(int argCount, int expectedCount, Value *args,
     case ARG_FILE:
       if (!IS_FILE(args[i])) {
         runtimeError("Expected argument %d to be an instance.", i + 1);
+        vm.shouldPanic = true;
         va_end(expectedArgs);
         return false;
       }
@@ -121,14 +133,6 @@ static void defineNative(const char *name, NativeFn function) {
   pop();
 }
 
-// static void defineGlobal(const char *name, Value value) {
-//   push(OBJ_VAL(copyString(name, (int)strlen(name), &vm.strings)));
-//   push(value);
-//   tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
-//   pop();
-//   pop();
-// }
-
 static ObjInstance *defineInstance(ObjKlass *klass, const char *name) {
   push(OBJ_VAL(copyString(name, (int)strlen(name), &vm.strings)));
   push(OBJ_VAL(klass));
@@ -143,27 +147,13 @@ static ObjInstance *defineInstance(ObjKlass *klass, const char *name) {
 
 static ObjKlass *defineKlass(const char *name, ObjType base) {
   push(OBJ_VAL(copyString(name, (int)strlen(name), &vm.strings)));
-  push(OBJ_VAL(newClass(AS_STRING(vm.stack[0]), base)));
+  push(OBJ_VAL(newKlass(AS_STRING(vm.stack[0]), base)));
   tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
   ObjKlass *klass = AS_KLASS(vm.stack[1]);
   pop();
   pop();
   return klass;
 }
-
-// static ObjClosure *findFunction(const char *name) {
-//   push(OBJ_VAL(copyString(name, (int)strlen(name), &vm.strings)));
-//   Value value;
-//   if (!tableGet(&vm.globals, AS_STRING(vm.stack[0]), &value)) {
-//     printf("Could not find class with name %s.\n",
-//            AS_STRING(vm.stack[0])->chars);
-//     exit(81);
-//   };
-//   ObjClosure *closure = AS_CLOSURE(value);
-//   pop();
-//   pop();
-//   return closure;
-// }
 
 static void defineNativeKlassMethod(ObjKlass *klass, const char *name,
                                     NativeFn function) {
@@ -187,21 +177,15 @@ static void defineNativeInstanceMethod(ObjInstance *instance, const char *name,
   pop();
 }
 
-// static void defineNativeInstanceField(ObjInstance *instance, const char
-// *name,
-//                                       Value value) {
-//   push(OBJ_VAL(instance));
-//   push(OBJ_VAL(copyString(name, (int)strlen(name), &vm.strings)));
-//   push(value);
-//   tableSet(&instance->fields, AS_STRING(vm.stack[1]), vm.stack[2]);
-//   pop();
-//   pop();
-//   pop();
-// }
+static void setNativeInstanceField(ObjInstance *instance, ObjString *string,
+                                   Value value) {
+  tableSet(&instance->fields, string, value);
+}
 
 static Value clockNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 0, args, NATIVE_NORMAL)) {
-    return 0;
+    vm.shouldPanic = true;
+    return NIL_VAL;
   };
   return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
 }
@@ -211,26 +195,57 @@ static Value exitNative(int argCount, Value *args) {
     exit(0);
   }
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    return 0;
+    vm.shouldPanic = true;
+    return NIL_VAL;
   }
   exit(AS_NUMBER(args[1]));
+}
+
+static Value panicNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_ANY)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  vm.shouldPanic = true;
+  if (IS_INSTANCE(args[1])) {
+    ObjInstance *err = AS_INSTANCE(args[1]);
+    Value isError;
+    if (tableGet(&err->fields, vm.string.isError, &isError)) {
+      if (IS_BOOL(isError) && AS_BOOL(isError)) {
+        Value message;
+        if (tableGet(&err->fields, vm.string.message, &message) &&
+            IS_STRING(message)) {
+          fprintf(stderr, "%s: ", err->klass->name->chars);
+          runtimeError(AS_CSTRING(message));
+          return NIL_VAL;
+        }
+      }
+    }
+  } else if (IS_STRING(args[1])) {
+    runtimeError(AS_CSTRING(args[1]));
+    return NIL_VAL;
+  }
+  runtimeError("Panic with unepxected value!");
+  return NIL_VAL;
 }
 
 static Value initFileNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_STRING,
                  ARG_STRING)) {
-    return 0;
+    vm.shouldPanic = true;
+    return NIL_VAL;
   };
   FILE *file;
   file = fopen(AS_CSTRING(args[1]), AS_CSTRING(args[2]));
   if (file == NULL) {
     runtimeError("Error opening file.");
-    return 0;
+    vm.shouldPanic = true;
+    return NIL_VAL;
   }
   ObjFile *file_;
   if (IS_FILE(args[0])) {
     file_ = AS_FILE(args[0]);
-  } else if (IS_CLASS(args[0])) {
+  } else if (IS_KLASS(args[0])) {
     file_ = newFile(AS_KLASS(args[0]));
   } else {
     file_ = newFile(vm.klass.file);
@@ -241,7 +256,8 @@ static Value initFileNative(int argCount, Value *args) {
 
 static Value closeFileNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_FILE)) {
-    return 0;
+    vm.shouldPanic = true;
+    return NIL_VAL;
   };
   ObjFile *file = AS_FILE(args[0]);
   fclose(file->file);
@@ -251,7 +267,8 @@ static Value closeFileNative(int argCount, Value *args) {
 
 static Value writeFileNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_FILE, ARG_STRING)) {
-    return 0;
+    vm.shouldPanic = true;
+    return NIL_VAL;
   };
   ObjString *str = AS_STRING(args[1]);
   FILE *file = AS_FILE(args[0])->file;
@@ -259,7 +276,8 @@ static Value writeFileNative(int argCount, Value *args) {
     int status = fputc(str->chars[i], file);
     if (status == EOF) {
       runtimeError("Could not write to file!");
-      return 0;
+      vm.shouldPanic = true;
+      return NIL_VAL;
     }
   }
   return NIL_VAL;
@@ -267,13 +285,15 @@ static Value writeFileNative(int argCount, Value *args) {
 
 static Value readFileNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_FILE, ARG_STRING)) {
-    return 0;
+    vm.shouldPanic = true;
+    return NIL_VAL;
   };
   FILE *file = AS_FILE(args[0])->file;
   ObjString *termStr = AS_STRING(args[1]);
   if (termStr->length > 1) {
     runtimeError("Read terminator should be empty for EOF or 1 char long.");
-    return 0;
+    vm.shouldPanic = true;
+    return NIL_VAL;
   }
   char term;
   if (termStr->length == 0) {
@@ -309,16 +329,18 @@ static Value readFileNative(int argCount, Value *args) {
 
 static Value initListNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_VARIADIC, ARG_ANY)) {
-    return 0;
+    vm.shouldPanic = true;
+    return NIL_VAL;
   };
   ObjList *list = NULL;
   if (IS_LIST(args[0])) {
     list = AS_LIST(args[0]);
-  } else if (IS_CLASS(args[0])) {
+  } else if (IS_KLASS(args[0])) {
     list = newList(AS_KLASS(args[0]));
   } else {
     runtimeError("Unexpect base for List init.");
-    return 0;
+    vm.shouldPanic = true;
+    return NIL_VAL;
   }
   push(OBJ_VAL(list));
   for (int i = 1; i < argCount; i++) {
@@ -329,7 +351,8 @@ static Value initListNative(int argCount, Value *args) {
 
 static Value pushListNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_VARIADIC, ARG_LIST, ARG_ANY)) {
-    return 0;
+    vm.shouldPanic = true;
+    return NIL_VAL;
   };
   ObjList *list = AS_LIST(args[0]);
   for (int i = 1; i < argCount; i++) {
@@ -341,7 +364,8 @@ static Value pushListNative(int argCount, Value *args) {
 
 static Value popListNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_LIST)) {
-    return 0;
+    vm.shouldPanic = true;
+    return NIL_VAL;
   };
   ObjList *list = AS_LIST(args[0]);
   Value value = list->items[list->count - 1];
@@ -351,7 +375,8 @@ static Value popListNative(int argCount, Value *args) {
 
 static Value lenListNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_LIST)) {
-    return 0;
+    vm.shouldPanic = true;
+    return NIL_VAL;
   };
   ObjList *list = AS_LIST(args[0]);
   double count = (double)list->count;
@@ -361,14 +386,16 @@ static Value lenListNative(int argCount, Value *args) {
 static Value removeListNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_LIST, ARG_NUMBER,
                  ARG_NUMBER)) {
-    return 0;
+    vm.shouldPanic = true;
+    return NIL_VAL;
   }
   ObjList *list = AS_LIST(args[0]);
   int start = AS_NUMBER(args[1]);
   int end = AS_NUMBER(args[2]);
   if (!isValidListRange(list, start, end)) {
     runtimeError("List range index is out of range.");
-    return 0;
+    vm.shouldPanic = true;
+    return NIL_VAL;
   }
   deleteFromList(list, start, end);
   return NIL_VAL;
@@ -376,7 +403,8 @@ static Value removeListNative(int argCount, Value *args) {
 
 static Value joinListNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_VARIADIC, ARG_LIST, ARG_LIST)) {
-    return 0;
+    vm.shouldPanic = true;
+    return NIL_VAL;
   }
   ObjList *list = newList(vm.klass.list);
   push(OBJ_VAL(list));
@@ -391,12 +419,13 @@ static Value joinListNative(int argCount, Value *args) {
 
 static Value initStringNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_VARIADIC, ARG_ANY)) {
-    return 0;
+    vm.shouldPanic = true;
+    return NIL_VAL;
   };
   ObjString *string = NULL;
   if (IS_STRING(args[0])) {
     string = AS_STRING(args[0]);
-  } else if (IS_CLASS(args[0])) {
+  } else if (IS_KLASS(args[0])) {
     if (argCount == 1) {
       string = copyEscString("", 0, &vm.strings, AS_KLASS(args[0]));
     } else if (argCount == 2) {
@@ -411,15 +440,18 @@ static Value initStringNative(int argCount, Value *args) {
 
       } else {
         runtimeError("Expected argument to be string or number.");
-        return 0;
+        vm.shouldPanic = true;
+        return NIL_VAL;
       }
     } else {
       runtimeError("Expected 1 argument but got %d.", argCount);
-      return 0;
+      vm.shouldPanic = true;
+      return NIL_VAL;
     }
   } else {
     runtimeError("Unexpect base for String init.");
-    return 0;
+    vm.shouldPanic = true;
+    return NIL_VAL;
   }
 
   return OBJ_VAL(string);
@@ -427,7 +459,8 @@ static Value initStringNative(int argCount, Value *args) {
 
 static Value lenStringNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_STRING)) {
-    return 0;
+    vm.shouldPanic = true;
+    return NIL_VAL;
   };
   ObjString *string = AS_STRING(args[0]);
   double count = (double)string->length;
@@ -436,7 +469,8 @@ static Value lenStringNative(int argCount, Value *args) {
 
 static Value containsStringNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_STRING, ARG_STRING)) {
-    return 0;
+    vm.shouldPanic = true;
+    return NIL_VAL;
   };
 
   char *string = AS_CSTRING(args[0]);
@@ -447,7 +481,8 @@ static Value containsStringNative(int argCount, Value *args) {
 
 static Value splitStringNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_STRING, ARG_STRING)) {
-    return 0;
+    vm.shouldPanic = true;
+    return NIL_VAL;
   };
   ObjString *string = AS_STRING(args[0]);
   char *term = AS_CSTRING(args[1]);
@@ -470,6 +505,55 @@ static Value splitStringNative(int argCount, Value *args) {
     pushToList(list, OBJ_VAL(str));
     lastSplit = cp + 1;
   }
+}
+
+static Value isInstOfNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE,
+                 ARG_KLASS)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return AS_INSTANCE(args[1])->klass == AS_KLASS(args[2]) ? TRUE_VAL
+                                                          : FALSE_VAL;
+}
+
+static Value isErrorNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_ANY)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+
+  if (IS_INSTANCE(args[1])) {
+    ObjInstance *err = AS_INSTANCE(args[1]);
+    Value isError;
+    if (tableGet(&err->fields, vm.string.isError, &isError)) {
+      if (IS_BOOL(isError) && AS_BOOL(isError)) {
+        return TRUE_VAL;
+      }
+    }
+  }
+  return FALSE_VAL;
+}
+
+static Value initErrorNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_STRING)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  ObjInstance *err = NULL;
+  if (IS_KLASS(args[0])) {
+    err = newInstance(AS_KLASS(args[0]));
+  } else if (IS_INSTANCE(args[0])) {
+    err = AS_INSTANCE(args[0]);
+  } else {
+    runtimeError("Could not init error.");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  push(OBJ_VAL(err));
+  setNativeInstanceField(err, vm.string.message, args[1]);
+  setNativeInstanceField(err, vm.string.isError, TRUE_VAL);
+  return pop();
 }
 
 static ObjKlass *createFileClass() {
@@ -504,16 +588,27 @@ static ObjKlass *createStringClass() {
   return stringKlass;
 }
 
+static ObjKlass *createErrorClass() {
+  ObjKlass *errKlass = defineKlass("Error", OBJ_INSTANCE);
+  defineNativeKlassMethod(errKlass, "init", initErrorNative);
+
+  return errKlass;
+}
+
 void registerNatives() {
   defineNative("tick", clockNative);
   defineNative("exit", exitNative);
   defineNative("open", initFileNative);
+  defineNative("iserr", isErrorNative);
+  defineNative("instof", isInstOfNative);
+  defineNative("panic", panicNative);
 }
 
 void registerBuiltInKlasses() {
   vm.klass.list = createListClass();
   vm.klass.file = createFileClass();
   vm.klass.string = createStringClass();
+  vm.klass.error = createErrorClass();
 }
 
 void registerListNatives() {

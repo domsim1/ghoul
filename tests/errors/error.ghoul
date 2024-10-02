@@ -1,0 +1,21 @@
+print "$expect$";
+print "bad thing.";
+print "<instance 'BadError'>";
+print "Bad Error!";
+print true;
+print true;
+print false;
+print "$actual$";
+:err = Error("bad thing.");
+print err.message;
+:BadError < Error {
+  init(m) {
+    super.init(m);
+  }
+}
+:err = BadError("Bad Error!");
+print err;
+print err.message;
+print iserr(err);
+print instof(err, BadError);
+print instof(err, Error);

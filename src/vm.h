@@ -18,7 +18,14 @@ typedef struct {
   ObjKlass *list;
   ObjKlass *file;
   ObjKlass *string;
+  ObjKlass *error;
 } BuiltInKlass;
+
+typedef struct {
+  ObjString *init;
+  ObjString *isError;
+  ObjString *message;
+} BuiltInStrings;
 
 typedef struct {
   CallFrame frames[FRAMES_MAX];
@@ -30,8 +37,9 @@ typedef struct {
   Table useStrings;
   Table strings;
   BuiltInKlass klass;
-  ObjString *initString;
+  BuiltInStrings string;
   ObjUpvalue *openUpvalues;
+  bool shouldPanic;
 
   size_t bytesAllocated;
   size_t nextGC;
@@ -50,6 +58,7 @@ typedef enum {
 
 extern VM vm;
 
+// ObjString *createStracktrace();
 void runtimeError(const char *format, ...);
 void initVM();
 void freeVM();

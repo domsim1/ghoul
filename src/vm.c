@@ -24,6 +24,35 @@ static void resetStack() {
   vm.openUpvalues = NULL;
 }
 
+// ObjString *createStracktrace() {
+//   int len = 0;
+//   char *stacktrace = ALLOCATE(char, 0);
+//   for (int i = vm.frameCount - 1; i >= 0; i--) {
+//     CallFrame *frame = &vm.frames[i];
+//     ObjFunction *function = frame->closure->function;
+//     size_t instruction = frame->ip - function->chunk.code - 1;
+//     int strLen =
+//         snprintf(NULL, 0, "[line %d of %s] in %s%s\n",
+//                  getLine(&function->chunk, instruction),
+//                  getLineFileName(&function->chunk, instruction),
+//                  function->name == NULL ? "script" : function->name->chars,
+//                  function->name == NULL ? "" : "()");
+//     char str[strLen + 1];
+//     int oldlen = len;
+//     len += strLen + 1;
+//     snprintf(str, strLen + 1, "[line %d of %s] in %s%s\n",
+//              getLine(&function->chunk, instruction),
+//              getLineFileName(&function->chunk, instruction),
+//              function->name == NULL ? "script" : function->name->chars,
+//              function->name == NULL ? "" : "()");
+//     stacktrace = GROW_ARRAY(char, stacktrace, oldlen, len + 1);
+//     strcat(stacktrace, str);
+//   }
+//   ObjString *stack = copyString(stacktrace, len - 1, &vm.strings);
+//   FREE(char, stacktrace);
+//   return stack;
+// }
+
 void runtimeError(const char *format, ...) {
   va_list args;
   va_start(args, format);
@@ -62,10 +91,15 @@ void initVM() {
   initTable(&vm.strings);
   initTable(&vm.useStrings);
 
-  vm.initString = NULL;
-  vm.initString = copyString("init", 4, &vm.strings);
+  vm.string.init = NULL;
+  vm.string.isError = NULL;
+  vm.string.message = NULL;
+  vm.string.init = copyString("init", 4, &vm.strings);
+  vm.string.isError = copyString("_isError_", 9, &vm.strings);
+  vm.string.message = copyString("message", 7, &vm.strings);
 
   vm.keep = NULL;
+  vm.shouldPanic = false;
 
   registerBuiltInKlasses();
   registerNatives();
@@ -75,10 +109,13 @@ void freeVM() {
   freeTable(&vm.strings);
   freeTable(&vm.globals);
   freeTable(&vm.useStrings);
-  vm.initString = NULL;
+  vm.string.init = NULL;
+  vm.string.isError = NULL;
+  vm.string.message = NULL;
   vm.klass.list = NULL;
   vm.klass.file = NULL;
   vm.klass.string = NULL;
+  vm.klass.error = NULL;
   vm.keep = NULL;
   freeObjects();
 }
@@ -135,7 +172,8 @@ static bool call(ObjClosure *closure, int argCount) {
 
 static bool callNative(NativeFn native, int argCount) {
   Value result = native(argCount + 1, vm.stackTop - (argCount + 1));
-  if (!result) {
+  if (vm.shouldPanic) {
+    vm.shouldPanic = false;
     return false;
   }
   vm.stackTop -= argCount + 1;
@@ -175,10 +213,10 @@ static bool callValue(Value callee, int argCount) {
       NativeFn native = bound->native->function;
       return callNative(native, argCount);
     }
-    case OBJ_CLASS: {
+    case OBJ_KLASS: {
       ObjKlass *klass = AS_KLASS(callee);
       Value initializer;
-      if (tableGet(&klass->methods, vm.initString, &initializer)) {
+      if (tableGet(&klass->methods, vm.string.init, &initializer)) {
         if (IS_NATIVE(initializer)) {
           return callNative(AS_NATIVE(initializer), argCount);
         }
@@ -837,14 +875,14 @@ static InterpretResult run() {
       break;
     }
     case OP_CLASS:
-      push(OBJ_VAL(newClass(READ_STRING(), OBJ_CLASS)));
+      push(OBJ_VAL(newKlass(READ_STRING(), OBJ_KLASS)));
       break;
     case OP_CLASS_SHORT:
-      push(OBJ_VAL(newClass(READ_STRING_SHORT(), OBJ_CLASS)));
+      push(OBJ_VAL(newKlass(READ_STRING_SHORT(), OBJ_KLASS)));
       break;
     case OP_INHERIT: {
       Value superclass = peek(1);
-      if (!IS_CLASS(superclass)) {
+      if (!IS_KLASS(superclass)) {
         runtimeError("Superclass must be a class.");
         return INTERPRET_RUNTIME_ERROR;
       }

@@ -196,7 +196,7 @@ static bool match(TokenType type) {
 }
 
 static void emitByte(uint8_t byte) {
-  writeChunk(currentChunk(), byte, parser.previous.line, current->file);
+  writeChunk(currentChunk(), byte, parser.previous.line);
 }
 
 static void emitBytes(uint8_t byte1, uint8_t byte2) {
@@ -316,7 +316,7 @@ static void initCompiler(Compiler *compiler, FunctionType type,
   compiler->type = type;
   compiler->localCount = 0;
   compiler->scopeDepth = 0;
-  compiler->function = newFunction();
+  compiler->function = newFunction(file);
   current = compiler;
   if (type != TYPE_SCRIPT) {
     if (parser.previous.type == TOKEN_COLON) {
@@ -1156,23 +1156,39 @@ static void useStatement() {
   if (source == NULL) {
     return;
   }
-  const char *oldFile = current->file;
-  current->file = realFilePath->chars;
 
-  Scanner oldScanner;
-  oldScanner = scanner;
+  Scanner oldScanner = scanner;
   initScanner(source);
+  Compiler compiler;
+  initCompiler(&compiler, TYPE_SCRIPT, realFilePath->chars);
   advance();
-  while (!match(TOKEN_EOF)) {
+  while (!check(TOKEN_EOF)) {
     declaration();
   }
+  ObjFunction *function = endCompiler();
 
   free(source);
-  current->file = oldFile;
   scanner = oldScanner;
   scanner.current--;
   advance();
   consume(TOKEN_SEMICOLON, "Expect ';' after use statement.");
+
+  uint16_t constant = makeConstantShort(OBJ_VAL(function));
+  if (constant > UINT8_MAX) {
+    emitByte(OP_CLOSURE_SHORT);
+  } else {
+    emitByte(OP_CLOSURE);
+  }
+  emitIndex(constant);
+
+  for (int i = 0; i < function->upvalueCount; i++) {
+    emitByte(compiler.upvalues[i].isLocal ? 1 : 0);
+    emitShort(compiler.upvalues[i].index);
+  }
+
+  emitByte(OP_CALL);
+  emitIndex(0);
+  emitByte(OP_POP);
 }
 
 static void classDeclaration() {

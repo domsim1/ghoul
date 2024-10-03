@@ -135,7 +135,7 @@ ObjBoundMethod *newBoundMethod(Value receiver, ObjClosure *method);
 ObjBoundNative *newBoundNative(Value receiver, ObjNative *native);
 ObjKlass *newKlass(ObjString *name, ObjType base);
 ObjClosure *newClosure(ObjFunction *function);
-ObjFunction *newFunction();
+ObjFunction *newFunction(const char *file);
 ObjInstance *newInstance(ObjKlass *klass);
 ObjNative *newNative(NativeFn function);
 ObjList *newList(ObjKlass *klass);

@@ -66,7 +66,7 @@ void runtimeError(const char *format, ...) {
     size_t instruction = frame->ip - function->chunk.code - 1;
     fprintf(stderr, "[line %d of %s] in ",
             getLine(&function->chunk, instruction),
-            getLineFileName(&function->chunk, instruction));
+            getFileName(&function->chunk));
     if (function->name == NULL) {
       fprintf(stderr, "script\n");
     } else {

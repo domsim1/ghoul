@@ -81,17 +81,16 @@ typedef struct {
   int capacity;
   uint8_t *code;
   int *lines;
-  char **file;
+  const char *file;
   ValueArray constants;
 } Chunk;
 
-void initChunk(Chunk *chunk);
+void initChunk(Chunk *chunk, const char *file);
 void freeChunk(Chunk *chunk);
-void writeChunk(Chunk *chunk, uint8_t byte, int line, const char *file);
+void writeChunk(Chunk *chunk, uint8_t byte, int line);
 int addConstant(Chunk *chunk, Value value);
 void writeConstant(Chunk *chunk, Value value, int line, const char *file);
 int getLine(Chunk *chunk, int line);
-char *getFile(Chunk *chunk, int line);
-const char *getLineFileName(Chunk *chunk, int line);
+const char *getFileName(Chunk *chunk);
 
 #endif

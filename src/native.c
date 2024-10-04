@@ -1,3 +1,5 @@
+#include <float.h>
+#include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -125,16 +127,16 @@ static bool checkArgs(int argCount, int expectedCount, Value *args,
   return true;
 }
 
-static void defineNative(const char *name, NativeFn function) {
-  push(OBJ_VAL(copyString(name, (int)strlen(name), &vm.strings)));
+static void defineNative(const char *name, int len, NativeFn function) {
+  push(OBJ_VAL(copyString(name, len, &vm.strings)));
   push(OBJ_VAL(newNative(function)));
   tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
   pop();
   pop();
 }
 
-static ObjInstance *defineInstance(ObjKlass *klass, const char *name) {
-  push(OBJ_VAL(copyString(name, (int)strlen(name), &vm.strings)));
+static ObjInstance *defineInstance(ObjKlass *klass, const char *name, int len) {
+  push(OBJ_VAL(copyString(name, len, &vm.strings)));
   push(OBJ_VAL(klass));
   push(OBJ_VAL(newInstance(AS_KLASS(vm.stack[1]))));
   tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[2]);
@@ -145,8 +147,8 @@ static ObjInstance *defineInstance(ObjKlass *klass, const char *name) {
   return instance;
 }
 
-static ObjKlass *defineKlass(const char *name, ObjType base) {
-  push(OBJ_VAL(copyString(name, (int)strlen(name), &vm.strings)));
+static ObjKlass *defineKlass(const char *name, int len, ObjType base) {
+  push(OBJ_VAL(copyString(name, len, &vm.strings)));
   push(OBJ_VAL(newKlass(AS_STRING(vm.stack[0]), base)));
   tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
   ObjKlass *klass = AS_KLASS(vm.stack[1]);
@@ -155,10 +157,10 @@ static ObjKlass *defineKlass(const char *name, ObjType base) {
   return klass;
 }
 
-static void defineNativeKlassMethod(ObjKlass *klass, const char *name,
+static void defineNativeKlassMethod(ObjKlass *klass, const char *name, int len,
                                     NativeFn function) {
   push(OBJ_VAL(klass));
-  push(OBJ_VAL(copyString(name, (int)strlen(name), &vm.strings)));
+  push(OBJ_VAL(copyString(name, len, &vm.strings)));
   push(OBJ_VAL(newNative(function)));
   tableSet(&klass->methods, AS_STRING(vm.stack[1]), vm.stack[2]);
   pop();
@@ -167,9 +169,9 @@ static void defineNativeKlassMethod(ObjKlass *klass, const char *name,
 }
 
 static void defineNativeInstanceMethod(ObjInstance *instance, const char *name,
-                                       NativeFn function) {
+                                       int len, NativeFn function) {
   push(OBJ_VAL(instance));
-  push(OBJ_VAL(copyString(name, (int)strlen(name), &vm.strings)));
+  push(OBJ_VAL(copyString(name, len, &vm.strings)));
   push(OBJ_VAL(newNative(function)));
   tableSet(&instance->fields, AS_STRING(vm.stack[1]), vm.stack[2]);
   pop();
@@ -180,6 +182,12 @@ static void defineNativeInstanceMethod(ObjInstance *instance, const char *name,
 static void setNativeInstanceField(ObjInstance *instance, ObjString *string,
                                    Value value) {
   tableSet(&instance->fields, string, value);
+}
+static void defineNativeInstanceField(ObjInstance *instance, const char *string,
+                                      int len, Value value) {
+  push(OBJ_VAL(copyString(string, len, &vm.strings)));
+  setNativeInstanceField(instance, AS_STRING(vm.stack[0]), value);
+  pop();
 }
 
 static Value clockNative(int argCount, Value *args) {
@@ -508,13 +516,26 @@ static Value splitStringNative(int argCount, Value *args) {
 }
 
 static Value isInstOfNative(int argCount, Value *args) {
-  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE,
-                 ARG_KLASS)) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_ANY, ARG_ANY)) {
     vm.shouldPanic = true;
     return NIL_VAL;
   };
-  return AS_INSTANCE(args[1])->klass == AS_KLASS(args[2]) ? TRUE_VAL
-                                                          : FALSE_VAL;
+
+  if (!IS_INSTANCE(args[1])) {
+    return FALSE_VAL;
+  }
+
+  if (IS_KLASS(args[2])) {
+    return AS_INSTANCE(args[1])->klass == AS_KLASS(args[2]) ? TRUE_VAL
+                                                            : FALSE_VAL;
+  }
+  if (IS_INSTANCE(args[2])) {
+    return AS_INSTANCE(args[1])->klass == AS_INSTANCE(args[2])->klass
+               ? TRUE_VAL
+               : FALSE_VAL;
+  }
+
+  return FALSE_VAL;
 }
 
 static Value isErrorNative(int argCount, Value *args) {
@@ -556,52 +577,313 @@ static Value initErrorNative(int argCount, Value *args) {
   return pop();
 }
 
+static Value absMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(fabs(AS_NUMBER(args[1])));
+}
+
+static Value acosMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(acos(AS_NUMBER(args[1])));
+}
+
+static Value acoshMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(acosh(AS_NUMBER(args[1])));
+}
+
+static Value asinMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(asin(AS_NUMBER(args[1])));
+}
+
+static Value asinhMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(asinh(AS_NUMBER(args[1])));
+}
+
+static Value atanMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(atan(AS_NUMBER(args[1])));
+}
+
+static Value atan2MathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER,
+                 ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(atan2(AS_NUMBER(args[1]), AS_NUMBER(args[2])));
+}
+
+static Value atanhMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(atanh(AS_NUMBER(args[1])));
+}
+
+static Value cbrtMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(cbrt(AS_NUMBER(args[1])));
+}
+
+static Value ceilMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(ceil(AS_NUMBER(args[1])));
+}
+
+static Value cosMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(cos(AS_NUMBER(args[1])));
+}
+
+static Value coshMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(cosh(AS_NUMBER(args[1])));
+}
+
+static Value expMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(exp(AS_NUMBER(args[1])));
+}
+
+static Value expm1MathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(expm1(AS_NUMBER(args[1])));
+}
+
+static Value floorMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(floor(AS_NUMBER(args[1])));
+}
+
+static Value hypotMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER,
+                 ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(hypot(AS_NUMBER(args[1]), AS_NUMBER(args[2])));
+}
+
+static Value logMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(log(AS_NUMBER(args[1])));
+}
+
+static Value log10MathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(log10(AS_NUMBER(args[1])));
+}
+
+static Value log1pMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(log1p(AS_NUMBER(args[1])));
+}
+
+static Value log2MathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(log2(AS_NUMBER(args[1])));
+}
+
+static Value maxMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_VARIADIC, ARG_ANY)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  double max = DBL_MIN;
+  for (int i = 1; i < argCount; i++) {
+    double x = AS_NUMBER(args[i]);
+    max = max < x ? x : max;
+  }
+  return NUMBER_VAL(max);
+}
+
+static Value minMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_VARIADIC, ARG_ANY)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  double min = DBL_MAX;
+  for (int i = 1; i < argCount; i++) {
+    double x = AS_NUMBER(args[i]);
+    min = min > x ? x : min;
+  }
+  return NUMBER_VAL(min);
+}
+
+static Value powMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER,
+                 ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(pow(AS_NUMBER(args[1]), AS_NUMBER(args[2])));
+}
+
+static Value randomMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL((double)rand() / (double)((unsigned)RAND_MAX + 1));
+}
+
+static Value roundMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(round(AS_NUMBER(args[1])));
+}
+
+static Value sinMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(sin(AS_NUMBER(args[1])));
+}
+
+static Value sinhMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(sinh(AS_NUMBER(args[1])));
+}
+
+static Value sqrtMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(sqrt(AS_NUMBER(args[1])));
+}
+
+static Value tanMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(tan(AS_NUMBER(args[1])));
+}
+
+static Value tanhMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(tanh(AS_NUMBER(args[1])));
+}
+
+static Value truncMathNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return NUMBER_VAL(trunc(AS_NUMBER(args[1])));
+}
+
 static ObjKlass *createFileClass() {
-  ObjKlass *fileKlass = defineKlass("File", OBJ_FILE);
-  defineNativeKlassMethod(fileKlass, "init", initFileNative);
-  defineNativeKlassMethod(fileKlass, "close", closeFileNative);
-  defineNativeKlassMethod(fileKlass, "write", writeFileNative);
-  defineNativeKlassMethod(fileKlass, "read", readFileNative);
+  ObjKlass *fileKlass = defineKlass("File", 4, OBJ_FILE);
+  defineNativeKlassMethod(fileKlass, "init", 4, initFileNative);
+  defineNativeKlassMethod(fileKlass, "close", 5, closeFileNative);
+  defineNativeKlassMethod(fileKlass, "write", 5, writeFileNative);
+  defineNativeKlassMethod(fileKlass, "read", 4, readFileNative);
 
   return fileKlass;
 }
 
 static ObjKlass *createListClass() {
-  ObjKlass *listKlass = defineKlass("List", OBJ_LIST);
-  defineNativeKlassMethod(listKlass, "init", initListNative);
-  defineNativeKlassMethod(listKlass, "push", pushListNative);
-  defineNativeKlassMethod(listKlass, "pop", popListNative);
-  defineNativeKlassMethod(listKlass, "len", lenListNative);
-  defineNativeKlassMethod(listKlass, "remove", removeListNative);
-  defineNativeKlassMethod(listKlass, "join", joinListNative);
+  ObjKlass *listKlass = defineKlass("List", 4, OBJ_LIST);
+  defineNativeKlassMethod(listKlass, "init", 4, initListNative);
+  defineNativeKlassMethod(listKlass, "push", 4, pushListNative);
+  defineNativeKlassMethod(listKlass, "pop", 3, popListNative);
+  defineNativeKlassMethod(listKlass, "len", 3, lenListNative);
+  defineNativeKlassMethod(listKlass, "remove", 6, removeListNative);
+  defineNativeKlassMethod(listKlass, "join", 4, joinListNative);
 
   return listKlass;
 }
 
 static ObjKlass *createStringClass() {
-  ObjKlass *stringKlass = defineKlass("String", OBJ_STRING);
-  defineNativeKlassMethod(stringKlass, "init", initStringNative);
-  defineNativeKlassMethod(stringKlass, "len", lenStringNative);
-  defineNativeKlassMethod(stringKlass, "contains", containsStringNative);
-  defineNativeKlassMethod(stringKlass, "split", splitStringNative);
+  ObjKlass *stringKlass = defineKlass("String", 6, OBJ_STRING);
+  defineNativeKlassMethod(stringKlass, "init", 4, initStringNative);
+  defineNativeKlassMethod(stringKlass, "len", 3, lenStringNative);
+  defineNativeKlassMethod(stringKlass, "contains", 8, containsStringNative);
+  defineNativeKlassMethod(stringKlass, "split", 5, splitStringNative);
 
   return stringKlass;
 }
 
 static ObjKlass *createErrorClass() {
-  ObjKlass *errKlass = defineKlass("Error", OBJ_INSTANCE);
-  defineNativeKlassMethod(errKlass, "init", initErrorNative);
+  ObjKlass *errKlass = defineKlass("Error", 5, OBJ_INSTANCE);
+  defineNativeKlassMethod(errKlass, "init", 4, initErrorNative);
 
   return errKlass;
 }
 
 void registerNatives() {
-  defineNative("tick", clockNative);
-  defineNative("exit", exitNative);
-  defineNative("open", initFileNative);
-  defineNative("iserr", isErrorNative);
-  defineNative("instof", isInstOfNative);
-  defineNative("panic", panicNative);
+  defineNative("tick", 4, clockNative);
+  defineNative("exit", 4, exitNative);
+  defineNative("open", 4, initFileNative);
+  defineNative("iserr", 5, isErrorNative);
+  defineNative("instof", 6, isInstOfNative);
+  defineNative("panic", 5, panicNative);
 }
 
 void registerBuiltInKlasses() {
@@ -611,14 +893,53 @@ void registerBuiltInKlasses() {
   vm.klass.error = createErrorClass();
 }
 
-void registerListNatives() {
+void registerMathNatives() {
   static bool isRegistered = false;
   if (isRegistered)
     return;
-
-  ObjInstance *listInstance =
-      defineInstance(defineKlass("Lists", OBJ_LIST), "Lists");
-  defineNativeInstanceMethod(listInstance, "clock", clockNative);
-
   isRegistered = true;
+
+  ObjInstance *mathInstance =
+      defineInstance(defineKlass("Math", 4, OBJ_INSTANCE), "Math", 4);
+  defineNativeInstanceField(mathInstance, "E", 1, NUMBER_VAL(2.718));
+  defineNativeInstanceField(mathInstance, "LN10", 4, NUMBER_VAL(2.303));
+  defineNativeInstanceField(mathInstance, "LN2", 3, NUMBER_VAL(0.693));
+  defineNativeInstanceField(mathInstance, "LOG10E", 6, NUMBER_VAL(0.434));
+  defineNativeInstanceField(mathInstance, "LOG2E", 5, NUMBER_VAL(1.443));
+  defineNativeInstanceField(mathInstance, "PI", 2, NUMBER_VAL(3.14159));
+  defineNativeInstanceField(mathInstance, "SQRT1_2", 7, NUMBER_VAL(0.707));
+  defineNativeInstanceField(mathInstance, "SQRT2", 5, NUMBER_VAL(1.414));
+
+  defineNativeInstanceMethod(mathInstance, "abs", 3, absMathNative);
+  defineNativeInstanceMethod(mathInstance, "acos", 4, acosMathNative);
+  defineNativeInstanceMethod(mathInstance, "acosh", 5, acoshMathNative);
+  defineNativeInstanceMethod(mathInstance, "asin", 4, asinMathNative);
+  defineNativeInstanceMethod(mathInstance, "asinh", 5, asinhMathNative);
+  defineNativeInstanceMethod(mathInstance, "atan", 4, atanMathNative);
+  defineNativeInstanceMethod(mathInstance, "atan2", 5, atan2MathNative);
+  defineNativeInstanceMethod(mathInstance, "atanh", 5, atanhMathNative);
+  defineNativeInstanceMethod(mathInstance, "cbrt", 4, cbrtMathNative);
+  defineNativeInstanceMethod(mathInstance, "ceil", 4, ceilMathNative);
+  defineNativeInstanceMethod(mathInstance, "cos", 3, cosMathNative);
+  defineNativeInstanceMethod(mathInstance, "cosh", 4, coshMathNative);
+  defineNativeInstanceMethod(mathInstance, "exp", 3, expMathNative);
+  defineNativeInstanceMethod(mathInstance, "expm1", 5, expm1MathNative);
+  defineNativeInstanceMethod(mathInstance, "floor", 5, floorMathNative);
+
+  defineNativeInstanceMethod(mathInstance, "hypot", 5, hypotMathNative);
+  defineNativeInstanceMethod(mathInstance, "log", 3, logMathNative);
+  defineNativeInstanceMethod(mathInstance, "log10", 5, log10MathNative);
+  defineNativeInstanceMethod(mathInstance, "log1p", 5, log1pMathNative);
+  defineNativeInstanceMethod(mathInstance, "log2", 4, log2MathNative);
+  defineNativeInstanceMethod(mathInstance, "max", 3, maxMathNative);
+  defineNativeInstanceMethod(mathInstance, "min", 3, minMathNative);
+  defineNativeInstanceMethod(mathInstance, "pow", 3, powMathNative);
+  defineNativeInstanceMethod(mathInstance, "random", 6, randomMathNative);
+  defineNativeInstanceMethod(mathInstance, "round", 5, roundMathNative);
+  defineNativeInstanceMethod(mathInstance, "sin", 3, sinMathNative);
+  defineNativeInstanceMethod(mathInstance, "sinh", 4, sinhMathNative);
+  defineNativeInstanceMethod(mathInstance, "sqrt", 4, sqrtMathNative);
+  defineNativeInstanceMethod(mathInstance, "tan", 3, tanMathNative);
+  defineNativeInstanceMethod(mathInstance, "tanh", 4, tanhMathNative);
+  defineNativeInstanceMethod(mathInstance, "trunc", 5, truncMathNative);
 }

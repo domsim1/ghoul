@@ -4,6 +4,6 @@
 void registerNatives();
 void registerBuiltInKlasses();
 
-void registerListNatives();
+void registerMathNatives();
 
 #endif

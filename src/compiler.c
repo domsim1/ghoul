@@ -1108,9 +1108,9 @@ static bool matchUseBuiltin(ObjString *name) {
   }
 
   switch (name->chars[0]) {
-  case 'L':
-    if (checkBuitinName(1, 3, "ist", name)) {
-      registerListNatives();
+  case 'M':
+    if (checkBuitinName(1, 3, "ath", name)) {
+      registerMathNatives();
       return true;
     }
   }

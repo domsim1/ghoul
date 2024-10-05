@@ -149,10 +149,13 @@ static bool call(ObjClosure *closure, int argCount) {
     }
     ObjList *variadicArgs = newList(vm.klass.list);
     vm.keep = (Obj *)variadicArgs;
+    int i = argCount - closure->function->arity;
+    int popback = i + 1;
     while (argCount > closure->function->arity - 1) {
       argCount--;
-      pushToList(variadicArgs, pop());
+      pushToList(variadicArgs, peek(i--));
     }
+    vm.stackTop -= popback;
     push(OBJ_VAL(variadicArgs));
     vm.keep = NULL;
     argCount++;

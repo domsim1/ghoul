@@ -441,9 +441,9 @@ static Value initStringNative(int argCount, Value *args) {
         string = AS_STRING(args[1]);
         string->klass = AS_KLASS(args[0]);
       } else if (IS_NUMBER(args[1])) {
-        int d_len = snprintf(NULL, 0, "%g", AS_NUMBER(args[1]));
+        int d_len = snprintf(NULL, 0, "%.15g", AS_NUMBER(args[1]));
         char d_str[d_len + 1];
-        sprintf(d_str, "%g", AS_NUMBER(args[1]));
+        sprintf(d_str, "%.15g", AS_NUMBER(args[1]));
         string = copyEscString(d_str, d_len, &vm.strings, AS_KLASS(args[0]));
 
       } else {

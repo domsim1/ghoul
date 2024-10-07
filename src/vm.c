@@ -9,6 +9,7 @@
 #include "memory.h"
 #include "native.h"
 #include "object.h"
+#include "table.h"
 #include "value.h"
 #include "vm.h"
 
@@ -228,6 +229,7 @@ static bool callValue(Value callee, int argCount) {
         runtimeError("Expected 0 argugments but got %d.", argCount);
         return false;
       }
+      pop();
       push(OBJ_VAL(newInstance(klass)));
       return true;
     }
@@ -288,10 +290,12 @@ static bool invoke(ObjString *name, int argCount) {
   return invokeFromClass(klass, name, argCount);
 }
 
-static bool bindMethod(ObjKlass *klass, ObjString *name) {
+static bool bindMethod(ObjKlass *klass, ObjString *name, bool ignoreError) {
   Value method;
   if (!tableGet(&klass->methods, name, &method)) {
-    runtimeError("Undefined property '%s'.", name->chars);
+    if (!ignoreError) {
+      runtimeError("Undefined property '%s'.", name->chars);
+    }
     return false;
   }
 
@@ -587,7 +591,7 @@ static InterpretResult run() {
         push(value);
         break;
       }
-      if (!bindMethod(klass, name)) {
+      if (!bindMethod(klass, name, false)) {
         return INTERPRET_RUNTIME_ERROR;
       }
       break;
@@ -622,7 +626,7 @@ static InterpretResult run() {
         push(value);
         break;
       }
-      if (!bindMethod(klass, name)) {
+      if (!bindMethod(klass, name, false)) {
         return INTERPRET_RUNTIME_ERROR;
       }
       break;
@@ -669,7 +673,7 @@ static InterpretResult run() {
       ObjString *name = READ_STRING();
       ObjKlass *superclass = AS_KLASS(pop());
 
-      if (!bindMethod(superclass, name)) {
+      if (!bindMethod(superclass, name, false)) {
         return INTERPRET_RUNTIME_ERROR;
       }
       break;
@@ -678,7 +682,7 @@ static InterpretResult run() {
       ObjString *name = READ_STRING_SHORT();
       ObjKlass *superclass = AS_KLASS(pop());
 
-      if (!bindMethod(superclass, name)) {
+      if (!bindMethod(superclass, name, false)) {
         return INTERPRET_RUNTIME_ERROR;
       }
       break;
@@ -937,8 +941,44 @@ static InterpretResult run() {
       break;
     }
     case OP_INDEX_SUBSCR: {
+      if (IS_STRING(peek(0))) {
+        ObjString *str = AS_STRING(pop());
+        ObjKlass *klass = NULL;
+        Table *fields = NULL;
+        if (IS_INSTANCE(peek(0))) {
+          ObjInstance *instance = AS_INSTANCE(peek(0));
+          klass = instance->klass;
+          fields = &instance->fields;
+        } else if (IS_LIST(peek(0))) {
+          ObjList *list = AS_LIST(peek(0));
+          klass = list->klass;
+          fields = &list->fields;
+        } else if (IS_FILE(peek(0))) {
+          ObjFile *file = AS_FILE(peek(0));
+          klass = file->klass;
+          fields = &file->fields;
+        } else if (IS_STRING(peek(0))) {
+          ObjString *string = AS_STRING(peek(0));
+          klass = string->klass;
+          fields = &string->fields;
+        } else {
+          runtimeError("Can only index into an instance with a string.");
+          return INTERPRET_RUNTIME_ERROR;
+        }
+        pop();
+        Value value;
+        if (tableGet(fields, str, &value)) {
+          push(value);
+          break;
+        }
+        if (bindMethod(klass, str, true)) {
+          break;
+        }
+        push(NIL_VAL);
+        break;
+      }
       if (!IS_NUMBER(peek(0))) {
-        runtimeError("List index is not a number.");
+        runtimeError("Index is not a valid number or string.");
         return INTERPRET_RUNTIME_ERROR;
       }
       double index = AS_NUMBER(pop());
@@ -970,7 +1010,29 @@ static InterpretResult run() {
     }
     case OP_STORE_SUBSCR: {
       Value item = pop();
-
+      if (IS_STRING(peek(0))) {
+        ObjString *str = AS_STRING(pop());
+        Table *fields = NULL;
+        if (IS_INSTANCE(peek(0))) {
+          ObjInstance *instance = AS_INSTANCE(peek(0));
+          fields = &instance->fields;
+        } else if (IS_LIST(peek(0))) {
+          ObjList *list = AS_LIST(peek(0));
+          fields = &list->fields;
+        } else if (IS_FILE(peek(0))) {
+          ObjFile *file = AS_FILE(peek(0));
+          fields = &file->fields;
+        } else if (IS_STRING(peek(0))) {
+          ObjString *string = AS_STRING(peek(0));
+          fields = &string->fields;
+        } else {
+          runtimeError("Can store into an instance with a string.");
+          return INTERPRET_RUNTIME_ERROR;
+        }
+        pop();
+        tableSet(fields, str, item);
+        break;
+      }
       if (!IS_NUMBER(peek(0))) {
         runtimeError("List index is not a number.");
         return INTERPRET_RUNTIME_ERROR;

@@ -1,6 +1,9 @@
 # simple ternary function, if true return a else b
 :tif(condition, a, b) {if (condition) -> a; else -> b;}
 
+# Inst is an empty class used to create an blank instance
+:Inst {}
+
 # range creates a generator from a to b values, if a is less then b it will generate backwards
 :range(a, b) {
   if (a > b) {

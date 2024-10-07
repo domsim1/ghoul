@@ -20,6 +20,7 @@ typedef struct {
   ObjKlass *file;
   ObjKlass *string;
   ObjKlass *error;
+  ObjKlass *pair;
 } BuiltInKlass;
 
 typedef struct {
@@ -66,5 +67,6 @@ void freeVM();
 InterpretResult interpret(const char *source, const char *file);
 void push(Value value);
 Value pop();
+Value peek(int distance);
 
 #endif

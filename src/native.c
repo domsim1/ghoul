@@ -11,6 +11,7 @@
 
 #include "memory.h"
 #include "object.h"
+#include "table.h"
 #include "value.h"
 #include "vm.h"
 
@@ -19,6 +20,7 @@ typedef enum {
   ARG_NUMBER,
   ARG_STRING,
   ARG_LIST,
+  ARG_MAP,
   ARG_CLOSURE,
   ARG_KLASS,
   ARG_INSTANCE,
@@ -89,6 +91,14 @@ static bool checkArgs(int argCount, int expectedCount, Value *args,
         return false;
       }
       break;
+    case ARG_MAP:
+      if (!IS_MAP(args[i])) {
+        runtimeError("Expected argument %d to be a map.", i + 1);
+        vm.shouldPanic = true;
+        va_end(expectedArgs);
+        return false;
+      }
+      break;
     case ARG_CLOSURE:
       if (!IS_CLOSURE(args[i])) {
         runtimeError("Expected argument %d to be a closure.", i + 1);
@@ -133,7 +143,7 @@ static bool checkArgs(int argCount, int expectedCount, Value *args,
 static void defineNative(const char *name, int len, NativeFn function) {
   push(OBJ_VAL(copyString(name, len, &vm.strings)));
   push(OBJ_VAL(newNative(function)));
-  tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
+  tableSet(&vm.globals, AS_STRING(peek(1)), peek(0));
   pop();
   pop();
 }
@@ -141,9 +151,9 @@ static void defineNative(const char *name, int len, NativeFn function) {
 static ObjInstance *defineInstance(ObjKlass *klass, const char *name, int len) {
   push(OBJ_VAL(copyString(name, len, &vm.strings)));
   push(OBJ_VAL(klass));
-  push(OBJ_VAL(newInstance(AS_KLASS(vm.stack[1]))));
-  tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[2]);
-  ObjInstance *instance = AS_INSTANCE(vm.stack[2]);
+  push(OBJ_VAL(newInstance(klass)));
+  tableSet(&vm.globals, AS_STRING(peek(2)), peek(0));
+  ObjInstance *instance = AS_INSTANCE(peek(0));
   pop();
   pop();
   pop();
@@ -152,9 +162,9 @@ static ObjInstance *defineInstance(ObjKlass *klass, const char *name, int len) {
 
 static ObjKlass *defineKlass(const char *name, int len, ObjType base) {
   push(OBJ_VAL(copyString(name, len, &vm.strings)));
-  push(OBJ_VAL(newKlass(AS_STRING(vm.stack[0]), base)));
-  tableSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
-  ObjKlass *klass = AS_KLASS(vm.stack[1]);
+  push(OBJ_VAL(newKlass(AS_STRING(peek(0)), base)));
+  tableSet(&vm.globals, AS_STRING(peek(1)), peek(0));
+  ObjKlass *klass = AS_KLASS(peek(0));
   pop();
   pop();
   return klass;
@@ -165,7 +175,7 @@ static void defineNativeKlassMethod(ObjKlass *klass, const char *name, int len,
   push(OBJ_VAL(klass));
   push(OBJ_VAL(copyString(name, len, &vm.strings)));
   push(OBJ_VAL(newNative(function)));
-  tableSet(&klass->methods, AS_STRING(vm.stack[1]), vm.stack[2]);
+  tableSet(&klass->methods, AS_STRING(peek(1)), peek(0));
   pop();
   pop();
   pop();
@@ -176,7 +186,7 @@ static void defineNativeInstanceMethod(ObjInstance *instance, const char *name,
   push(OBJ_VAL(instance));
   push(OBJ_VAL(copyString(name, len, &vm.strings)));
   push(OBJ_VAL(newNative(function)));
-  tableSet(&instance->fields, AS_STRING(vm.stack[1]), vm.stack[2]);
+  tableSet(&instance->fields, AS_STRING(peek(1)), peek(0));
   pop();
   pop();
   pop();
@@ -189,7 +199,7 @@ static void setNativeInstanceField(ObjInstance *instance, ObjString *string,
 static void defineNativeInstanceField(ObjInstance *instance, const char *string,
                                       int len, Value value) {
   push(OBJ_VAL(copyString(string, len, &vm.strings)));
-  setNativeInstanceField(instance, AS_STRING(vm.stack[0]), value);
+  setNativeInstanceField(instance, AS_STRING(peek(0)), value);
   pop();
 }
 
@@ -435,6 +445,139 @@ static Value joinListNative(int argCount, Value *args) {
     }
   }
   return OBJ_VAL(pop());
+}
+
+static Value initMapNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  ObjMap *map = NULL;
+  if (IS_MAP(args[0])) {
+    map = AS_MAP(args[0]);
+  } else if (IS_KLASS(args[0])) {
+    map = newMap(AS_KLASS(args[0]));
+  } else {
+    runtimeError("Unexpect base for map init.");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  return OBJ_VAL(map);
+}
+
+static Value keysMapNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_MAP)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  ObjMap *map = AS_MAP(args[0]);
+  ObjList *list = newList(vm.klass.list);
+  vm.keep = (Obj *)list;
+  for (int i = 0; i < map->items.capacity; i++) {
+    Entry entry = map->items.entries[i];
+    if (entry.key == NULL) {
+      continue;
+    }
+    pushToList(list, OBJ_VAL(entry.key));
+  }
+  vm.keep = NULL;
+  return OBJ_VAL(list);
+}
+
+static Value valuesMapNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_MAP)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  ObjMap *map = AS_MAP(args[0]);
+  ObjList *list = newList(vm.klass.list);
+  vm.keep = (Obj *)list;
+  for (int i = 0; i < map->items.capacity; i++) {
+    Entry entry = map->items.entries[i];
+    if (entry.key == NULL) {
+      continue;
+    }
+    pushToList(list, entry.value);
+  }
+  vm.keep = NULL;
+  return OBJ_VAL(list);
+}
+
+static Value pairsMapNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_MAP)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  ObjMap *map = AS_MAP(args[0]);
+  ObjList *list = newList(vm.klass.list);
+  push(OBJ_VAL(list));
+  for (int i = 0; i < map->items.capacity; i++) {
+    Entry entry = map->items.entries[i];
+    if (entry.key == NULL) {
+      continue;
+    }
+    ObjInstance *pair = newInstance(vm.klass.pair);
+    push(OBJ_VAL(pair));
+    defineNativeInstanceField(pair, "key", 3, OBJ_VAL(entry.key));
+    defineNativeInstanceField(pair, "value", 5, entry.value);
+    pushToList(list, pop());
+  }
+  return pop();
+}
+
+static Value hasKeyMapNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_MAP, ARG_STRING)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  ObjMap *map = AS_MAP(args[0]);
+  ObjString *key = AS_STRING(args[1]);
+  Value value;
+  if (tableGet(&map->items, key, &value)) {
+    return TRUE_VAL;
+  }
+  return FALSE_VAL;
+}
+
+static Value getMapNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_MAP, ARG_STRING)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  ObjMap *map = AS_MAP(args[0]);
+  ObjString *key = AS_STRING(args[1]);
+  Value value;
+  if (tableGet(&map->items, key, &value)) {
+    return value;
+  }
+  return NIL_VAL;
+}
+
+static Value setMapNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_VARIADIC, ARG_MAP, ARG_STRING,
+                 ARG_ANY)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  ObjMap *map = AS_MAP(args[0]);
+  ObjString *key = AS_STRING(args[1]);
+  if (tableSet(&map->items, key, args[2])) {
+    return args[2];
+  }
+  return NIL_VAL;
+}
+
+static Value deleteMapNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_MAP, ARG_STRING)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  ObjMap *map = AS_MAP(args[0]);
+  ObjString *key = AS_STRING(args[1]);
+  if (tableDelete(&map->items, key)) {
+    return TRUE_VAL;
+  }
+  return FALSE_VAL;
 }
 
 static Value initStringNative(int argCount, Value *args) {
@@ -962,8 +1105,22 @@ static ObjKlass *createListClass() {
 
 static ObjKlass *createMapClass() {
   ObjKlass *mapKlass = defineKlass("Map", 3, OBJ_MAP);
+  defineNativeKlassMethod(mapKlass, "init", 4, initMapNative);
+  defineNativeKlassMethod(mapKlass, "keys", 4, keysMapNative);
+  defineNativeKlassMethod(mapKlass, "values", 6, valuesMapNative);
+  defineNativeKlassMethod(mapKlass, "pairs", 5, pairsMapNative);
+  defineNativeKlassMethod(mapKlass, "has", 3, hasKeyMapNative);
+  defineNativeKlassMethod(mapKlass, "get", 3, getMapNative);
+  defineNativeKlassMethod(mapKlass, "set", 3, setMapNative);
+  defineNativeKlassMethod(mapKlass, "delete", 6, deleteMapNative);
 
   return mapKlass;
+}
+
+static ObjKlass *createPairClass() {
+  ObjKlass *pairKlass = defineKlass("Pair", 4, OBJ_INSTANCE);
+
+  return pairKlass;
 }
 
 static ObjKlass *createStringClass() {
@@ -1009,6 +1166,7 @@ void registerBuiltInKlasses() {
   vm.klass.string = createStringClass();
   vm.klass.error = createErrorClass();
   vm.klass.map = createMapClass();
+  vm.klass.pair = createPairClass();
 }
 
 void registerMathNatives() {

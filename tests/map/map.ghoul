@@ -1,0 +1,9 @@
+print "$expect$";
+print "{}";
+print "{\"apple\":pie,}";
+print "$actual$";
+print Map();
+print {
+  "apple": "pie",
+}
+

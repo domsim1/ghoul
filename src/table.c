@@ -104,7 +104,7 @@ bool tableDelete(Table *table, ObjString *key) {
 
   entry->key = NULL;
   entry->value = BOOL_VAL(true);
-  return false;
+  return true;
 }
 
 void tableAddAll(Table *from, Table *to) {

@@ -117,6 +117,8 @@ void freeVM() {
   vm.klass.file = NULL;
   vm.klass.string = NULL;
   vm.klass.error = NULL;
+  vm.klass.pair = NULL;
+  vm.klass.map = NULL;
   vm.keep = NULL;
   freeObjects();
 }
@@ -131,7 +133,7 @@ Value pop() {
   return *vm.stackTop;
 }
 
-static Value peek(int distance) { return vm.stackTop[-1 - distance]; }
+Value peek(int distance) { return vm.stackTop[-1 - distance]; }
 
 static ObjUpvalue *captureUpvalue(Value *local);
 
@@ -189,6 +191,9 @@ static bool initClass(ObjKlass *klass, Value initializer, int argCount) {
   switch (klass->base) {
   case OBJ_LIST:
     vm.stackTop[-argCount - 1] = OBJ_VAL(newList(klass));
+    break;
+  case OBJ_MAP:
+    vm.stackTop[-argCount - 1] = OBJ_VAL(newMap(klass));
     break;
   case OBJ_FILE:
     vm.stackTop[-argCount - 1] = OBJ_VAL(newFile(klass));
@@ -270,6 +275,10 @@ static bool invoke(ObjString *name, int argCount) {
     ObjList *list = AS_LIST(receiver);
     klass = list->klass;
     fields = &list->fields;
+  } else if (IS_MAP(receiver)) {
+    ObjMap *map = AS_MAP(receiver);
+    klass = map->klass;
+    fields = &map->fields;
   } else if (IS_FILE(receiver)) {
     ObjFile *file = AS_FILE(receiver);
     klass = file->klass;
@@ -572,6 +581,10 @@ static InterpretResult run() {
         ObjList *list = AS_LIST(peek(0));
         klass = list->klass;
         fields = &list->fields;
+      } else if (IS_MAP(peek(0))) {
+        ObjMap *map = AS_MAP(peek(0));
+        klass = map->klass;
+        fields = &map->fields;
       } else if (IS_FILE(peek(0))) {
         ObjFile *file = AS_FILE(peek(0));
         klass = file->klass;
@@ -607,6 +620,10 @@ static InterpretResult run() {
         ObjList *list = AS_LIST(peek(0));
         klass = list->klass;
         fields = &list->fields;
+      } else if (IS_MAP(peek(0))) {
+        ObjMap *map = AS_MAP(peek(0));
+        klass = map->klass;
+        fields = &map->fields;
       } else if (IS_FILE(peek(0))) {
         ObjFile *file = AS_FILE(peek(0));
         klass = file->klass;
@@ -639,6 +656,15 @@ static InterpretResult run() {
       } else if (IS_LIST(peek(1))) {
         ObjList *list = AS_LIST(peek(1));
         fields = &list->fields;
+      } else if (IS_MAP(peek(0))) {
+        ObjMap *map = AS_MAP(peek(0));
+        fields = &map->fields;
+      } else if (IS_STRING(peek(0))) {
+        ObjString *string = AS_STRING(peek(0));
+        fields = &string->fields;
+      } else if (IS_FILE(peek(0))) {
+        ObjFile *file = AS_FILE(peek(0));
+        fields = &file->fields;
       } else {
         runtimeError("Only instances have fields.");
         return INTERPRET_RUNTIME_ERROR;
@@ -658,6 +684,15 @@ static InterpretResult run() {
       } else if (IS_LIST(peek(1))) {
         ObjList *list = AS_LIST(peek(1));
         fields = &list->fields;
+      } else if (IS_MAP(peek(0))) {
+        ObjMap *map = AS_MAP(peek(0));
+        fields = &map->fields;
+      } else if (IS_STRING(peek(0))) {
+        ObjString *string = AS_STRING(peek(0));
+        fields = &string->fields;
+      } else if (IS_FILE(peek(0))) {
+        ObjFile *file = AS_FILE(peek(0));
+        fields = &file->fields;
       } else {
         runtimeError("Only instances have fields.");
         return INTERPRET_RUNTIME_ERROR;
@@ -1084,7 +1119,7 @@ static InterpretResult run() {
         ObjString *string = AS_STRING(peek(0));
         int i = 0;
         push(NUMBER_VAL((double)i));
-        if (i > string->length - 1) {
+        if (string->length == 0) {
           pop();
           push(NIL_VAL);
           break;

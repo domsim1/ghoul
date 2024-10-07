@@ -1400,7 +1400,9 @@ static void forStatement() {
 
 static void printStatement() {
   expression();
-  consume(TOKEN_SEMICOLON, "Expect ';' after value.");
+  if (parser.previous.type != TOKEN_RIGHT_BRACE) {
+    consume(TOKEN_SEMICOLON, "Expect ';' after value.");
+  }
   emitByte(OP_PRINT);
 }
 

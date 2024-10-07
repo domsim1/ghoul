@@ -6,6 +6,8 @@
 #include <string.h>
 #include <time.h>
 
+#include <readline/readline.h>
+
 #include "memory.h"
 #include "object.h"
 #include "value.h"
@@ -465,6 +467,19 @@ static Value initStringNative(int argCount, Value *args) {
   return OBJ_VAL(string);
 }
 
+static Value asNumberStringNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_VARIADIC, ARG_ANY)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  double num;
+  int match = sscanf(AS_CSTRING(args[0]), "%lf", &num);
+  if (match) {
+    return NUMBER_VAL(num);
+  }
+  return NIL_VAL;
+}
+
 static Value lenStringNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_STRING)) {
     vm.shouldPanic = true;
@@ -515,6 +530,70 @@ static Value splitStringNative(int argCount, Value *args) {
   }
 }
 
+static Value isNumberNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_ANY)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return IS_NUMBER(args[1]) ? TRUE_VAL : FALSE_VAL;
+}
+
+static Value isStringNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_ANY)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return IS_STRING(args[1]) ? TRUE_VAL : FALSE_VAL;
+}
+
+static Value isInstNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_ANY)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return IS_INSTANCE(args[1]) ? TRUE_VAL : FALSE_VAL;
+}
+
+static Value isKlassNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_ANY)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return IS_KLASS(args[1]) ? TRUE_VAL : FALSE_VAL;
+}
+
+static Value isListNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_ANY)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return IS_LIST(args[1]) ? TRUE_VAL : FALSE_VAL;
+}
+
+static Value isBoolNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_ANY)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return IS_BOOL(args[1]) ? TRUE_VAL : FALSE_VAL;
+}
+
+static Value isNilNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_ANY)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return IS_NIL(args[1]) ? TRUE_VAL : FALSE_VAL;
+}
+
+static Value isFuncNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_ANY)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  return IS_CLOSURE(args[1]) ? TRUE_VAL : FALSE_VAL;
+}
+
 static Value isInstOfNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_ANY, ARG_ANY)) {
     vm.shouldPanic = true;
@@ -536,6 +615,17 @@ static Value isInstOfNative(int argCount, Value *args) {
   }
 
   return FALSE_VAL;
+}
+
+static Value promptNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_STRING)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  char *input = readline(AS_CSTRING(args[1]));
+  push(OBJ_VAL(copyString(input, strlen(input), &vm.strings)));
+  free(input);
+  return pop();
 }
 
 static Value isErrorNative(int argCount, Value *args) {
@@ -866,6 +956,7 @@ static ObjKlass *createStringClass() {
   defineNativeKlassMethod(stringKlass, "len", 3, lenStringNative);
   defineNativeKlassMethod(stringKlass, "contains", 8, containsStringNative);
   defineNativeKlassMethod(stringKlass, "split", 5, splitStringNative);
+  defineNativeKlassMethod(stringKlass, "asnum", 5, asNumberStringNative);
 
   return stringKlass;
 }
@@ -884,6 +975,15 @@ void registerNatives() {
   defineNative("iserr", 5, isErrorNative);
   defineNative("instof", 6, isInstOfNative);
   defineNative("panic", 5, panicNative);
+  defineNative("isnum", 5, isNumberNative);
+  defineNative("isstr", 5, isStringNative);
+  defineNative("isinst", 6, isInstNative);
+  defineNative("isclass", 7, isKlassNative);
+  defineNative("islist", 6, isListNative);
+  defineNative("isbool", 6, isBoolNative);
+  defineNative("isnil", 5, isNilNative);
+  defineNative("isfn", 4, isFuncNative);
+  defineNative("prompt", 6, promptNative);
 }
 
 void registerBuiltInKlasses() {

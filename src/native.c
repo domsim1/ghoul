@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #include <readline/readline.h>
 
@@ -192,12 +193,21 @@ static void defineNativeInstanceField(ObjInstance *instance, const char *string,
   pop();
 }
 
-static Value clockNative(int argCount, Value *args) {
+static Value tickNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 0, args, NATIVE_NORMAL)) {
     vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
+}
+
+static Value sleepNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  int sleepTime = AS_NUMBER(args[1]) * 1000000;
+  return NUMBER_VAL(usleep(sleepTime));
 }
 
 static Value exitNative(int argCount, Value *args) {
@@ -969,7 +979,8 @@ static ObjKlass *createErrorClass() {
 }
 
 void registerNatives() {
-  defineNative("tick", 4, clockNative);
+  defineNative("tick", 4, tickNative);
+  defineNative("sleep", 5, sleepNative);
   defineNative("exit", 4, exitNative);
   defineNative("open", 4, initFileNative);
   defineNative("iserr", 5, isErrorNative);

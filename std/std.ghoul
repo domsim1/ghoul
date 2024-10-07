@@ -1,3 +1,7 @@
+# simple ternary function, if true return a else b
+:tif(condition, a, b) {if (condition) -> a; else -> b;}
+
+# range creates a generator from a to b values, if a is less then b it will generate backwards
 :range(a, b) {
   if (a > b) {
     :c = a + 1;
@@ -14,5 +18,14 @@
       ->c;
     }
   }
+}
+
+# collect appends all values from generator into a list
+:collect(generator) {
+  :l = [];
+  for (:v in generator) {
+    l.push(v);
+  }
+  -> l;
 }
 

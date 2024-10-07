@@ -16,6 +16,7 @@ typedef struct {
 
 typedef struct {
   ObjKlass *list;
+  ObjKlass *map;
   ObjKlass *file;
   ObjKlass *string;
   ObjKlass *error;

@@ -960,6 +960,12 @@ static ObjKlass *createListClass() {
   return listKlass;
 }
 
+static ObjKlass *createMapClass() {
+  ObjKlass *mapKlass = defineKlass("Map", 3, OBJ_MAP);
+
+  return mapKlass;
+}
+
 static ObjKlass *createStringClass() {
   ObjKlass *stringKlass = defineKlass("String", 6, OBJ_STRING);
   defineNativeKlassMethod(stringKlass, "init", 4, initStringNative);
@@ -1002,6 +1008,7 @@ void registerBuiltInKlasses() {
   vm.klass.file = createFileClass();
   vm.klass.string = createStringClass();
   vm.klass.error = createErrorClass();
+  vm.klass.map = createMapClass();
 }
 
 void registerMathNatives() {

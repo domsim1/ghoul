@@ -781,6 +781,37 @@ static void list(bool canAssign) {
   emitIndex((uint16_t)itemCount);
 }
 
+static void map(bool canAssign) {
+  int itemCount = 0;
+  if (!check(TOKEN_RIGHT_BRACE)) {
+    do {
+      if (check(TOKEN_RIGHT_BRACE)) {
+        // trailing comma
+        break;
+      }
+
+      consume(TOKEN_STRING, "Expect string for map key.");
+      string(false);
+      consume(TOKEN_COLON, "Expect ':' after key.");
+      parsePrecedence(PREC_OR);
+
+      if (itemCount >= UINT16_COUNT) {
+        error("Cannot have more than 65535 keys and values in a map literal.");
+      }
+      itemCount += 2;
+    } while (match(TOKEN_COMMA));
+  }
+
+  consume(TOKEN_RIGHT_BRACE, "Expect '}' after map literal.");
+
+  if (itemCount > UINT8_MAX) {
+    emitByte(OP_BUILD_MAP_SHORT);
+  } else {
+    emitByte(OP_BUILD_MAP);
+  }
+  emitIndex((uint16_t)itemCount);
+}
+
 static void subscript(bool canAssign) {
   parsePrecedence(PREC_OR);
   consume(TOKEN_RIGHT_BRACKET, "Expect ']' after index.");
@@ -887,7 +918,7 @@ static void unary(bool canAssign) {
 ParseRule rules[] = {
     [TOKEN_LEFT_PAREN] = {grouping, call, PREC_CALL},
     [TOKEN_RIGHT_PAREN] = {NULL, NULL, PREC_NONE},
-    [TOKEN_LEFT_BRACE] = {NULL, NULL, PREC_NONE},
+    [TOKEN_LEFT_BRACE] = {map, NULL, PREC_NONE},
     [TOKEN_RIGHT_BRACE] = {NULL, NULL, PREC_NONE},
     [TOKEN_LEFT_BRACKET] = {list, subscript, PREC_SUBSCRIPT},
     [TOKEN_RIGHT_BRACKET] = {NULL, NULL, PREC_NONE},

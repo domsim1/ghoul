@@ -255,7 +255,11 @@ int disassembleInstruction(Chunk *chunk, int offset) {
   case OP_BUILD_LIST:
     return constantInstruction("OP_BUILD_LIST", chunk, offset);
   case OP_BUILD_LIST_SHORT:
-    return constantShortInstruction("OP_BUILD_LIST", chunk, offset);
+    return constantShortInstruction("OP_BUILD_LIST_SHORT", chunk, offset);
+  case OP_BUILD_MAP:
+    return constantInstruction("OP_BUILD_MAP", chunk, offset);
+  case OP_BUILD_MAP_SHORT:
+    return constantShortInstruction("OP_BUILD_MAP_SHORT", chunk, offset);
   case OP_INDEX_SUBSCR:
     return simpleInstruction("OP_INDEX_SUBSCR", offset);
   case OP_STORE_SUBSCR:

@@ -95,6 +95,14 @@ ObjList *newList(ObjKlass *klass) {
   return list;
 }
 
+ObjMap *newMap(ObjKlass *klass) {
+  ObjMap *map = ALLOCATE_OBJ(ObjMap, OBJ_MAP);
+  map->klass = klass;
+  initTable(&map->items);
+  initTable(&map->fields);
+  return map;
+}
+
 ObjFile *newFile(ObjKlass *klass) {
   ObjFile *file = ALLOCATE_OBJ(ObjFile, OBJ_FILE);
   file->file = NULL;
@@ -262,6 +270,20 @@ static void printList(ObjList *list) {
   printf("]");
 }
 
+static void printMap(ObjMap *map) {
+  printf("{");
+  for (int i = 0; i < map->items.capacity; i++) {
+    Entry entry = map->items.entries[i];
+    if (entry.key == NULL) {
+      continue;
+    }
+    printf("\"%s\":", entry.key->chars);
+    printValue(entry.value);
+    printf(",");
+  }
+  printf("}");
+}
+
 void printObject(Value value) {
   switch (OBJ_TYPE(value)) {
   case OBJ_BOUND_METHOD:
@@ -287,6 +309,9 @@ void printObject(Value value) {
     break;
   case OBJ_LIST:
     printList(AS_LIST(value));
+    break;
+  case OBJ_MAP:
+    printMap(AS_MAP(value));
     break;
   case OBJ_STRING:
     printf("%s", AS_CSTRING(value));

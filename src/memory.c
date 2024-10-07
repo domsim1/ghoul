@@ -124,6 +124,15 @@ static void blackenObject(Obj *object) {
     for (int i = 0; i < list->count; i++) {
       markValue(list->items[i]);
     }
+    markTable(&list->fields);
+    markObject((Obj *)list->klass);
+    break;
+  }
+  case OBJ_MAP: {
+    ObjMap *map = (ObjMap *)object;
+    markTable(&map->items);
+    markTable(&map->fields);
+    markObject((Obj *)map->klass);
     break;
   }
   case OBJ_FILE: {
@@ -132,8 +141,13 @@ static void blackenObject(Obj *object) {
     markTable(&file->fields);
     break;
   }
+  case OBJ_STRING: {
+    ObjString *string = (ObjString *)object;
+    markObject((Obj *)string->klass);
+    markTable(&string->fields);
+    break;
+  }
   case OBJ_NATIVE:
-  case OBJ_STRING:
     break;
   }
 }
@@ -180,6 +194,7 @@ static void freeObject(Obj *object) {
   case OBJ_STRING: {
     ObjString *string = (ObjString *)object;
     FREE_ARRAY(char, string->chars, string->length + 1);
+    freeTable(&string->fields);
     FREE(ObjString, object);
     break;
   }
@@ -191,6 +206,13 @@ static void freeObject(Obj *object) {
     FREE_ARRAY(Value *, list->items, list->count);
     freeTable(&list->fields);
     FREE(ObjList, object);
+    break;
+  }
+  case OBJ_MAP: {
+    ObjMap *map = (ObjMap *)object;
+    freeTable(&map->items);
+    freeTable(&map->fields);
+    FREE(ObjMap, map);
     break;
   }
   case OBJ_FILE: {

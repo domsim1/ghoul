@@ -16,6 +16,7 @@
 #define IS_INSTANCE(value) isObjType(value, OBJ_INSTANCE)
 #define IS_NATIVE(value) isObjType(value, OBJ_NATIVE)
 #define IS_LIST(value) isObjType(value, OBJ_LIST)
+#define IS_MAP(value) isObjType(value, OBJ_MAP)
 #define IS_STRING(value) isObjType(value, OBJ_STRING)
 #define IS_FILE(value) isObjType(value, OBJ_FILE)
 
@@ -27,6 +28,7 @@
 #define AS_INSTANCE(value) ((ObjInstance *)AS_OBJ(value))
 #define AS_NATIVE(value) (((ObjNative *)AS_OBJ(value))->function)
 #define AS_LIST(value) ((ObjList *)AS_OBJ(value))
+#define AS_MAP(value) ((ObjMap *)AS_OBJ(value))
 #define AS_STRING(value) ((ObjString *)AS_OBJ(value))
 #define AS_CSTRING(value) (((ObjString *)AS_OBJ(value))->chars)
 #define AS_FILE(value) ((ObjFile *)AS_OBJ(value))
@@ -40,6 +42,7 @@ typedef enum {
   OBJ_INSTANCE,
   OBJ_NATIVE,
   OBJ_LIST,
+  OBJ_MAP,
   OBJ_STRING,
   OBJ_UPVALUE,
   OBJ_FILE,
@@ -126,6 +129,13 @@ typedef struct {
 
 typedef struct {
   Obj obj;
+  ObjKlass *klass;
+  Table items;
+  Table fields;
+} ObjMap;
+
+typedef struct {
+  Obj obj;
   FILE *file;
   ObjKlass *klass;
   Table fields;
@@ -139,6 +149,7 @@ ObjFunction *newFunction(const char *file);
 ObjInstance *newInstance(ObjKlass *klass);
 ObjNative *newNative(NativeFn function);
 ObjList *newList(ObjKlass *klass);
+ObjMap *newMap(ObjKlass *klass);
 ObjString *takeString(char *chars, int length);
 ObjString *copyString(const char *chars, int length, Table *stringTable);
 ObjString *copyEscString(const char *chars, int length, Table *stringTable,

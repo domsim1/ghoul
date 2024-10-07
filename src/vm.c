@@ -940,42 +940,49 @@ static InterpretResult run() {
       push(OBJ_VAL(list));
       break;
     }
+    case OP_BUILD_MAP: {
+      ObjMap *map = newMap(vm.klass.map);
+      uint8_t itemCount = READ_BYTE();
+
+      vm.keep = (Obj *)map;
+      for (int i = itemCount - 1; i > 0; i -= 2) {
+        tableSet(&map->items, AS_STRING(peek(i)), peek(i - 1));
+      }
+      vm.stackTop -= itemCount;
+
+      push(OBJ_VAL(map));
+      vm.keep = NULL;
+      break;
+    }
+    case OP_BUILD_MAP_SHORT: {
+      ObjMap *map = newMap(vm.klass.map);
+      uint16_t itemCount = READ_SHORT();
+
+      vm.keep = (Obj *)map;
+      for (int i = itemCount - 1; i > 0; i -= 2) {
+        tableSet(&map->items, AS_STRING(peek(i)), peek(i - 1));
+      }
+      vm.stackTop -= itemCount;
+
+      push(OBJ_VAL(map));
+      vm.keep = NULL;
+      break;
+    }
     case OP_INDEX_SUBSCR: {
       if (IS_STRING(peek(0))) {
-        ObjString *str = AS_STRING(pop());
-        ObjKlass *klass = NULL;
-        Table *fields = NULL;
-        if (IS_INSTANCE(peek(0))) {
-          ObjInstance *instance = AS_INSTANCE(peek(0));
-          klass = instance->klass;
-          fields = &instance->fields;
-        } else if (IS_LIST(peek(0))) {
-          ObjList *list = AS_LIST(peek(0));
-          klass = list->klass;
-          fields = &list->fields;
-        } else if (IS_FILE(peek(0))) {
-          ObjFile *file = AS_FILE(peek(0));
-          klass = file->klass;
-          fields = &file->fields;
-        } else if (IS_STRING(peek(0))) {
-          ObjString *string = AS_STRING(peek(0));
-          klass = string->klass;
-          fields = &string->fields;
-        } else {
-          runtimeError("Can only index into an instance with a string.");
+        ObjString *key = AS_STRING(pop());
+        if (!IS_MAP(peek(0))) {
+          runtimeError("Can only key into a map.");
           return INTERPRET_RUNTIME_ERROR;
         }
-        pop();
+        ObjMap *map = AS_MAP(pop());
         Value value;
-        if (tableGet(fields, str, &value)) {
+        if (tableGet(&map->items, key, &value)) {
           push(value);
           break;
         }
-        if (bindMethod(klass, str, true)) {
-          break;
-        }
-        push(NIL_VAL);
-        break;
+        runtimeError("Key is not a valid member of the map.");
+        return INTERPRET_RUNTIME_ERROR;
       }
       if (!IS_NUMBER(peek(0))) {
         runtimeError("Index is not a valid number or string.");
@@ -1012,25 +1019,13 @@ static InterpretResult run() {
       Value item = pop();
       if (IS_STRING(peek(0))) {
         ObjString *str = AS_STRING(pop());
-        Table *fields = NULL;
-        if (IS_INSTANCE(peek(0))) {
-          ObjInstance *instance = AS_INSTANCE(peek(0));
-          fields = &instance->fields;
-        } else if (IS_LIST(peek(0))) {
-          ObjList *list = AS_LIST(peek(0));
-          fields = &list->fields;
-        } else if (IS_FILE(peek(0))) {
-          ObjFile *file = AS_FILE(peek(0));
-          fields = &file->fields;
-        } else if (IS_STRING(peek(0))) {
-          ObjString *string = AS_STRING(peek(0));
-          fields = &string->fields;
-        } else {
-          runtimeError("Can store into an instance with a string.");
+        if (!IS_MAP(peek(0))) {
+          runtimeError("Map key is not a string.");
           return INTERPRET_RUNTIME_ERROR;
         }
-        pop();
-        tableSet(fields, str, item);
+        ObjMap *map = AS_MAP(pop());
+        tableSet(&map->items, str, item);
+        push(item);
         break;
       }
       if (!IS_NUMBER(peek(0))) {

@@ -1201,7 +1201,6 @@ void registerMathNatives() {
   defineNativeInstanceMethod(mathInstance, "exp", 3, expMathNative);
   defineNativeInstanceMethod(mathInstance, "expm1", 5, expm1MathNative);
   defineNativeInstanceMethod(mathInstance, "floor", 5, floorMathNative);
-
   defineNativeInstanceMethod(mathInstance, "hypot", 5, hypotMathNative);
   defineNativeInstanceMethod(mathInstance, "log", 3, logMathNative);
   defineNativeInstanceMethod(mathInstance, "log10", 5, log10MathNative);

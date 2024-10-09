@@ -225,7 +225,7 @@ static bool callValue(Value callee, int argCount) {
     case OBJ_KLASS: {
       ObjKlass *klass = AS_KLASS(callee);
       Value initializer;
-      if (tableGet(&klass->methods, vm.string.init, &initializer)) {
+      if (tableGet(&klass->properties, vm.string.init, &initializer)) {
         if (IS_NATIVE(initializer)) {
           return callNative(AS_NATIVE(initializer), argCount);
         }
@@ -253,7 +253,7 @@ static bool callValue(Value callee, int argCount) {
 
 static bool invokeFromClass(ObjKlass *klass, ObjString *name, int argCount) {
   Value method;
-  if (!tableGet(&klass->methods, name, &method)) {
+  if (!tableGet(&klass->properties, name, &method)) {
     runtimeError("Undefined property '%s'.", name->chars);
     return false;
   }
@@ -299,26 +299,29 @@ static bool invoke(ObjString *name, int argCount) {
   return invokeFromClass(klass, name, argCount);
 }
 
-static bool bindMethod(ObjKlass *klass, ObjString *name, bool ignoreError) {
-  Value method;
-  if (!tableGet(&klass->methods, name, &method)) {
+static bool bindKlassProp(ObjKlass *klass, ObjString *name, bool ignoreError) {
+  Value prop;
+  if (!tableGet(&klass->properties, name, &prop)) {
     if (!ignoreError) {
       runtimeError("Undefined property '%s'.", name->chars);
     }
     return false;
   }
 
-  if (IS_NATIVE(method)) {
-    ObjBoundNative *bound =
-        newBoundNative(peek(0), (ObjNative *)AS_OBJ(method));
+  if (IS_NATIVE(prop)) {
+    ObjBoundNative *bound = newBoundNative(peek(0), (ObjNative *)AS_OBJ(prop));
+    pop();
+    push(OBJ_VAL(bound));
+    return true;
+  } else if (IS_CLOSURE(prop)) {
+    ObjBoundMethod *bound = newBoundMethod(peek(0), AS_CLOSURE(prop));
     pop();
     push(OBJ_VAL(bound));
     return true;
   }
 
-  ObjBoundMethod *bound = newBoundMethod(peek(0), AS_CLOSURE(method));
   pop();
-  push(OBJ_VAL(bound));
+  push(prop);
   return true;
 }
 
@@ -358,7 +361,7 @@ static void closeUpvalues(Value *last) {
 static void defineMethod(ObjString *name) {
   Value method = peek(0);
   ObjKlass *klass = AS_KLASS(peek(1));
-  tableSet(&klass->methods, name, method);
+  tableSet(&klass->properties, name, method);
   pop();
   return;
 }
@@ -610,7 +613,7 @@ static InterpretResult run() {
         push(value);
         break;
       }
-      if (!bindMethod(klass, name, false)) {
+      if (!bindKlassProp(klass, name, false)) {
         return INTERPRET_RUNTIME_ERROR;
       }
       break;
@@ -649,7 +652,7 @@ static InterpretResult run() {
         push(value);
         break;
       }
-      if (!bindMethod(klass, name, false)) {
+      if (!bindKlassProp(klass, name, false)) {
         return INTERPRET_RUNTIME_ERROR;
       }
       break;
@@ -714,7 +717,7 @@ static InterpretResult run() {
       ObjString *name = READ_STRING();
       ObjKlass *superclass = AS_KLASS(pop());
 
-      if (!bindMethod(superclass, name, false)) {
+      if (!bindKlassProp(superclass, name, false)) {
         return INTERPRET_RUNTIME_ERROR;
       }
       break;
@@ -723,7 +726,7 @@ static InterpretResult run() {
       ObjString *name = READ_STRING_SHORT();
       ObjKlass *superclass = AS_KLASS(pop());
 
-      if (!bindMethod(superclass, name, false)) {
+      if (!bindKlassProp(superclass, name, false)) {
         return INTERPRET_RUNTIME_ERROR;
       }
       break;
@@ -936,15 +939,15 @@ static InterpretResult run() {
       }
       ObjKlass *subclass = AS_KLASS(peek(0));
       ObjKlass *super = AS_KLASS(superclass);
-      tableAddAll(&super->methods, &subclass->methods);
+      tableAddAll(&super->properties, &subclass->properties);
       subclass->base = super->base;
       pop();
       break;
     }
-    case OP_METHOD:
+    case OP_PROPERTY:
       defineMethod(READ_STRING());
       break;
-    case OP_METHOD_SHORT:
+    case OP_PROPERTY_SHORT:
       defineMethod(READ_STRING_SHORT());
       break;
     case OP_BUILD_LIST: {

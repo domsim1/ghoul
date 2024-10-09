@@ -175,7 +175,7 @@ static void defineNativeKlassMethod(ObjKlass *klass, const char *name, int len,
   push(OBJ_VAL(klass));
   push(OBJ_VAL(copyString(name, len, &vm.strings)));
   push(OBJ_VAL(newNative(function)));
-  tableSet(&klass->methods, AS_STRING(peek(1)), peek(0));
+  tableSet(&klass->properties, AS_STRING(peek(1)), peek(0));
   pop();
   pop();
   pop();

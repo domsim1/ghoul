@@ -74,7 +74,7 @@ typedef struct {
   Obj obj;
   ObjString *name;
   ObjType base;
-  Table methods;
+  Table properties;
 } ObjKlass;
 
 struct ObjString {

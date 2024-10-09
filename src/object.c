@@ -45,7 +45,7 @@ ObjBoundMethod *newBoundMethod(Value receiver, ObjClosure *method) {
 ObjKlass *newKlass(ObjString *name, ObjType base) {
   ObjKlass *klass = ALLOCATE_OBJ(ObjKlass, OBJ_KLASS);
   klass->name = name;
-  initTable(&klass->methods);
+  initTable(&klass->properties);
   klass->base = base;
   return klass;
 }

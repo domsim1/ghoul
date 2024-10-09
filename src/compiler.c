@@ -1120,11 +1120,24 @@ static void method(bool canInit) {
   }
   function(type);
   if (constant > UINT8_MAX) {
-    emitByte(OP_METHOD_SHORT);
+    emitByte(OP_PROPERTY_SHORT);
   } else {
-    emitByte(OP_METHOD);
+    emitByte(OP_PROPERTY);
   }
   emitIndex(constant);
+}
+
+static void staticVariable() {
+  uint16_t constant = identifierConstant(&parser.previous);
+  consume(TOKEN_EQUAL, "Expect assignment after identifier");
+  expression();
+  if (constant > UINT8_MAX) {
+    emitByte(OP_PROPERTY_SHORT);
+  } else {
+    emitByte(OP_PROPERTY);
+  }
+  emitIndex(constant);
+  consume(TOKEN_SEMICOLON, "Expect ';' after static class assignment.");
 }
 
 static bool checkBuitinName(int start, int length, const char *rest,
@@ -1261,7 +1274,11 @@ static void classDeclaration() {
   consume(TOKEN_LEFT_BRACE, "Expect '{' before class body.");
   while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
     consume(TOKEN_IDENTIFIER, "Expect identifier.");
-    method(true);
+    if (check(TOKEN_LEFT_PAREN)) {
+      method(true);
+    } else {
+      staticVariable();
+    }
   }
   consume(TOKEN_RIGHT_BRACE, "Expect '}' before class body.");
   emitByte(OP_POP);

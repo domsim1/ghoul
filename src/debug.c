@@ -248,10 +248,10 @@ int disassembleInstruction(Chunk *chunk, int offset) {
     return constantShortInstruction("OP_CLASS_SHORT", chunk, offset);
   case OP_INHERIT:
     return simpleInstruction("OP_INHERIT", offset);
-  case OP_METHOD:
-    return constantInstruction("OP_METHOD", chunk, offset);
-  case OP_METHOD_SHORT:
-    return constantShortInstruction("OP_METHOD_SHORT", chunk, offset);
+  case OP_PROPERTY:
+    return constantInstruction("OP_PROPERTY", chunk, offset);
+  case OP_PROPERTY_SHORT:
+    return constantShortInstruction("OP_PROPERTY_SHORT", chunk, offset);
   case OP_BUILD_LIST:
     return constantInstruction("OP_BUILD_LIST", chunk, offset);
   case OP_BUILD_LIST_SHORT:

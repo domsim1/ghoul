@@ -524,13 +524,19 @@ static InterpretResult run() {
     }
     case OP_DEFINE_GLOBAL: {
       ObjString *name = READ_STRING();
-      tableSet(&vm.globals, name, peek(0));
+      if (!tableSet(&vm.globals, name, peek(0))) {
+        runtimeError("Global already defined.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
       pop();
       break;
     }
     case OP_DEFINE_GLOBAL_SHORT: {
       ObjString *name = READ_STRING_SHORT();
-      tableSet(&vm.globals, name, peek(0));
+      if (!tableSet(&vm.globals, name, peek(0))) {
+        runtimeError("Global already defined.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
       pop();
       break;
     }

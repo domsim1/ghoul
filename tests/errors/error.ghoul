@@ -13,7 +13,7 @@ print err.message;
     super.init(m);
   }
 }
-:err = BadError("Bad Error!");
+err = BadError("Bad Error!");
 print err;
 print err.message;
 print iserr(err);

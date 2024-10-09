@@ -432,19 +432,38 @@ static Value removeListNative(int argCount, Value *args) {
 }
 
 static Value joinListNative(int argCount, Value *args) {
-  if (!checkArgs(argCount, 2, args, NATIVE_VARIADIC, ARG_LIST, ARG_LIST)) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_LIST, ARG_STRING)) {
     vm.shouldPanic = true;
     return NIL_VAL;
   }
-  ObjList *list = newList(vm.klass.list);
-  push(OBJ_VAL(list));
-  for (int arg = 0; arg < argCount; arg++) {
-    ObjList *listb = AS_LIST(args[arg]);
-    for (int i = 0; i < listb->count; i++) {
-      pushToList(list, listb->items[i]);
+  ObjList *list = AS_LIST(args[0]);
+  ObjString *delimiter = AS_STRING(args[1]);
+  int length = 0;
+
+  for (int i = 0; i < list->count; i++) {
+    Value item = list->items[i];
+    if (IS_STRING(item)) {
+      length += AS_STRING(item)->length;
+    } else {
+      runtimeError("Can only join a list of strings.");
+      vm.shouldPanic = true;
+      return NIL_VAL;
+    }
+    if (i < list->count - 1) {
+      length += delimiter->length;
     }
   }
-  return OBJ_VAL(pop());
+
+  char *result = ALLOCATE(char, length + 1);
+  result[0] = '\0';
+  for (int i = 0; i < list->count; i++) {
+    char *str = AS_CSTRING(list->items[i]);
+    strcat(result, str);
+    if (i < list->count - 1) {
+      strcat(result, delimiter->chars);
+    }
+  }
+  return OBJ_VAL(takeString(result, length));
 }
 
 static Value initMapNative(int argCount, Value *args) {

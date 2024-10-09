@@ -95,6 +95,16 @@ ObjList *newList(ObjKlass *klass) {
   return list;
 }
 
+ObjList *takeList(ObjKlass *klass, Value *values, int length) {
+  ObjList *list = ALLOCATE_OBJ(ObjList, OBJ_LIST);
+  list->items = values;
+  list->klass = klass;
+  list->count = length;
+  list->capacity = length + 1;
+  initTable(&list->fields);
+  return list;
+}
+
 ObjMap *newMap(ObjKlass *klass) {
   ObjMap *map = ALLOCATE_OBJ(ObjMap, OBJ_MAP);
   map->klass = klass;

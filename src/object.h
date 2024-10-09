@@ -158,6 +158,7 @@ ObjUpvalue *newUpvalue(Value *slot);
 ObjFile *newFile(ObjKlass *klass);
 void printObject(Value value);
 
+ObjList *takeList(ObjKlass *klass, Value *values, int length);
 void pushToList(ObjList *list, Value value);
 void storeToList(ObjList *list, int index, Value value);
 Value indexFromList(ObjList *list, int index);

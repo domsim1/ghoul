@@ -4,16 +4,16 @@ p.push(5);
 :a = List(1,2,3,4,5);
 a.remove(1, 3);
 
-:b = [1, 2];
-b = b.join(b, b, b);
+:b = ["1", "2"];
+b = b ++ b ++ b ++ b;
 
 print "$expect$";
 print "[5]";
 print 5;
 print "[1, 5]";
-print "[1, 2, 1, 2, 1, 2, 1, 2]";
+print "1,2,1,2,1,2,1,2";
 print "$actual$";
 print p;
 print p.pop();
 print a;
-print b;
+print b.join(",");

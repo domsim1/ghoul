@@ -4,7 +4,7 @@
 
 :c < String{
   addTest() {
-    -> this + "test";
+    -> this ++ "test";
   }
 }
 :d = c("hi ");

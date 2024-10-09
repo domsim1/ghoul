@@ -370,7 +370,7 @@ static bool isFalsey(Value value) {
   return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
 }
 
-static void concatenate() {
+static void concatenateStrings() {
   ObjString *b = AS_STRING(peek(0));
   ObjString *a = AS_STRING(peek(1));
 
@@ -381,6 +381,21 @@ static void concatenate() {
   chars[length] = '\0';
 
   ObjString *result = takeString(chars, length);
+  pop();
+  pop();
+  push(OBJ_VAL(result));
+}
+
+static void concatenateLists() {
+  ObjList *b = AS_LIST(peek(0));
+  ObjList *a = AS_LIST(peek(1));
+
+  int length = a->count + b->count;
+  Value *values = ALLOCATE(Value, length + 1);
+  memcpy(values, a->items, sizeof(Value) * a->count);
+  memcpy(values + a->count, b->items, sizeof(Value) * b->count);
+
+  ObjList *result = takeList(a->klass, values, length);
   pop();
   pop();
   push(OBJ_VAL(result));
@@ -758,14 +773,15 @@ static InterpretResult run() {
       break;
     }
     case OP_ADD:
+      BINARY_OP(NUMBER_VAL, +);
+      break;
+    case OP_CONCAT:
       if (IS_STRING(peek(0)) && IS_STRING(peek(1))) {
-        concatenate();
-      } else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
-        double a = AS_NUMBER(pop());
-        double b = AS_NUMBER(pop());
-        push(NUMBER_VAL(a + b));
+        concatenateStrings();
+      } else if (IS_LIST(peek(0)) && IS_LIST(peek(1))) {
+        concatenateLists();
       } else {
-        runtimeError("Operands must be two numbers or two strings.");
+        runtimeError("Can only concat two strings or lists.");
         return INTERPRET_RUNTIME_ERROR;
       }
       break;

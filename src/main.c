@@ -4,6 +4,7 @@
 
 #include <readline/history.h>
 #include <readline/readline.h>
+#include <unistd.h>
 
 #include "vm.h"
 
@@ -51,7 +52,7 @@ static char *readFile(const char *path) {
 static void runFile(const char *path) {
   char *res = realpath(path, actualpath);
   if (res == NULL) {
-    fprintf(stderr, "Failed to resolve file path.");
+    fprintf(stderr, "Failed to resolve file path.\n");
     exit(74);
   }
   char *source = readFile(actualpath);
@@ -64,7 +65,13 @@ static void runFile(const char *path) {
     exit(70);
 }
 
-static void loadStd() { runFile("std/std.ghoul"); }
+static void loadStd() {
+#ifdef RELEASE
+  runFile("/usr/share/ghoul/std.ghoul");
+#else
+  runFile("std/std.ghoul");
+#endif
+}
 
 int main(int argc, const char *argv[]) {
   initVM();

@@ -11,9 +11,12 @@ print "[1, 2, 3]";
 print "['one', 'two', 'three']";
 print "[1, 'two']";
 print "[<class 'TestClass'>]";
+print "[1, 2, 3, 'one', 'two', 'three']";
 print "$actual$";
 print dataEmpty;
 print dataNum;
 print dataString;
 print dataMix;
 print dataClass;
+print dataNum ++ dataString;
+

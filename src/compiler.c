@@ -607,6 +607,9 @@ static void binary(bool canAssign) {
   case TOKEN_PLUS:
     emitByte(OP_ADD);
     break;
+  case TOKEN_PLUS_PLUS:
+    emitByte(OP_CONCAT);
+    break;
   case TOKEN_MINUS:
     emitByte(OP_SUBTRACT);
     break;
@@ -926,6 +929,7 @@ ParseRule rules[] = {
     [TOKEN_DOT] = {NULL, dot, PREC_CALL},
     [TOKEN_MINUS] = {unary, binary, PREC_TERM},
     [TOKEN_PLUS] = {NULL, binary, PREC_TERM},
+    [TOKEN_PLUS_PLUS] = {NULL, binary, PREC_TERM},
     [TOKEN_BITWISE_NOT] = {unary, NULL, PREC_UNARY},
     [TOKEN_BITWISE_AND] = {NULL, binary, PREC_BITWISE_AND},
     [TOKEN_BITWISE_OR] = {NULL, binary, PREC_BITWISE_XOR},

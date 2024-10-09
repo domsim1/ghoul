@@ -219,7 +219,9 @@ Token scanToken() {
                      : match('=') ? TOKEN_MINUS_EQUAL
                                   : TOKEN_MINUS);
   case '+':
-    return makeToken(match('=') ? TOKEN_PLUS_EQUAL : TOKEN_PLUS);
+    return makeToken(match('+')   ? TOKEN_PLUS_PLUS
+                     : match('=') ? TOKEN_PLUS_EQUAL
+                                  : TOKEN_PLUS);
   case '/':
     return makeToken(match('=') ? TOKEN_SLASH_EQUAL : TOKEN_SLASH);
   case '*':

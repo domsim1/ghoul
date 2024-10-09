@@ -525,7 +525,7 @@ static InterpretResult run() {
     case OP_DEFINE_GLOBAL: {
       ObjString *name = READ_STRING();
       if (!tableSet(&vm.globals, name, peek(0))) {
-        runtimeError("Global already defined.");
+        runtimeError("Global %s is already defined.", name->chars);
         return INTERPRET_RUNTIME_ERROR;
       }
       pop();
@@ -534,7 +534,7 @@ static InterpretResult run() {
     case OP_DEFINE_GLOBAL_SHORT: {
       ObjString *name = READ_STRING_SHORT();
       if (!tableSet(&vm.globals, name, peek(0))) {
-        runtimeError("Global already defined.");
+        runtimeError("Global %s is already defined.", name->chars);
         return INTERPRET_RUNTIME_ERROR;
       }
       pop();

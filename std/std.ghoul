@@ -2,7 +2,7 @@
 :tif(condition, a, b) {if (condition) -> a; else -> b;}
 
 # Inst is an empty class used to create an blank instance
-:Inst {}
+:Inst{}
 
 # range creates a generator from a to b values, if a is less then b it will generate backwards
 :range(a, b) {
@@ -30,5 +30,24 @@
     l.push(v);
   }
   -> l;
+}
+
+:_auto() {
+  :i = -1;
+  -> :(*shouldReset) {
+    if (shouldReset.len() > 0 && shouldReset[0] == true) {
+      i = -1;
+      -> i;
+    }
+    i += 1;
+    -> i;
+  }
+}
+:auto = _auto();
+
+:Enum{
+  init() {
+    auto(true);
+  }
 }
 

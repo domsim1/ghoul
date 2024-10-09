@@ -455,14 +455,17 @@ static Value joinListNative(int argCount, Value *args) {
   }
 
   char *result = ALLOCATE(char, length + 1);
-  result[0] = '\0';
+  char *rpos = result;
   for (int i = 0; i < list->count; i++) {
-    char *str = AS_CSTRING(list->items[i]);
-    strcat(result, str);
+    ObjString *str = AS_STRING(list->items[i]);
+    memcpy(rpos, str->chars, str->length);
+    rpos += str->length;
     if (i < list->count - 1) {
-      strcat(result, delimiter->chars);
+      memcpy(rpos, delimiter->chars, delimiter->length);
+      rpos += delimiter->length;
     }
   }
+  *rpos = '\0';
   return OBJ_VAL(takeString(result, length));
 }
 

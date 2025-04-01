@@ -1112,8 +1112,21 @@ static InterpretResult run() {
     }
     case OP_IN: {
       if (IS_CLOSURE(peek(0))) {
-        push(peek(0));
         ObjClosure *closure = AS_CLOSURE(peek(0));
+        int i = 0;
+        push(NUMBER_VAL((double)i));
+        push(peek(1));
+        if (!call(closure, 0)) {
+          return INTERPRET_RUNTIME_ERROR;
+        }
+        frame = &vm.frames[vm.frameCount - 1];
+      } else if (IS_CLOSURE(peek(1)) && IS_NUMBER(peek(0))) {
+        ObjClosure *closure = AS_CLOSURE(peek(1));
+        int i = (int)AS_NUMBER(peek(0));
+        i += 1;
+        pop();
+        push(NUMBER_VAL((double)i));
+        push(peek(1));
         if (!call(closure, 0)) {
           return INTERPRET_RUNTIME_ERROR;
         }

@@ -1347,7 +1347,10 @@ static void genericFor(Token identifier) {
   int exitJump = emitJump(OP_JUMP_IF_FALSE);
   emitByte(OP_POP);
 
+  // OP_IN stores values in stack, need to ofset for locals
+  current->localCount += 2;
   statement();
+  current->localCount -= 2;
   emitLoop(loopStart);
 
   patchJump(exitJump);

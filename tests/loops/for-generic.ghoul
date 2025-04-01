@@ -1,14 +1,24 @@
 print "$expect$";
+print 10;
 print 0;
+print 10;
 print 1;
+print 10;
 print 2;
+print 10;
 print 3;
+print 10;
 print 0;
+print 10;
 print 1;
+print 10;
 print 2;
+print 10;
 print 3;
 print "$actual$";
 for (:val in [0, 1, 2, 3]) {
+  :test = 10;
+  print test;
   print val;
 }
 
@@ -23,5 +33,7 @@ for (:val in [0, 1, 2, 3]) {
 }
 
 for (:val in counter()) {
+  :test = 10;
+  print test;
   print val;
 }

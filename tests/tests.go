@@ -85,7 +85,13 @@ func getFiles() []string {
 }
 
 func run(filepath string, resBuffer *string) string {
-	path, err := exec.LookPath("./ghoul.exe")
+	var exePath string
+	if runtime.GOOS == "windows" {
+		exePath = "./ghoul.exe"
+	} else {
+		exePath = "./ghoul"
+	}
+	path, err := exec.LookPath(exePath)
 	if err != nil {
 		log.Fatal(err)
 	}

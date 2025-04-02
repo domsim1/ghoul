@@ -1,4 +1,4 @@
-name: 'PR and Commit Validation'
+name: 'Test'
 
 on:
   push:
@@ -15,6 +15,9 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: '1.22.x'
+    - name: Install GNU Readline
+      shell: bash
+      run: sudo apt install -y libreadline-dev
     - name: Run and Show test results
       shell: bash
       run: make test

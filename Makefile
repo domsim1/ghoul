@@ -1,19 +1,23 @@
 CC=cc
 WARN=-Wall -Wextra
-EXE=ghoul
 LIBS=-lreadline -lm
 cfiles := src/*.c
 hfiles := src/*.h
 
-WIN_TARGET := $(if $(findstring Windows, $(TARGET_OS)), 1, 0)
-WIN_STACK := -Wl,--stack,8388608
+ifeq ($(OS), Windows_NT)
+    WIN_STACK=-Wl,--stack,8388608
+	EXE=ghoul.exe
+else
+    WIN_STACK=
+    EXE=ghoul
+endif
 
 ghoul: $(cfiles) $(hfiles)
-	$(CC) $(WARN) -g -o $(EXE) $(cfiles) $(LIBS) $(if $(WIN_TARGET), $(WIN_STACK), )
+	$(CC) $(WARN) -g -o $(EXE) $(cfiles) $(LIBS) $(WIN_STACK)
 
 .PHONY: test release install uninstall clean bear
 test: ghoul
-	cp $(if $(WIN_TARGET), ./ghoul.exe ./tests/ghoul.exe, ./ghoul ./tests/ghoul)
+	cp ./$(EXE) ./tests/$(EXE)
 	cp -r ./std ./tests/
 	cd ./tests; go run tests.go
 
@@ -31,9 +35,9 @@ uninstall:
 	rm -rf /usr/share/ghoul
 
 clean:
-	rm $(if $(WIN_TARGET), ./ghoul.exe, ./ghoul) 
+	rm ./$(EXE)
 	rm -rf /tests/std
-	rm $(if $(WIN_TARGET), ./tests/ghoul.exe, ./tests/ghoul)
+	rm ./tests/$(EXE)
 
 bear:
 	bear -- make

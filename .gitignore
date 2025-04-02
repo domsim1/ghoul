@@ -1,5 +1,7 @@
 ghoul
+ghoul.exe
 tests/ghoul
+tests/ghoul.exe
 tests/std/
 .DS_Store
 test.ghoul

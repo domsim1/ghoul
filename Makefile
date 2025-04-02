@@ -5,12 +5,15 @@ LIBS=-lreadline -lm
 cfiles := src/*.c
 hfiles := src/*.h
 
+WIN_TARGET := $(if $(findstring Windows, $(TARGET_OS)), 1, 0)
+WIN_STACK := -Wl,--stack,8388608
+
 ghoul: $(cfiles) $(hfiles)
-	$(CC) $(WARN) -o $(EXE) $(cfiles) $(LIBS)
+	$(CC) $(WARN) -g -o $(EXE) $(cfiles) $(LIBS) $(if $(WIN_TARGET), $(WIN_STACK), )
 
 .PHONY: test release install uninstall clean bear
 test: ghoul
-	cp ./ghoul ./tests/ghoul
+	cp $(if $(WIN_TARGET), ./ghoul.exe ./tests/ghoul.exe, ./ghoul ./tests/ghoul)
 	cp -r ./std ./tests/
 	cd ./tests; go run tests.go
 
@@ -28,9 +31,9 @@ uninstall:
 	rm -rf /usr/share/ghoul
 
 clean:
-	rm ./ghoul
+	rm $(if $(WIN_TARGET), ./ghoul.exe, ./ghoul) 
 	rm -rf /tests/std
-	rm ./tests/ghoul
+	rm $(if $(WIN_TARGET), ./tests/ghoul.exe, ./tests/ghoul)
 
 bear:
 	bear -- make

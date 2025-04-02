@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"sync"
 )
@@ -84,7 +85,7 @@ func getFiles() []string {
 }
 
 func run(filepath string, resBuffer *string) string {
-	path, err := exec.LookPath("./ghoul")
+	path, err := exec.LookPath("./ghoul.exe")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -100,7 +101,12 @@ func run(filepath string, resBuffer *string) string {
 }
 
 func getRes(fileData string, fileName string, resBuffer *string) bool {
-	data := strings.Split(fileData, "\n")
+	var data []string
+	if runtime.GOOS == "windows" {
+		data = strings.Split(fileData, "\r\n")
+	} else {		
+		data = strings.Split(fileData, "\n")
+	}
 	data = data[:len(data)-1]
 	expected := make([]string, 0)
 	actual := make([]string, 0)

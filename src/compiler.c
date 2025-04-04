@@ -1151,16 +1151,19 @@ static bool checkBuitinName(int start, int length, const char *rest,
 }
 
 static bool matchUseBuiltin(ObjString *name) {
-  if (name->length != 4) {
-    return false;
-  }
-
   switch (name->chars[0]) {
   case 'M':
     if (checkBuitinName(1, 3, "ath", name)) {
       registerMathNatives();
       return true;
     }
+    break;
+  case 'R':
+    if (checkBuitinName(1, 6, "equest", name)) {
+      registerRequestNatives();
+      return true;
+    }
+    break;
   }
   return false;
 }

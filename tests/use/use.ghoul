@@ -3,6 +3,6 @@ print "$expect$";
 print 10;
 print 20;
 print "$actual$";
-print add([1, 2, 3, 4]);
+print add(1, 2, 3, 4);
 :val = 20;
 print val;

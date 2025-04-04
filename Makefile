@@ -1,6 +1,6 @@
 CC=cc
 WARN=-Wall -Wextra
-LIBS=-lreadline -lm
+LIBS=-lreadline -lcurl -lm
 cfiles := src/*.c
 hfiles := src/*.h
 

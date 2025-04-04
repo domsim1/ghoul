@@ -7,6 +7,7 @@ print true;
 print true;
 print true;
 print true;
+print true;
 print false;
 print false;
 print "$actual$";
@@ -20,6 +21,7 @@ print isclass(Class);
 print isnil(nil);
 print isfn(:(){});
 print islist([]);
+print ismap({});
 print isnil("");
 print isinst(0);
 

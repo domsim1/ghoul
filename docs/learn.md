@@ -15,6 +15,8 @@ The script can be ran fromt he command line with `ghoul ./hello.ghoul`.
 
 Congratulation, you just coded your first words in ghoulish!
 
+
+
 ## Types
 
 Ghoul has many.
@@ -27,6 +29,7 @@ Ghoul has many.
 * `class`: Blueprint for creating an inst: `:Pizza{}`
 * `list`: dynmaic array: `[1, 2, 3]`
 * `fn`: function: `:do_thing() {}`
+* `Map`: Simple Key Value store: `:phone_book = { "dom": "04-XXX-XXX-XXX" }`
 
 Types can be checked in using the `is<type>` functions.
 
@@ -52,7 +55,7 @@ print instof(pizza, Pizza);
 ```
 
 
-Exluding `num`, `nil`, `bool`, `class`, `fn` and `inst` all types are also an `inst`. This allows methods to live on those types.
+Exluding `num`, `nil`, `bool`, `class` and `fn`, all types are also an `inst`. This allows methods to live on those types.
 
 ```
 print "apple".len();
@@ -63,8 +66,7 @@ print "apple".len();
 Ghoul also has some additional built in classes that provide some special functionality.
 
 * `File`: for file IO
-* `Error`: keeps a stacktrace
-* `Map`: Simple Key Value store: `:phone_book = { "dom": "04-XXX-XXX-XXX" }`
+* `Error`: works with `panic()`
 
 
 ## The Summon Operator
@@ -100,7 +102,6 @@ Example:
 print add(10, 20);
 # 30
 ```
-
 
 ### Class
 
@@ -261,5 +262,87 @@ for (:pair in phone_book.pairs()) {
 }
 ```
 
+## Varadic Functions
+
+The last parameter can be marked with a `*` to indicate it's varadic. All addition provided parameters will be packed into a list that can be accessed by the parameter marked with `*`.
+
+Example:
+
+```
+:add(*nums) {
+	:sum = 0;
+	for (:n in nums) {
+		sum += n;
+	}
+	->sum;
+}
+
+print add(1, 2, 3, 4);
+# 10
+```
+
+## Generator Functions
+
+With the power of closures comes the ability to create generator function. Generator function are useful for creating a lazy evaluation iterator that can be used with generic for.
+
+Example:
+
+```
+:fibonacci_generator() {
+	:last_number = 0;
+	:current_number = 1;
+	->:() {
+		:next_number = last_number + current_number;	
+		last_number = current_number;
+		current_number = next_number;
+		->next_number;
+	}
+}
+for (:n in fibonacci_generator()) {
+	print n;
+	if (n == 21) {
+		break;
+	}
+}
+# 1 2 3 5 13 21
+```
+
+## Use
+
+In ghoul you can break up code into files, to consume a file within your script the keyword `use` is used. The file path can be absulute or relevent. In addition, interal libraries such as `Math` or `Request` can be loaded using `use`. Note that a consumed file is loaded into global scope, a file will fail to load if you have declaration collisions.
+
+Example:
+
+```
+# file: coolmath.ghoul
+:CoolMath {
+	PI = 3.14159265359;
+}
+CoolMath = CoolMath();
+```
+
+```
+# file: main.ghoul
+use "Math";
+use "./coolmath.ghoul";
+print CoolMath.PI == Math.PI;
+# true
+```
+
+## Error
+
+Error is a class that can be used to create an error `inst`. Errors play well with `iserr` and `panic` functions for control flow.
+
+```
+:err = Error("oh no!");
+if (iserr(err)) {
+	panic(err);
+}
+# Error: oh no!
+# [line 3 of ghoul/file.ghoul] in script 
+```
+
 
 ## WIP
+
+This doc is still under construction.

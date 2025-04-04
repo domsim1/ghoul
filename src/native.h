@@ -5,5 +5,6 @@ void registerNatives();
 void registerBuiltInKlasses();
 
 void registerMathNatives();
+void registerRequestNatives();
 
 #endif

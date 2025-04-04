@@ -13,20 +13,24 @@ Ghoul is a scripting language designed to be terse, simple, expressive and fast.
 say_hello(name);
 ```
 
+
+
 ## Learn Ghoul
 
 Check out [learn.md](docs/learn.md)!
+
 
 
 ## Build
 
 Build with `make`.
 
-Tested on Ubuntu and Windows (MSYS2 UCRT64)
+Tested on Ubuntu and Windows (MSYS2 UCRT64 | CLANG64)
 
 ### Dependencies
 
-[GNU Readline](https://en.wikipedia.org/wiki/GNU_Readline)
+* [GNU Readline](https://en.wikipedia.org/wiki/GNU_Readline)
+* [libcurl](https://curl.se/libcurl/)
 
 ## Test
 
@@ -34,7 +38,9 @@ Test with `make test`.
 
 ### Test Dependencies
 
-[Go](https://go.dev/)
+* [Go](https://go.dev/)
+
+
 
 ## Thanks
 

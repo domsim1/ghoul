@@ -10,6 +10,8 @@
 #include <curl/curl.h>
 #include <readline/readline.h>
 
+#include "../vendor/cJSON/cJSON.h"
+
 #include "memory.h"
 #include "object.h"
 #include "table.h"
@@ -398,6 +400,104 @@ static Value postRequestNative(int argCount, Value *args) {
   free(chunk.response);
   curl_easy_cleanup(curl);
   curl_slist_free_all(headers);
+  return pop();
+}
+
+static void buildMapFromJson(cJSON *item, ObjMap *map);
+
+static void buildListFromJson(cJSON *item, ObjList *list) {  
+  if (cJSON_IsString(item)) {
+    pushToList(list, OBJ_VAL(copyString(item->valuestring, strlen(item->valuestring), &vm.strings)));
+  } else if (cJSON_IsNumber(item)) {
+    pushToList(list, NUMBER_VAL(item->valuedouble));
+  } else if (cJSON_IsBool(item)) {      
+    pushToList(list, BOOL_VAL(cJSON_IsTrue(item)));
+  } else if (cJSON_IsObject(item)) {
+    ObjMap *nested_map = newMap(vm.klass.map);
+    push(OBJ_VAL(nested_map));
+    buildMapFromJson(item->child, nested_map);  
+    pushToList(list, pop());
+  } else if (cJSON_IsArray(item)) {
+    ObjList *nested_list = newList(vm.klass.list);
+    push(OBJ_VAL(nested_list));
+    int size = cJSON_GetArraySize(item);
+    for (int i = 0; i < size; i++) {
+      cJSON *elem = cJSON_GetArrayItem(item, i);        
+      buildListFromJson(elem, nested_list); 
+    }
+    pushToList(list, pop());
+  }
+}
+
+static void buildMapFromJson(cJSON *item, ObjMap *map) {
+  while (item) {
+    if (!item->string) { 
+      item = item->next;
+      continue;
+    }
+
+    if (cJSON_IsString(item)) {
+      if (tableSet(&map->items, copyString(item->string, strlen(item->string), &vm.strings), OBJ_VAL(copyString(item->valuestring, strlen(item->valuestring), &vm.strings)))) {    
+        item = item->next;
+        continue;
+      }
+      break;
+    } else if (cJSON_IsNumber(item)) {
+      if (tableSet(&map->items, copyString(item->string, strlen(item->string), &vm.strings), NUMBER_VAL(item->valuedouble))) {        
+        item = item->next;        
+        continue;
+      }
+      break;
+    } else if (cJSON_IsBool(item)) {      
+      if (tableSet(&map->items, copyString(item->string, strlen(item->string), &vm.strings), BOOL_VAL(cJSON_IsTrue(item)))) {
+        item = item->next;
+        continue; 
+      }
+      break;
+    } else if (cJSON_IsObject(item)) {
+      ObjMap *nested_map = newMap(vm.klass.map);
+      push(OBJ_VAL(nested_map));
+      buildMapFromJson(item->child, nested_map);      
+      if (tableSet(&map->items, copyString(item->string, strlen(item->string), &vm.strings), pop())) {
+        item = item->next;
+        continue; 
+      }
+      break;
+    } else if (cJSON_IsArray(item)) {
+      ObjList *list = newList(vm.klass.list);
+      push(OBJ_VAL(list));
+      int size = cJSON_GetArraySize(item);
+      for (int i = 0; i < size; i++) {
+        cJSON *elem = cJSON_GetArrayItem(item, i);        
+        buildListFromJson(elem, list); 
+      }
+      if (tableSet(&map->items, copyString(item->string, strlen(item->string), &vm.strings), pop())) {
+        item = item->next;
+        continue;
+      }
+      break;
+    }
+
+    item = item->next;
+    continue;
+  } 
+}
+
+static Value parseJsonNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_STRING)) {
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  };
+  cJSON *root = cJSON_Parse(AS_CSTRING(args[1])); 
+  if (!root) {
+    runtimeError("failed to parse JSON: [%s]\n", cJSON_GetErrorPtr());
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  ObjMap *map = newMap(vm.klass.map);
+  push(OBJ_VAL(map));
+  buildMapFromJson(root->child, map);
+  cJSON_Delete(root);
   return pop();
 }
 
@@ -1353,6 +1453,17 @@ void registerRequestNatives() {
       defineInstance(defineKlass("Request", 7, OBJ_INSTANCE), "Request", 7);
   defineNativeInstanceMethod(requestInstance, "get", 3, getRequestNative);
   defineNativeInstanceMethod(requestInstance, "post", 4, postRequestNative);
+}
+
+void registerJsonNatives() {
+  static bool isRegistered = false;
+  if (isRegistered)
+    return;
+  isRegistered = true;
+
+  ObjInstance *jsonInstance =
+      defineInstance(defineKlass("JSON", 4, OBJ_INSTANCE), "JSON", 4); 
+  defineNativeInstanceMethod(jsonInstance, "parse", 5, parseJsonNative);
 }
 
 void registerMathNatives() {

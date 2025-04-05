@@ -4,6 +4,8 @@ LIBS=-lreadline -lcurl -lm
 cfiles := src/*.c
 hfiles := src/*.h
 
+vcfiles := vendor/cJSON/cJSON.c
+
 ifeq ($(OS), Windows_NT)
     WIN_STACK=-Wl,--stack,8388608
 	EXE=ghoul.exe
@@ -13,7 +15,7 @@ else
 endif
 
 ghoul: $(cfiles) $(hfiles)
-	$(CC) $(WARN) -g -o $(EXE) $(cfiles) $(LIBS) $(WIN_STACK)
+	$(CC) $(WARN) -g -o $(EXE) $(cfiles) $(vcfiles) $(LIBS) $(WIN_STACK)
 
 .PHONY: test release install uninstall clean bear
 test: ghoul

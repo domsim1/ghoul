@@ -6,5 +6,6 @@ void registerBuiltInKlasses();
 
 void registerMathNatives();
 void registerRequestNatives();
+void registerJsonNatives();
 
 #endif

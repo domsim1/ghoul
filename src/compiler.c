@@ -1164,6 +1164,12 @@ static bool matchUseBuiltin(ObjString *name) {
       return true;
     }
     break;
+  case 'J':
+    if (checkBuitinName(1, 3, "SON", name)) {
+      registerJsonNatives();
+      return true;
+    }
+    break;
   }
   return false;
 }

@@ -283,7 +283,7 @@ static size_t writeDataCallback(char *data, size_t size, size_t nmemb, void *cli
 }
 
 static Value getRequestNative(int argCount, Value *args) {
-  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_STRING)) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_STRING, ARG_LIST)) {
     vm.shouldPanic = true;
     return NIL_VAL;
   };
@@ -292,6 +292,23 @@ static Value getRequestNative(int argCount, Value *args) {
   if (!curl) {
     vm.shouldPanic = true;
     return NIL_VAL;
+  }
+
+  struct curl_slist *headers = NULL;
+
+  ObjList *list = AS_LIST(args[2]);
+  for (int i = 0; i < list->count; i++) {
+    Value item = list->items[i];
+    if (!IS_STRING(item)) {
+      vm.shouldPanic = true;
+      runtimeError("Post header list must be strings only");
+      return NIL_VAL;
+    }    
+    headers = curl_slist_append(headers, AS_CSTRING(item));
+  }
+
+  if (headers != NULL) {
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
   }
 
   struct NetworkData chunk = {0};
@@ -320,6 +337,7 @@ static Value getRequestNative(int argCount, Value *args) {
 
   free(chunk.response);
   curl_easy_cleanup(curl);
+  curl_slist_free_all(headers);
   return pop();
 }
 

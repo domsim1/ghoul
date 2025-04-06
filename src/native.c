@@ -437,32 +437,16 @@ static void buildMapFromJson(cJSON *item, ObjMap *map) {
     }
 
     if (cJSON_IsString(item)) {
-      if (tableSet(&map->items, copyString(item->string, strlen(item->string), &vm.strings), OBJ_VAL(copyString(item->valuestring, strlen(item->valuestring), &vm.strings)))) {    
-        item = item->next;
-        continue;
-      }
-      break;
+      tableSet(&map->items, copyString(item->string, strlen(item->string), &vm.strings), OBJ_VAL(copyString(item->valuestring, strlen(item->valuestring), &vm.strings)));
     } else if (cJSON_IsNumber(item)) {
-      if (tableSet(&map->items, copyString(item->string, strlen(item->string), &vm.strings), NUMBER_VAL(item->valuedouble))) {        
-        item = item->next;        
-        continue;
-      }
-      break;
+      tableSet(&map->items, copyString(item->string, strlen(item->string), &vm.strings), NUMBER_VAL(item->valuedouble));
     } else if (cJSON_IsBool(item)) {      
-      if (tableSet(&map->items, copyString(item->string, strlen(item->string), &vm.strings), BOOL_VAL(cJSON_IsTrue(item)))) {
-        item = item->next;
-        continue; 
-      }
-      break;
+      tableSet(&map->items, copyString(item->string, strlen(item->string), &vm.strings), BOOL_VAL(cJSON_IsTrue(item)));
     } else if (cJSON_IsObject(item)) {
       ObjMap *nested_map = newMap(vm.klass.map);
       push(OBJ_VAL(nested_map));
       buildMapFromJson(item->child, nested_map);      
-      if (tableSet(&map->items, copyString(item->string, strlen(item->string), &vm.strings), pop())) {
-        item = item->next;
-        continue; 
-      }
-      break;
+      tableSet(&map->items, copyString(item->string, strlen(item->string), &vm.strings), pop());
     } else if (cJSON_IsArray(item)) {
       ObjList *list = newList(vm.klass.list);
       push(OBJ_VAL(list));
@@ -471,15 +455,9 @@ static void buildMapFromJson(cJSON *item, ObjMap *map) {
         cJSON *elem = cJSON_GetArrayItem(item, i);        
         buildListFromJson(elem, list); 
       }
-      if (tableSet(&map->items, copyString(item->string, strlen(item->string), &vm.strings), pop())) {
-        item = item->next;
-        continue;
-      }
-      break;
+      tableSet(&map->items, copyString(item->string, strlen(item->string), &vm.strings), pop());
     }
-
     item = item->next;
-    continue;
   } 
 }
 

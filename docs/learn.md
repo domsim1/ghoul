@@ -96,7 +96,7 @@ Example:
 
 ```
 :add(a, b) {
-	-> a + b;
+  -> a + b;
 }
 
 print add(10, 20);
@@ -112,20 +112,20 @@ Example:
 
 ```
 :Animal {
-	init(name) {
-		this.name = name;
-		this.legs = 0;
-	}
-	leg_count() {
-		-> this.legs;
-	}
+  init(name) {
+    this.name = name;
+    this.legs = 0;
+  }
+  leg_count() {
+    -> this.legs;
+  }
 }
 
 :Dog < Animal {
-	init() {
-		super.init("Dog");
-		this.legs = 4;
-	}
+  init() {
+    super.init("Dog");
+    this.legs = 4;
+  }
 }
 
 :dog = Dog();
@@ -146,7 +146,7 @@ Example:
 
 ```
 :make_adder(to_add) {
-	-> :(x) { -> to_add + x; }
+  -> :(x) { -> to_add + x; }
 }
 :add10 = make_adder(10);
 print add10(20);
@@ -175,11 +175,11 @@ Example:
 :hp = 15;
 
 if (hp < 10) {
-	print "low HP!";
+  print "low HP!";
 } else if (hp > 20) {
-	print "high HP!";
+  print "high HP!";
 } else {
-	print "normal HP!";
+  print "normal HP!";
 }
 # normal HP!
 ```
@@ -199,7 +199,7 @@ Example:
 
 ```
 while (true) {
-	print "hi";
+  print "hi";
 }
 # will print hi forever
 ```
@@ -214,7 +214,7 @@ Example:
 
 ```
 for (:i = 0; i < 10; i += 1) {
-	print i;
+  print i;
 }
 # will print from 0 to 9
 ``` 
@@ -229,7 +229,7 @@ Example:
 
 ```
 for (:num in [1, 2, 3, 4]) {
-	print num;
+  print num;
 }
 # will print 1 to 4
 ```
@@ -242,7 +242,7 @@ Example:
 
 ```
 :phone_book = {
-	"Stacy's mum": "XX-XXX-XXX-XXX",
+  "Stacy's mum": "XX-XXX-XXX-XXX",
 }
 
 print phone_book["Stacy's mum"];
@@ -254,11 +254,11 @@ Example:
 
 ```
 :phone_book = {
-	"Stacy's mum": "XX-XXX-XXX-XXX",
+  "Stacy's mum": "XX-XXX-XXX-XXX",
 }
 
 for (:pair in phone_book.pairs()) {
-	print "I think I am in love with " ++ pair.key ++ " at " ++ pair.value;
+  print "I think I am in love with " ++ pair.key ++ " at " ++ pair.value;
 }
 ```
 
@@ -270,11 +270,11 @@ Example:
 
 ```
 :add(*nums) {
-	:sum = 0;
-	for (:n in nums) {
-		sum += n;
-	}
-	->sum;
+  :sum = 0;
+  for (:n in nums) {
+    sum += n;
+  }
+  ->sum;
 }
 
 print add(1, 2, 3, 4);
@@ -289,20 +289,20 @@ Example:
 
 ```
 :fibonacci_generator() {
-	:last_number = 0;
-	:current_number = 1;
-	->:() {
-		:next_number = last_number + current_number;	
-		last_number = current_number;
-		current_number = next_number;
-		->next_number;
-	}
+  :last_number = 0;
+  :current_number = 1;
+  ->:() {
+    :next_number = last_number + current_number;  
+    last_number = current_number;
+    current_number = next_number;
+    ->next_number;
+  }
 }
 for (:n in fibonacci_generator()) {
-	print n;
-	if (n == 21) {
-		break;
-	}
+  print n;
+  if (n == 21) {
+    break;
+  }
 }
 # 1 2 3 5 13 21
 ```
@@ -316,7 +316,7 @@ Example:
 ```
 # file: coolmath.ghoul
 :CoolMath {
-	PI = 3.14159265359;
+  PI = 3.14159265359;
 }
 CoolMath = CoolMath();
 ```
@@ -336,7 +336,7 @@ Error is a class that can be used to create an error `inst`. Errors play well wi
 ```
 :err = Error("oh no!");
 if (iserr(err)) {
-	panic(err);
+  panic(err);
 }
 # Error: oh no!
 # [line 3 of ghoul/file.ghoul] in script 

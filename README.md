@@ -6,7 +6,7 @@ Ghoul is a scripting language designed to be terse, simple, expressive and fast.
 
 ```
 :say_hello(to) {
-    print "Hello, " ++ to ++ "!";
+  print "Hello, " ++ to ++ "!";
 }
 
 :name = "Ghoul";

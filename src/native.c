@@ -416,7 +416,8 @@ static void buildListFromJson(cJSON *item, ObjList *list) {
     ObjMap *nested_map = newMap(vm.klass.map);
     push(OBJ_VAL(nested_map));
     buildMapFromJson(item->child, nested_map);  
-    pushToList(list, pop());
+    pushToList(list, OBJ_VAL(nested_map));
+    pop();
   } else if (cJSON_IsArray(item)) {
     ObjList *nested_list = newList(vm.klass.list);
     push(OBJ_VAL(nested_list));
@@ -425,7 +426,8 @@ static void buildListFromJson(cJSON *item, ObjList *list) {
       cJSON *elem = cJSON_GetArrayItem(item, i);        
       buildListFromJson(elem, nested_list); 
     }
-    pushToList(list, pop());
+    pushToList(list, OBJ_VAL(nested_list));
+    pop();
   }
 }
 
@@ -446,7 +448,8 @@ static void buildMapFromJson(cJSON *item, ObjMap *map) {
       ObjMap *nested_map = newMap(vm.klass.map);
       push(OBJ_VAL(nested_map));
       buildMapFromJson(item->child, nested_map);      
-      tableSet(&map->items, copyString(item->string, strlen(item->string), &vm.strings), pop());
+      tableSet(&map->items, copyString(item->string, strlen(item->string), &vm.strings), OBJ_VAL(nested_map));
+      pop();
     } else if (cJSON_IsArray(item)) {
       ObjList *list = newList(vm.klass.list);
       push(OBJ_VAL(list));
@@ -455,7 +458,8 @@ static void buildMapFromJson(cJSON *item, ObjMap *map) {
         cJSON *elem = cJSON_GetArrayItem(item, i);        
         buildListFromJson(elem, list); 
       }
-      tableSet(&map->items, copyString(item->string, strlen(item->string), &vm.strings), pop());
+      tableSet(&map->items, copyString(item->string, strlen(item->string), &vm.strings), OBJ_VAL(list));
+      pop();
     }
     item = item->next;
   } 

@@ -282,14 +282,20 @@ static void printList(ObjList *list) {
 
 static void printMap(ObjMap *map) {
   printf("{");
+  bool first = true;
   for (int i = 0; i < map->items.capacity; i++) {
     Entry entry = map->items.entries[i];
     if (entry.key == NULL) {
       continue;
     }
+    if (first) {
+      first = false;
+    } else {
+      printf(", ");
+    }
+
     printf("\"%s\":", entry.key->chars);
     printValue(entry.value);
-    printf(",");
   }
   printf("}");
 }

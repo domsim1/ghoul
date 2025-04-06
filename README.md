@@ -13,13 +13,9 @@ Ghoul is a scripting language designed to be terse, simple, expressive and fast.
 say_hello(name);
 ```
 
-
-
 ## Learn Ghoul
 
 Check out [learn.md](docs/learn.md)!
-
-
 
 ## Build
 
@@ -39,8 +35,6 @@ Test with `make test`.
 ### Test Dependencies
 
 * [Go](https://go.dev/)
-
-
 
 ## Thanks
 

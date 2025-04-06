@@ -18,6 +18,9 @@ jobs:
     - name: Install GNU Readline
       shell: bash
       run: sudo apt install -y libreadline-dev
+    - name: Install libcurl
+      shell: bash
+      run: sudo apt install -y libcurl4-openssl-dev
     - name: Run and Show test results
       shell: bash
       run: make test

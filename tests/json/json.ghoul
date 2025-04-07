@@ -1,0 +1,18 @@
+use "JSON";
+:data = {
+	"test": 1,
+	"obj": {
+		"array": [true],
+	},
+	"value": nil,
+	"apple": "pie",
+}
+
+:jStr = JSON.stringify(data, false);
+
+print "$expect$";
+print jStr;
+print JSON.parse(jStr);
+print "$actual$";
+print "{\"test\":1,\"obj\":{\"array\":[true]},\"value\":null,\"apple\":\"pie\"}";
+print "{\"test\":1, \"obj\":{\"array\":[true]}, \"value\":nil, \"apple\":pie}";

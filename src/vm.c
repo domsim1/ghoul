@@ -7,7 +7,7 @@
 #include "chunk.h"
 #include "compiler.h"
 #include "memory.h"
-#include "native.h"
+#include "native/native.h"
 #include "object.h"
 #include "table.h"
 #include "value.h"

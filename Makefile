@@ -1,10 +1,10 @@
 CC=cc
 WARN=-Wall -Wextra
-LIBS=-lreadline -lcurl -lm
-cfiles := src/*.c
-hfiles := src/*.h
+LIBS=-lreadline -lcurl -lm -lraylib
+cfiles := src/*.c src/native/*.c
+hfiles := src/*.h src/native/*.c
 
-vcfiles := vendor/cJSON/cJSON.c
+vcfiles := src/external/cJSON/cJSON.c
 
 ifeq ($(OS), Windows_NT)
     WIN_STACK=-Wl,--stack,8388608

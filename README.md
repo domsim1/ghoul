@@ -27,6 +27,7 @@ Tested on Ubuntu and Windows (MSYS2 UCRT64 | CLANG64)
 
 * [GNU Readline](https://en.wikipedia.org/wiki/GNU_Readline)
 * [libcurl](https://curl.se/libcurl/)
+* [raylib](https://www.raylib.com/)
 
 ## Test
 

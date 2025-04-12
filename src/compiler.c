@@ -8,7 +8,7 @@
 #include "common.h"
 #include "compiler.h"
 #include "memory.h"
-#include "native.h"
+#include "native/native.h"
 #include "scanner.h"
 #include "table.h"
 #include "vm.h"

@@ -46,4 +46,5 @@ void defineNativeKlassMethod(ObjKlass *klass, const char *name, int len, NativeF
 void defineNativeInstanceMethod(ObjInstance *instance, const char *name, int len, NativeFn function);
 void setNativeInstanceField(ObjInstance *instance, ObjString *string, Value value); 
 void defineNativeInstanceField(ObjInstance *instance, const char *string, int len, Value value); 
+Value readNativeInstanceField(ObjInstance *instance, const char *name, int len);
 #endif

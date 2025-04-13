@@ -27,6 +27,13 @@ typedef struct {
   ObjString *init;
   ObjString *isError;
   ObjString *message;
+  ObjString *r; 
+  ObjString *g; 
+  ObjString *b; 
+  ObjString *a; 
+  ObjString *x; 
+  ObjString *y; 
+  ObjString *z; 
 } BuiltInStrings;
 
 typedef struct {

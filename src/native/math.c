@@ -2,7 +2,6 @@
 
 static Value absMathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(fabs(AS_NUMBER(args[1])));
@@ -10,7 +9,6 @@ static Value absMathNative(int argCount, Value *args) {
 
 static Value acosMathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(acos(AS_NUMBER(args[1])));
@@ -18,7 +16,6 @@ static Value acosMathNative(int argCount, Value *args) {
 
 static Value acoshMathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(acosh(AS_NUMBER(args[1])));
@@ -26,7 +23,6 @@ static Value acoshMathNative(int argCount, Value *args) {
 
 static Value asinMathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(asin(AS_NUMBER(args[1])));
@@ -34,7 +30,6 @@ static Value asinMathNative(int argCount, Value *args) {
 
 static Value asinhMathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(asinh(AS_NUMBER(args[1])));
@@ -42,7 +37,6 @@ static Value asinhMathNative(int argCount, Value *args) {
 
 static Value atanMathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(atan(AS_NUMBER(args[1])));
@@ -51,7 +45,6 @@ static Value atanMathNative(int argCount, Value *args) {
 static Value atan2MathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER,
                  ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(atan2(AS_NUMBER(args[1]), AS_NUMBER(args[2])));
@@ -59,7 +52,6 @@ static Value atan2MathNative(int argCount, Value *args) {
 
 static Value atanhMathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(atanh(AS_NUMBER(args[1])));
@@ -67,7 +59,6 @@ static Value atanhMathNative(int argCount, Value *args) {
 
 static Value cbrtMathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(cbrt(AS_NUMBER(args[1])));
@@ -75,7 +66,6 @@ static Value cbrtMathNative(int argCount, Value *args) {
 
 static Value ceilMathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(ceil(AS_NUMBER(args[1])));
@@ -83,7 +73,6 @@ static Value ceilMathNative(int argCount, Value *args) {
 
 static Value cosMathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(cos(AS_NUMBER(args[1])));
@@ -91,7 +80,6 @@ static Value cosMathNative(int argCount, Value *args) {
 
 static Value coshMathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(cosh(AS_NUMBER(args[1])));
@@ -99,7 +87,6 @@ static Value coshMathNative(int argCount, Value *args) {
 
 static Value expMathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(exp(AS_NUMBER(args[1])));
@@ -107,7 +94,6 @@ static Value expMathNative(int argCount, Value *args) {
 
 static Value expm1MathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(expm1(AS_NUMBER(args[1])));
@@ -115,7 +101,6 @@ static Value expm1MathNative(int argCount, Value *args) {
 
 static Value floorMathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(floor(AS_NUMBER(args[1])));
@@ -124,7 +109,6 @@ static Value floorMathNative(int argCount, Value *args) {
 static Value hypotMathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER,
                  ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(hypot(AS_NUMBER(args[1]), AS_NUMBER(args[2])));
@@ -132,7 +116,6 @@ static Value hypotMathNative(int argCount, Value *args) {
 
 static Value logMathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(log(AS_NUMBER(args[1])));
@@ -140,7 +123,6 @@ static Value logMathNative(int argCount, Value *args) {
 
 static Value log10MathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(log10(AS_NUMBER(args[1])));
@@ -148,7 +130,6 @@ static Value log10MathNative(int argCount, Value *args) {
 
 static Value log1pMathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(log1p(AS_NUMBER(args[1])));
@@ -156,7 +137,6 @@ static Value log1pMathNative(int argCount, Value *args) {
 
 static Value log2MathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(log2(AS_NUMBER(args[1])));
@@ -164,7 +144,6 @@ static Value log2MathNative(int argCount, Value *args) {
 
 static Value maxMathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_VARIADIC, ARG_ANY)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   double max = DBL_MIN;
@@ -177,7 +156,6 @@ static Value maxMathNative(int argCount, Value *args) {
 
 static Value minMathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_VARIADIC, ARG_ANY)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   double min = DBL_MAX;
@@ -191,7 +169,6 @@ static Value minMathNative(int argCount, Value *args) {
 static Value powMathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER,
                  ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(pow(AS_NUMBER(args[1]), AS_NUMBER(args[2])));
@@ -199,7 +176,6 @@ static Value powMathNative(int argCount, Value *args) {
 
 static Value randomMathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL((double)rand() / (double)((unsigned)RAND_MAX + 1));
@@ -215,7 +191,6 @@ static Value roundMathNative(int argCount, Value *args) {
 
 static Value sinMathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(sin(AS_NUMBER(args[1])));
@@ -223,7 +198,6 @@ static Value sinMathNative(int argCount, Value *args) {
 
 static Value sinhMathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(sinh(AS_NUMBER(args[1])));
@@ -231,7 +205,6 @@ static Value sinhMathNative(int argCount, Value *args) {
 
 static Value sqrtMathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(sqrt(AS_NUMBER(args[1])));
@@ -239,7 +212,6 @@ static Value sqrtMathNative(int argCount, Value *args) {
 
 static Value tanMathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(tan(AS_NUMBER(args[1])));
@@ -247,7 +219,6 @@ static Value tanMathNative(int argCount, Value *args) {
 
 static Value tanhMathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(tanh(AS_NUMBER(args[1])));
@@ -255,7 +226,6 @@ static Value tanhMathNative(int argCount, Value *args) {
 
 static Value truncMathNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL(trunc(AS_NUMBER(args[1])));

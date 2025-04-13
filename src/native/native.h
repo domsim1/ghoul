@@ -7,5 +7,6 @@ void registerBuiltInKlasses();
 void registerMathNatives();
 void registerRequestNatives();
 void registerJsonNatives();
+void registerRaylibNatives();
 
 #endif

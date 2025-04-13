@@ -174,6 +174,12 @@ void setNativeInstanceField(ObjInstance *instance, ObjString *string,
   tableSet(&instance->fields, string, value);
 }
 
+Value readNativeInstanceField(ObjInstance *instance, const char *name, int len) {
+  Value v;
+  tableGet(&instance->fields, copyString(name, len, &vm.strings), &v); 
+  return v;
+}
+
 void defineNativeInstanceField(ObjInstance *instance, const char *string,
                                       int len, Value value) {
   push(OBJ_VAL(copyString(string, len, &vm.strings)));
@@ -184,7 +190,6 @@ void defineNativeInstanceField(ObjInstance *instance, const char *string,
 static Value initFileNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_STRING,
                  ARG_STRING)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   FILE *file;
@@ -205,9 +210,9 @@ static Value initFileNative(int argCount, Value *args) {
   file_->file = file;
   return OBJ_VAL(file_);
 }
+
 static Value closeFileNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_FILE)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   ObjFile *file = AS_FILE(args[0]);
@@ -218,7 +223,6 @@ static Value closeFileNative(int argCount, Value *args) {
 
 static Value writeFileNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_FILE, ARG_STRING)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   ObjString *str = AS_STRING(args[1]);
@@ -236,7 +240,6 @@ static Value writeFileNative(int argCount, Value *args) {
 
 static Value readFileNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_FILE, ARG_STRING)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   FILE *file = AS_FILE(args[0])->file;
@@ -280,7 +283,6 @@ static Value readFileNative(int argCount, Value *args) {
 
 static Value initListNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_VARIADIC, ARG_ANY)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   ObjList *list = NULL;
@@ -302,7 +304,6 @@ static Value initListNative(int argCount, Value *args) {
 
 static Value pushListNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_VARIADIC, ARG_LIST, ARG_ANY)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   ObjList *list = AS_LIST(args[0]);
@@ -315,7 +316,6 @@ static Value pushListNative(int argCount, Value *args) {
 
 static Value popListNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_LIST)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   ObjList *list = AS_LIST(args[0]);
@@ -326,7 +326,6 @@ static Value popListNative(int argCount, Value *args) {
 
 static Value lenListNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_LIST)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   ObjList *list = AS_LIST(args[0]);
@@ -337,7 +336,6 @@ static Value lenListNative(int argCount, Value *args) {
 static Value removeListNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_LIST, ARG_NUMBER,
                  ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   }
   ObjList *list = AS_LIST(args[0]);
@@ -354,7 +352,6 @@ static Value removeListNative(int argCount, Value *args) {
 
 static Value joinListNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_LIST, ARG_STRING)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   }
   ObjList *list = AS_LIST(args[0]);
@@ -392,7 +389,6 @@ static Value joinListNative(int argCount, Value *args) {
 
 static Value initMapNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   ObjMap *map = NULL;
@@ -410,7 +406,6 @@ static Value initMapNative(int argCount, Value *args) {
 
 static Value keysMapNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_MAP)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   ObjMap *map = AS_MAP(args[0]);
@@ -429,7 +424,6 @@ static Value keysMapNative(int argCount, Value *args) {
 
 static Value valuesMapNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_MAP)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   ObjMap *map = AS_MAP(args[0]);
@@ -448,7 +442,6 @@ static Value valuesMapNative(int argCount, Value *args) {
 
 static Value pairsMapNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_MAP)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   ObjMap *map = AS_MAP(args[0]);
@@ -470,7 +463,6 @@ static Value pairsMapNative(int argCount, Value *args) {
 
 static Value hasKeyMapNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_MAP, ARG_STRING)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   ObjMap *map = AS_MAP(args[0]);
@@ -484,7 +476,6 @@ static Value hasKeyMapNative(int argCount, Value *args) {
 
 static Value getMapNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_MAP, ARG_STRING)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   ObjMap *map = AS_MAP(args[0]);
@@ -499,7 +490,6 @@ static Value getMapNative(int argCount, Value *args) {
 static Value setMapNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 3, args, NATIVE_VARIADIC, ARG_MAP, ARG_STRING,
                  ARG_ANY)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   ObjMap *map = AS_MAP(args[0]);
@@ -512,7 +502,6 @@ static Value setMapNative(int argCount, Value *args) {
 
 static Value deleteMapNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_MAP, ARG_STRING)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   ObjMap *map = AS_MAP(args[0]);
@@ -525,7 +514,6 @@ static Value deleteMapNative(int argCount, Value *args) {
 
 static Value initStringNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_VARIADIC, ARG_ANY)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   ObjString *string = NULL;
@@ -565,7 +553,6 @@ static Value initStringNative(int argCount, Value *args) {
 
 static Value asNumberStringNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_VARIADIC, ARG_ANY)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   double num;
@@ -578,7 +565,6 @@ static Value asNumberStringNative(int argCount, Value *args) {
 
 static Value lenStringNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_STRING)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   ObjString *string = AS_STRING(args[0]);
@@ -588,7 +574,6 @@ static Value lenStringNative(int argCount, Value *args) {
 
 static Value containsStringNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_STRING, ARG_STRING)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
 
@@ -600,7 +585,6 @@ static Value containsStringNative(int argCount, Value *args) {
 
 static Value splitStringNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_STRING, ARG_STRING)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   ObjString *string = AS_STRING(args[0]);
@@ -629,7 +613,6 @@ static Value splitStringNative(int argCount, Value *args) {
 
 static Value initErrorNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_STRING)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   ObjInstance *err = NULL;

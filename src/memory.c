@@ -251,6 +251,13 @@ static void markRoots() {
   markObject((Obj *)vm.string.init);
   markObject((Obj *)vm.string.isError);
   markObject((Obj *)vm.string.message);
+  markObject((Obj *)vm.string.r);
+  markObject((Obj *)vm.string.g);
+  markObject((Obj *)vm.string.b);
+  markObject((Obj *)vm.string.a);
+  markObject((Obj *)vm.string.x);
+  markObject((Obj *)vm.string.y);
+  markObject((Obj *)vm.string.z);
 }
 
 static void traceReferences() {

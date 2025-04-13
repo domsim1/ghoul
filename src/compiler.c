@@ -1162,6 +1162,9 @@ static bool matchUseBuiltin(ObjString *name) {
     if (checkBuitinName(1, 6, "equest", name)) {
       registerRequestNatives();
       return true;
+    } else if (checkBuitinName(1, 1, "L", name)) {
+      registerRaylibNatives();
+      return true;
     }
     break;
   case 'J':

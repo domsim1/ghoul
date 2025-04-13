@@ -95,9 +95,23 @@ void initVM() {
   vm.string.init = NULL;
   vm.string.isError = NULL;
   vm.string.message = NULL;
+  vm.string.r = NULL;
+  vm.string.g = NULL;
+  vm.string.b = NULL;
+  vm.string.a = NULL;
+  vm.string.x = NULL;
+  vm.string.y = NULL;
+  vm.string.z = NULL;
   vm.string.init = copyString("init", 4, &vm.strings);
   vm.string.isError = copyString("_isError_", 9, &vm.strings);
   vm.string.message = copyString("message", 7, &vm.strings);
+  vm.string.r = copyString("r", 1, &vm.strings);
+  vm.string.g = copyString("g", 1, &vm.strings);
+  vm.string.b = copyString("b", 1, &vm.strings);
+  vm.string.a = copyString("a", 1, &vm.strings);
+  vm.string.x = copyString("x", 1, &vm.strings);
+  vm.string.y = copyString("y", 1, &vm.strings);
+  vm.string.z = copyString("z", 1, &vm.strings);
 
   vm.keep = NULL;
   vm.shouldPanic = false;
@@ -113,6 +127,13 @@ void freeVM() {
   vm.string.init = NULL;
   vm.string.isError = NULL;
   vm.string.message = NULL;
+  vm.string.r = NULL;
+  vm.string.g = NULL;
+  vm.string.b = NULL;
+  vm.string.a = NULL;
+  vm.string.x = NULL;
+  vm.string.y = NULL;
+  vm.string.z = NULL;
   vm.klass.list = NULL;
   vm.klass.file = NULL;
   vm.klass.string = NULL;

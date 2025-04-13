@@ -70,7 +70,6 @@ static void buildMapFromJson(cJSON *item, ObjMap *map) {
 
 static Value parseJsonNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_STRING)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   cJSON *root = cJSON_Parse(AS_CSTRING(args[1])); 
@@ -132,7 +131,6 @@ static cJSON *valueToJson(Value value) {
 
 static Value stringifyJsonNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_MAP, ARG_BOOL)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   }
   ObjMap *map = AS_MAP(args[1]);

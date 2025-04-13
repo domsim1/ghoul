@@ -2,7 +2,6 @@
 
 static Value tickNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 0, args, NATIVE_NORMAL)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
@@ -10,7 +9,6 @@ static Value tickNative(int argCount, Value *args) {
 
 static Value sleepNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   int sleepTime = AS_NUMBER(args[1]) * 1000000;
@@ -22,7 +20,6 @@ static Value exitNative(int argCount, Value *args) {
     exit(0);
   }
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   }
   exit(AS_NUMBER(args[1]));
@@ -30,7 +27,6 @@ static Value exitNative(int argCount, Value *args) {
 
 static Value panicNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_ANY)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   vm.shouldPanic = true;
@@ -58,7 +54,6 @@ static Value panicNative(int argCount, Value *args) {
 
 static Value promptNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_STRING)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   char *input = readline(AS_CSTRING(args[1]));
@@ -69,7 +64,6 @@ static Value promptNative(int argCount, Value *args) {
 
 static Value isErrorNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_ANY)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
 
@@ -87,7 +81,6 @@ static Value isErrorNative(int argCount, Value *args) {
 
 static Value isNumberNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_ANY)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return IS_NUMBER(args[1]) ? TRUE_VAL : FALSE_VAL;
@@ -95,7 +88,6 @@ static Value isNumberNative(int argCount, Value *args) {
 
 static Value isStringNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_ANY)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return IS_STRING(args[1]) ? TRUE_VAL : FALSE_VAL;
@@ -103,7 +95,6 @@ static Value isStringNative(int argCount, Value *args) {
 
 static Value isInstNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_ANY)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return IS_INSTANCE(args[1]) ? TRUE_VAL : FALSE_VAL;
@@ -111,7 +102,6 @@ static Value isInstNative(int argCount, Value *args) {
 
 static Value isKlassNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_ANY)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return IS_KLASS(args[1]) ? TRUE_VAL : FALSE_VAL;
@@ -119,7 +109,6 @@ static Value isKlassNative(int argCount, Value *args) {
 
 static Value isListNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_ANY)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return IS_LIST(args[1]) ? TRUE_VAL : FALSE_VAL;
@@ -127,7 +116,6 @@ static Value isListNative(int argCount, Value *args) {
 
 static Value isMapNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_ANY)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return IS_MAP(args[1]) ? TRUE_VAL : FALSE_VAL;
@@ -135,7 +123,6 @@ static Value isMapNative(int argCount, Value *args) {
 
 static Value isBoolNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_ANY)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return IS_BOOL(args[1]) ? TRUE_VAL : FALSE_VAL;
@@ -143,7 +130,6 @@ static Value isBoolNative(int argCount, Value *args) {
 
 static Value isNilNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_ANY)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return IS_NIL(args[1]) ? TRUE_VAL : FALSE_VAL;
@@ -151,7 +137,6 @@ static Value isNilNative(int argCount, Value *args) {
 
 static Value isFuncNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_ANY)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
   return IS_CLOSURE(args[1]) ? TRUE_VAL : FALSE_VAL;
@@ -159,7 +144,6 @@ static Value isFuncNative(int argCount, Value *args) {
 
 static Value isInstOfNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_ANY, ARG_ANY)) {
-    vm.shouldPanic = true;
     return NIL_VAL;
   };
 

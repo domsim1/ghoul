@@ -21,6 +21,12 @@ jobs:
     - name: Install libcurl
       shell: bash
       run: sudo apt install -y libcurl4-openssl-dev
+    - name: Install raylib
+      shell: bash
+      run: |
+        sudo apt-get install -y --no-install-recommends libglfw3 libglfw3-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev libwayland-dev libxkbcommon-dev
+        sudo add-apt-repository ppa:texus/raylib -y
+        sudo apt install libraylib5-dev
     - name: Run and Show test results
       shell: bash
       run: make test

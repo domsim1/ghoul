@@ -15,16 +15,6 @@ static Value createVector2(double x, double y) {
   return pop();
 }
 
-static Value createCamera2d(ObjInstance *offset, ObjInstance *target, double rotation, double zoom) {
-  ObjInstance *camera2d = newInstance(camera2dRef);
-  push(OBJ_VAL(camera2d));
-  defineNativeInstanceField(camera2d, "offset", 6, OBJ_VAL(offset));
-  defineNativeInstanceField(camera2d, "target", 6, OBJ_VAL(target));
-  defineNativeInstanceField(camera2d, "rotation", 8, NUMBER_VAL(rotation));
-  defineNativeInstanceField(camera2d, "zoom", 4, NUMBER_VAL(zoom));
-  return pop();
-}
-
 static Value createImage(Image img) {
   ObjInstance *imgInst = newInstance(imgKlassRef); 
   push(OBJ_VAL(imgInst));
@@ -528,6 +518,55 @@ static Value endMode2dRLNative(int argCount, Value *args) {
   return NIL_VAL;
 }
 
+static Value beginMode3dRLNative(int argCount, Value *args) {  
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  };
+  ObjInstance *cam = AS_INSTANCE(args[1]);
+  ObjInstance *position = AS_INSTANCE(readNativeInstanceField(cam, "position", 6));
+  Value positionx;
+  Value positiony;
+  Value positionz;
+  tableGet(&position->fields, vm.string.x, &positionx);
+  tableGet(&position->fields, vm.string.y, &positiony);  
+  tableGet(&position->fields, vm.string.z, &positionz);  
+
+  ObjInstance *target = AS_INSTANCE(readNativeInstanceField(cam, "target", 6));
+  Value targetx;
+  Value targety;
+  Value targetz;
+  tableGet(&target->fields, vm.string.x, &targetx);
+  tableGet(&target->fields, vm.string.y, &targety);  
+  tableGet(&target->fields, vm.string.z, &targetz);  
+
+  ObjInstance *up = AS_INSTANCE(readNativeInstanceField(cam, "up", 6));
+  Value upx;
+  Value upy;
+  Value upz;
+  tableGet(&up->fields, vm.string.x, &upx);
+  tableGet(&up->fields, vm.string.y, &upy);  
+  tableGet(&up->fields, vm.string.z, &upz);  
+
+  Camera3D cam3d = {
+    (Vector3){AS_NUMBER(positionx), AS_NUMBER(positiony), AS_NUMBER(positionz)},
+    (Vector3){AS_NUMBER(targetx), AS_NUMBER(targety), AS_NUMBER(targetz)},
+    (Vector3){AS_NUMBER(upx), AS_NUMBER(upy), AS_NUMBER(upz)},
+    AS_NUMBER(readNativeInstanceField(cam, "fovy", 4)),
+    AS_NUMBER(readNativeInstanceField(cam, "projection", 10)),
+  };
+
+  BeginMode3D(cam3d);
+  return NIL_VAL;
+}
+
+static Value endMode3dRLNative(int argCount, Value *args) {  
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
+    return NIL_VAL;
+  };
+  EndMode3D();
+  return NIL_VAL;
+}
+
 static Value loadImageRLNative(int argCount, Value *args) { 
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_STRING)) {
     return NIL_VAL;
@@ -564,6 +603,51 @@ static Value initColorNative(int argCount, Value *args) {
   setNativeInstanceField(color, vm.string.g, args[2]);
   setNativeInstanceField(color, vm.string.b, args[3]);
   setNativeInstanceField(color, vm.string.a, args[4]);
+  return pop();
+}
+
+static Value initCamera2dNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 5, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_INSTANCE, ARG_NUMBER, ARG_NUMBER)) {
+    return NIL_VAL;
+  };
+  ObjInstance *cam = NULL;
+  if (IS_KLASS(args[0])) {
+    cam = newInstance(AS_KLASS(args[0]));
+  } else if (IS_INSTANCE(args[0])) {
+    cam = AS_INSTANCE(args[0]);
+  } else {
+    runtimeError("Could not init Camera2D.");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  push(OBJ_VAL(cam));
+  defineNativeInstanceField(cam, "offset", 6, args[1]);
+  defineNativeInstanceField(cam, "target", 6, args[2]);
+  defineNativeInstanceField(cam, "rotation", 8, args[3]);
+  defineNativeInstanceField(cam, "zoom", 4, args[4]);
+  return pop();
+}
+
+static Value initCamera3dNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 6, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_INSTANCE, ARG_INSTANCE, ARG_NUMBER, ARG_NUMBER)) {
+    return NIL_VAL;
+  };
+  ObjInstance *cam = NULL;
+  if (IS_KLASS(args[0])) {
+    cam = newInstance(AS_KLASS(args[0]));
+  } else if (IS_INSTANCE(args[0])) {
+    cam = AS_INSTANCE(args[0]);
+  } else {
+    runtimeError("Could not init Camera3D.");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  push(OBJ_VAL(cam));
+  defineNativeInstanceField(cam, "position", 8, args[1]);
+  defineNativeInstanceField(cam, "target", 6, args[2]);
+  defineNativeInstanceField(cam, "up", 2, args[3]);
+  defineNativeInstanceField(cam, "fovy", 4, args[4]);
+  defineNativeInstanceField(cam, "projection", 10, args[5]);
   return pop();
 }
 
@@ -610,7 +694,14 @@ void registerRaylibNatives() {
   ObjKlass *camera2dKlass = newKlass(copyString("Camera2D", 8, &vm.strings), OBJ_INSTANCE);
   push(OBJ_VAL(camera2dKlass));
   camera2dRef = camera2dKlass;
+  defineNativeKlassMethod(camera2dKlass, "init", 4, initCamera2dNative);
   defineNativeInstanceField(raylibInstance, "Camera2D", 8, pop());
+
+  ObjKlass *camera3dKlass = newKlass(copyString("Camera3D", 8, &vm.strings), OBJ_INSTANCE);
+  push(OBJ_VAL(camera3dKlass));
+  camera2dRef = camera3dKlass;
+  defineNativeKlassMethod(camera3dKlass, "init", 4, initCamera3dNative);
+  defineNativeInstanceField(raylibInstance, "Camera3D", 8, pop());
 
   ObjKlass *imgKlass = newKlass(copyString("Image", 5, &vm.strings), OBJ_INSTANCE);
   push(OBJ_VAL(imgKlass));
@@ -681,6 +772,10 @@ void registerRaylibNatives() {
   defineNativeInstanceMethod(raylibInstance, "end_drawing", 11, endDrawingRLNative);
   defineNativeInstanceMethod(raylibInstance, "begin_mode_2d", 13, beginMode2dRLNative);
   defineNativeInstanceMethod(raylibInstance, "end_mode_2d", 11, endMode2dRLNative);
+  defineNativeInstanceMethod(raylibInstance, "begin_mode_3d", 13, beginMode3dRLNative);
+  defineNativeInstanceMethod(raylibInstance, "end_mode_3d", 11, endMode3dRLNative);
+  
+
 
   // rtextures
   defineNativeInstanceMethod(raylibInstance, "load_image", 10, loadImageRLNative);
@@ -730,5 +825,9 @@ void registerRaylibNatives() {
   defineNativeInstanceField(raylibInstance, "FLAG_BORDERLESS_WINDOWED_MODE", 29, NUMBER_VAL(FLAG_BORDERLESS_WINDOWED_MODE)); 
   defineNativeInstanceField(raylibInstance, "FLAG_MSAA_4X_HINT", 17, NUMBER_VAL(FLAG_MSAA_4X_HINT)); 
   defineNativeInstanceField(raylibInstance, "FLAG_INTERLACED_HINT", 20, NUMBER_VAL(FLAG_INTERLACED_HINT)); 
+
+  // camera projection
+  defineNativeInstanceField(raylibInstance, "CAMERA_PERSPECTIVE", 18, NUMBER_VAL(CAMERA_PERSPECTIVE));
+  defineNativeInstanceField(raylibInstance, "CAMERA_ORTHOGRAPHIC", 19, NUMBER_VAL(CAMERA_ORTHOGRAPHIC));
 }
 

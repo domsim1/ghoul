@@ -567,6 +567,38 @@ static Value endMode3dRLNative(int argCount, Value *args) {
   return NIL_VAL;
 }
 
+static Value setTargetFpsRLNative(int argCount, Value *args) {  
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    return NIL_VAL;
+  };
+  SetTargetFPS(AS_NUMBER(args[1]));
+  return NIL_VAL;
+}
+
+static Value getFrameTimeRLNative(int argCount, Value *args) {  
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
+    return NIL_VAL;
+  };
+  GetFrameTime();
+  return NIL_VAL;
+}
+
+static Value getTimeRLNative(int argCount, Value *args) {  
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
+    return NIL_VAL;
+  };
+  GetTime();
+  return NIL_VAL;
+}
+
+static Value getFpsRLNative(int argCount, Value *args) {  
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
+    return NIL_VAL;
+  };
+  GetFPS();
+  return NIL_VAL;
+}
+
 static Value loadImageRLNative(int argCount, Value *args) { 
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_STRING)) {
     return NIL_VAL;
@@ -774,8 +806,12 @@ void registerRaylibNatives() {
   defineNativeInstanceMethod(raylibInstance, "end_mode_2d", 11, endMode2dRLNative);
   defineNativeInstanceMethod(raylibInstance, "begin_mode_3d", 13, beginMode3dRLNative);
   defineNativeInstanceMethod(raylibInstance, "end_mode_3d", 11, endMode3dRLNative);
-  
 
+  // timing-related functions
+  defineNativeInstanceMethod(raylibInstance, "set_target_fps", 14, setTargetFpsRLNative);
+  defineNativeInstanceMethod(raylibInstance, "get_frame_time", 14, getFrameTimeRLNative);
+  defineNativeInstanceMethod(raylibInstance, "get_time", 8, getTimeRLNative);
+  defineNativeInstanceMethod(raylibInstance, "get_fps", 7, getFpsRLNative);
 
   // rtextures
   defineNativeInstanceMethod(raylibInstance, "load_image", 10, loadImageRLNative);

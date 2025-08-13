@@ -21,7 +21,7 @@ endif
 ghoul: $(cfiles) $(hfiles)
 	$(CC) $(WARN) -g $(DEFINES) -o $(EXE) $(cfiles) $(vcfiles) $(LIBS) $(OS_LIBS) $(WIN_STACK)
 
-.PHONY: test release install uninstall clean compiledb
+.PHONY: test release clean compiledb
 test: ghoul
 	cp ./$(EXE) ./tests/$(EXE)
 	cp -r ./std ./tests/
@@ -30,15 +30,6 @@ test: ghoul
 release: $(cfiles) $(hfiles)
 	$(CC) -DRELEASE $(DEFINES) -O2 $(WARN) -o $(EXE) $(cfiles) $(vcfiles) $(LIBS) $(OS_LIBS) $(WIN_STACK)
 
-install: release
-	install -d /usr/bin
-	install -m 755 ./ghoul /usr/bin
-	install -d /usr/share/ghoul
-	install -m 644 ./std/std.ghoul /usr/share/ghoul/
-
-uninstall:
-	rm -f /usr/bin/ghoul
-	rm -rf /usr/share/ghoul
 
 clean:
 	rm -f ./$(EXE)

@@ -7,9 +7,62 @@
 #include <readline/readline.h>
 #include <unistd.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <libgen.h>
+#endif
+
 #include "vm.h"
 
 static char actualpath[PATH_MAX + 1];
+
+static char* getExecutableDir() {
+    static char execDir[PATH_MAX + 1];
+    static int initialized = 0;
+    
+    if (initialized) {
+        return execDir;
+    }
+    
+#ifdef _WIN32
+    DWORD result = GetModuleFileName(NULL, execDir, PATH_MAX);
+    if (result == 0 || result == PATH_MAX) {
+        return NULL;
+    }
+    
+    char *lastSlash = strrchr(execDir, '\\');
+    if (lastSlash != NULL) {
+        *lastSlash = '\0';
+    } else {
+        return NULL;
+    }
+#else
+    ssize_t len = readlink("/proc/self/exe", execDir, PATH_MAX - 1);
+    if (len == -1 || len == 0) {
+        return NULL;
+    }
+    execDir[len] = '\0';
+    
+    char tempPath[PATH_MAX + 1];
+    strncpy(tempPath, execDir, PATH_MAX);
+    tempPath[PATH_MAX] = '\0';
+    
+    char *dir = dirname(tempPath);
+    if (dir == NULL) {
+        return NULL;
+    }
+    
+    if (strlen(dir) >= PATH_MAX) {
+        return NULL;
+    }
+    
+    strcpy(execDir, dir);
+#endif
+    
+    initialized = 1;
+    return execDir;
+}
 
 static int get_nesting_level(const char *input) {
   int brace_count = 0;
@@ -186,11 +239,30 @@ static void runFile(const char *path) {
 }
 
 static void loadStd() {
-#ifdef RELEASE
-  runFile("/usr/share/ghoul/std.ghoul");
+  char *execDir = getExecutableDir();
+  if (execDir == NULL) {
+    fprintf(stderr, "Warning: Failed to get executable directory, using fallback path.\n");
+    runFile("std/std.ghoul");
+    return;
+  }
+  
+  static char stdPath[PATH_MAX + 1];
+  int result = snprintf(stdPath, sizeof(stdPath), "%s%sstd%sstd.ghoul", 
+                       execDir, 
+#ifdef _WIN32
+                       "\\", "\\"
 #else
-  runFile("std/std.ghoul");
+                       "/", "/"
 #endif
+  );
+  
+  if (result >= PATH_MAX || result < 0) {
+    fprintf(stderr, "Warning: Standard library path too long, using fallback.\n");
+    runFile("std/std.ghoul");
+    return;
+  }
+  
+  runFile(stdPath);
 }
 
 int main(int argc, const char *argv[]) {

@@ -1,5 +1,6 @@
 ghoul
 ghoul.exe
+ghoul-windows-bundle/
 tests/ghoul
 tests/ghoul.exe
 tests/std/

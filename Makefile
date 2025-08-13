@@ -21,7 +21,7 @@ endif
 ghoul: $(cfiles) $(hfiles)
 	$(CC) $(WARN) -g $(DEFINES) -o $(EXE) $(cfiles) $(vcfiles) $(LIBS) $(OS_LIBS) $(WIN_STACK)
 
-.PHONY: test release install uninstall clean bear
+.PHONY: test release install uninstall clean compiledb
 test: ghoul
 	cp ./$(EXE) ./tests/$(EXE)
 	cp -r ./std ./tests/
@@ -45,5 +45,7 @@ clean:
 	rm -rf ./tests/std
 	rm -f ./tests/$(EXE)
 
-bear:
-	bear -- make
+compiledb:
+	@which compiledb > /dev/null 2>&1 || (echo "compiledb not found. Install via: python -m pip install compiledb" && exit 1)
+	compiledb make clean
+	compiledb make

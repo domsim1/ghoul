@@ -248,6 +248,44 @@ install_optional_tools() {
     install_package_alternatives "Clang compiler (alternative to GCC)" "true" \
         "mingw-w64-ucrt-x86_64-clang" \
         "mingw-w64-x86_64-clang"
+    
+    # Python and compiledb for compilation database generation
+    install_package_alternatives "Python 3" "true" \
+        "mingw-w64-ucrt-x86_64-python" \
+        "mingw-w64-x86_64-python" \
+        "python3"
+    
+    if command_exists python3 || command_exists python; then
+        print_status "Installing compiledb via pip..."
+        local python_cmd=""
+        if command_exists python3; then
+            python_cmd="python3"
+        elif command_exists python; then
+            python_cmd="python"
+        fi
+        
+        # Check if pip is available
+        if ! $python_cmd -m pip --version &>/dev/null; then
+            print_status "pip not found, installing pip..."
+            install_package_alternatives "Python pip package manager" "true" \
+                "mingw-w64-ucrt-x86_64-python-pip" \
+                "mingw-w64-x86_64-python-pip"
+        fi
+        
+        # Try to install compiledb
+        if $python_cmd -m pip install compiledb; then
+            print_success "compiledb installed successfully via pip"
+        else
+            print_warning "Failed to install compiledb via pip"
+            print_status "You can install it manually later with:"
+            print_status "  $python_cmd -m pip install compiledb"
+            print_status "Or try:"
+            print_status "  pacman -S mingw-w64-ucrt-x86_64-python-pip"
+            print_status "  $python_cmd -m pip install compiledb"
+        fi
+    else
+        print_warning "Python not available, skipping compiledb installation"
+    fi
 }
 
 # Verify installations

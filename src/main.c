@@ -11,22 +11,134 @@
 
 static char actualpath[PATH_MAX + 1];
 
+static int get_nesting_level(const char *input) {
+  int brace_count = 0;
+  int paren_count = 0;
+  int in_string = 0;
+  char string_char = 0;
+  
+  for (const char *p = input; *p; p++) {
+    if (!in_string) {
+      if (*p == '"' || *p == '\'') {
+        in_string = 1;
+        string_char = *p;
+      } else if (*p == '{') {
+        brace_count++;
+      } else if (*p == '}') {
+        brace_count--;
+      } else if (*p == '(') {
+        paren_count++;
+      } else if (*p == ')') {
+        paren_count--;
+      }
+    } else {
+      if (*p == string_char && (p == input || *(p-1) != '\\')) {
+        in_string = 0;
+      }
+    }
+  }
+  
+  return brace_count + paren_count + (in_string ? 1 : 0);
+}
+
+static char* create_prompt(int nesting_level) {
+  if (nesting_level == 0) {
+    char *prompt = malloc(8);
+    if (prompt == NULL) {
+      return NULL;
+    }
+    strcpy(prompt, "ghoul> ");
+    return prompt;
+  }
+  
+  int base_indent = 7;
+  int additional_indent = nesting_level * 2;
+  int total_spaces = base_indent + additional_indent;
+  int prompt_len = total_spaces + 3;
+  char *prompt = malloc(prompt_len);
+  if (prompt == NULL) {
+    return NULL;
+  }
+  
+  for (int i = 0; i < total_spaces; i++) {
+    prompt[i] = ' ';
+  }
+  prompt[total_spaces] = '.';
+  prompt[total_spaces + 1] = ' ';
+  prompt[total_spaces + 2] = '\0';
+  
+  return prompt;
+}
+
 static void repl() {
+  char *full_input = NULL;
+  size_t full_input_size = 0;
+  
   for (;;) {
-    char *input = readline("ghoul> ");
+    int nesting_level = (full_input == NULL) ? 0 : get_nesting_level(full_input);
+    char *prompt = create_prompt(nesting_level);
+    if (prompt == NULL) {
+      fprintf(stderr, "Memory allocation failed for prompt\n");
+      if (full_input) {
+        free(full_input);
+      }
+      break;
+    }
+    char *input = readline(prompt);
+    free(prompt);
 
     if (input == NULL) {
+      if (full_input) {
+        free(full_input);
+        full_input = NULL;
+      }
       printf("\nBye!\n");
       break;
     }
 
-    if (strlen(input) > 0) {
-      add_history(input);
+    if (full_input == NULL) {
+      size_t input_len = strlen(input);
+      full_input = malloc(input_len + 1);
+      if (full_input == NULL) {
+        fprintf(stderr, "Memory allocation failed\n");
+        free(input);
+        break;
+      }
+      strcpy(full_input, input);
+      full_input_size = input_len;
+    } else {
+      size_t input_len = strlen(input);
+      size_t new_size = full_input_size + input_len + 2;
+      char *new_full_input = realloc(full_input, new_size);
+      if (new_full_input == NULL) {
+        fprintf(stderr, "Memory allocation failed\n");
+        free(full_input);
+        free(input);
+        break;
+      }
+      full_input = new_full_input;
+      strcat(full_input, "\n");
+      strcat(full_input, input);
+      full_input_size += input_len + 1;
     }
 
-    interpret(input, "REPL");
-
     free(input);
+
+    if (get_nesting_level(full_input) == 0) {
+      if (strlen(full_input) > 0) {
+        add_history(full_input);
+      }
+
+      interpret(full_input, "REPL");
+
+      free(full_input);
+      full_input = NULL;
+      full_input_size = 0;
+    }
+  }
+  
+  if (full_input) {
+    free(full_input);
   }
 }
 

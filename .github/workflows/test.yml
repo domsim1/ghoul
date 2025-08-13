@@ -24,9 +24,17 @@ jobs:
     - name: Install raylib
       shell: bash
       run: |
+        sudo apt-get update
         sudo apt-get install -y --no-install-recommends libglfw3 libglfw3-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev libwayland-dev libxkbcommon-dev
-        sudo add-apt-repository ppa:texus/raylib -y
-        sudo apt install libraylib5-dev
+        # Build raylib from source to avoid PPA issues
+        git clone https://github.com/raysan5/raylib.git
+        cd raylib
+        mkdir build && cd build
+        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON ..
+        make -j$(nproc)
+        sudo make install
+        sudo ldconfig
+        cd ../..
     - name: Run and Show test results
       shell: bash
       run: make test

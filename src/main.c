@@ -1,6 +1,7 @@
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <readline/history.h>
 #include <readline/readline.h>
@@ -14,7 +15,14 @@ static void repl() {
   for (;;) {
     char *input = readline("ghoul> ");
 
-    add_history(input);
+    if (input == NULL) {
+      printf("\nBye!\n");
+      break;
+    }
+
+    if (strlen(input) > 0) {
+      add_history(input);
+    }
 
     interpret(input, "REPL");
 

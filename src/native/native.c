@@ -563,6 +563,465 @@ static Value asNumberStringNative(int argCount, Value *args) {
   return NIL_VAL;
 }
 
+static Value toLowerCaseStringNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_STRING)) {
+    return NIL_VAL;
+  }
+  
+  ObjString *original = AS_STRING(args[0]);
+  
+  if (original->length == 0) {
+    return args[0];
+  }
+  
+  char *lowercased = ALLOCATE(char, original->length + 1);
+  if (lowercased == NULL) {
+    runtimeError("Memory allocation failed in lower.");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  bool changed = false;
+  for (int i = 0; i < original->length; i++) {
+    unsigned char c = (unsigned char)original->chars[i];
+    char lower_c = tolower(c);
+    lowercased[i] = lower_c;
+    if (lower_c != original->chars[i]) {
+      changed = true;
+    }
+  }
+  lowercased[original->length] = '\0';
+  
+  if (!changed) {
+    FREE_ARRAY(char, lowercased, original->length + 1);
+    return args[0];
+  }
+  
+  push(OBJ_VAL(takeString(lowercased, original->length)));
+  ObjString *result = AS_STRING(peek(0));
+  result->klass = original->klass;
+  return pop();
+}
+
+static Value toUpperCaseStringNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_STRING)) {
+    return NIL_VAL;
+  }
+  
+  ObjString *original = AS_STRING(args[0]);
+  
+  if (original->length == 0) {
+    return args[0];
+  }
+  
+  char *uppercased = ALLOCATE(char, original->length + 1);
+  if (uppercased == NULL) {
+    runtimeError("Memory allocation failed in upper.");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  bool changed = false;
+  for (int i = 0; i < original->length; i++) {
+    unsigned char c = (unsigned char)original->chars[i];
+    char upper_c = toupper(c);
+    uppercased[i] = upper_c;
+    if (upper_c != original->chars[i]) {
+      changed = true;
+    }
+  }
+  uppercased[original->length] = '\0';
+  
+  if (!changed) {
+    FREE_ARRAY(char, uppercased, original->length + 1);
+    return args[0];
+  }
+  
+  push(OBJ_VAL(takeString(uppercased, original->length)));
+  ObjString *result = AS_STRING(peek(0));
+  result->klass = original->klass;
+  return pop();
+}
+
+static Value indexOfStringNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_STRING, ARG_STRING)) {
+    return NIL_VAL;
+  }
+  
+  ObjString *haystack_str = AS_STRING(args[0]);
+  ObjString *needle_str = AS_STRING(args[1]);
+  
+  if (needle_str->length == 0) {
+    return NUMBER_VAL(0);
+  }
+  
+  if (haystack_str->length == 0 || needle_str->length > haystack_str->length) {
+    return NUMBER_VAL(-1);
+  }
+  
+  char *haystack = haystack_str->chars;
+  char *needle = needle_str->chars;
+  
+  char *found = strstr(haystack, needle);
+  if (found == NULL) {
+    return NUMBER_VAL(-1);
+  }
+  
+  ptrdiff_t index = found - haystack;
+  if (index < 0 || index >= haystack_str->length) {
+    return NUMBER_VAL(-1);
+  }
+  
+  return NUMBER_VAL((double)index);
+}
+
+static Value lastIndexOfStringNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_STRING, ARG_STRING)) {
+    return NIL_VAL;
+  }
+  
+  ObjString *haystack_str = AS_STRING(args[0]);
+  ObjString *needle_str = AS_STRING(args[1]);
+  
+  if (needle_str->length == 0) {
+    return NUMBER_VAL((double)haystack_str->length);
+  }
+  
+  if (haystack_str->length == 0 || needle_str->length > haystack_str->length) {
+    return NUMBER_VAL(-1);
+  }
+  
+  char *haystack = haystack_str->chars;
+  char *needle = needle_str->chars;
+  char *last_found = NULL;
+  char *current = haystack;
+  
+  while ((current = strstr(current, needle)) != NULL) {
+    last_found = current;
+    current += needle_str->length;
+    if (current > haystack + haystack_str->length) {
+      break;
+    }
+  }
+  
+  if (last_found == NULL) {
+    return NUMBER_VAL(-1);
+  }
+  
+  ptrdiff_t index = last_found - haystack;
+  if (index < 0 || index >= haystack_str->length) {
+    return NUMBER_VAL(-1);
+  }
+  
+  return NUMBER_VAL((double)index);
+}
+
+static Value startsWithStringNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_STRING, ARG_STRING)) {
+    return NIL_VAL;
+  }
+  
+  ObjString *string_str = AS_STRING(args[0]);
+  ObjString *prefix_str = AS_STRING(args[1]);
+  
+  if (prefix_str->length == 0) {
+    return TRUE_VAL;
+  }
+  
+  if (string_str->length < prefix_str->length) {
+    return FALSE_VAL;
+  }
+  
+  return (memcmp(string_str->chars, prefix_str->chars, prefix_str->length) == 0) ? TRUE_VAL : FALSE_VAL;
+}
+
+static Value endsWithStringNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_STRING, ARG_STRING)) {
+    return NIL_VAL;
+  }
+  
+  ObjString *string_str = AS_STRING(args[0]);
+  ObjString *suffix_str = AS_STRING(args[1]);
+  
+  if (suffix_str->length == 0) {
+    return TRUE_VAL;
+  }
+  
+  if (string_str->length < suffix_str->length) {
+    return FALSE_VAL;
+  }
+  
+  char *suffix_start = string_str->chars + string_str->length - suffix_str->length;
+  return (memcmp(suffix_start, suffix_str->chars, suffix_str->length) == 0) ? TRUE_VAL : FALSE_VAL;
+}
+
+static Value trimStringNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_STRING)) {
+    return NIL_VAL;
+  }
+  
+  ObjString *original = AS_STRING(args[0]);
+  
+  if (original->length == 0) {
+    return args[0];
+  }
+  
+  char *start = original->chars;
+  char *end = original->chars + original->length - 1;
+  
+  while (start <= end && isspace((unsigned char)*start)) {
+    start++;
+  }
+  
+  while (end >= start && isspace((unsigned char)*end)) {
+    end--;
+  }
+  
+  int new_length = (int)(end - start + 1);
+  if (new_length <= 0) {
+    push(OBJ_VAL(copyString("", 0, &vm.strings)));
+    ObjString *result = AS_STRING(peek(0));
+    result->klass = original->klass;
+    return pop();
+  }
+  
+  if (new_length == original->length) {
+    return args[0];
+  }
+  
+  if (new_length > original->length) {
+    runtimeError("Invalid length calculation in trim.");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  char *trimmed = ALLOCATE(char, new_length + 1);
+  if (trimmed == NULL) {
+    runtimeError("Memory allocation failed in trim.");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  memcpy(trimmed, start, new_length);
+  trimmed[new_length] = '\0';
+  
+  push(OBJ_VAL(takeString(trimmed, new_length)));
+  ObjString *result = AS_STRING(peek(0));
+  result->klass = original->klass;
+  return pop();
+}
+
+static Value substringStringNative(int argCount, Value *args) {
+  if (argCount < 2 || argCount > 3) {
+    runtimeError("substring() takes 1 or 2 arguments but got %d.", argCount - 1);
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  if (!IS_STRING(args[0]) || !IS_NUMBER(args[1])) {
+    runtimeError("substring() expects string and number arguments.");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  if (argCount == 3 && !IS_NUMBER(args[2])) {
+    runtimeError("substring() end index must be a number.");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  ObjString *original = AS_STRING(args[0]);
+  double start_d = AS_NUMBER(args[1]);
+  double end_d = (argCount == 3) ? AS_NUMBER(args[2]) : (double)original->length;
+  
+  if (start_d < INT_MIN || start_d > INT_MAX || end_d < INT_MIN || end_d > INT_MAX) {
+    runtimeError("Index out of range in substring.");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  int start = (int)start_d;
+  int end = (int)end_d;
+  
+  if (start < 0) start = 0;
+  if (end > original->length) end = original->length;
+  if (start > end) start = end;
+  if (start > original->length) start = original->length;
+  
+  int new_length = end - start;
+  if (new_length <= 0) {
+    push(OBJ_VAL(copyString("", 0, &vm.strings)));
+    ObjString *result = AS_STRING(peek(0));
+    result->klass = original->klass;
+    return pop();
+  }
+  
+  if (new_length == original->length && start == 0) {
+    return args[0];
+  }
+  
+  if (start + new_length > original->length) {
+    runtimeError("Substring bounds exceed string length.");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  char *substring = ALLOCATE(char, new_length + 1);
+  if (substring == NULL) {
+    runtimeError("Memory allocation failed in substring.");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  memcpy(substring, original->chars + start, new_length);
+  substring[new_length] = '\0';
+  
+  push(OBJ_VAL(takeString(substring, new_length)));
+  ObjString *result = AS_STRING(peek(0));
+  result->klass = original->klass;
+  return pop();
+}
+
+static Value replaceStringNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_STRING, ARG_STRING, ARG_STRING)) {
+    return NIL_VAL;
+  }
+  
+  ObjString *original = AS_STRING(args[0]);
+  char *search = AS_CSTRING(args[1]);
+  char *replace = AS_CSTRING(args[2]);
+  
+  int search_len = strlen(search);
+  int replace_len = strlen(replace);
+  
+  if (search_len == 0) {
+    return args[0];
+  }
+  
+  char *found = strstr(original->chars, search);
+  if (found == NULL) {
+    return args[0];
+  }
+  
+  int prefix_len = (int)(found - original->chars);
+  int suffix_len = original->length - prefix_len - search_len;
+  
+  if (prefix_len < 0 || suffix_len < 0 || prefix_len > original->length) {
+    runtimeError("Invalid string bounds in replace.");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  long long new_length_ll = (long long)prefix_len + replace_len + suffix_len;
+  if (new_length_ll < 0 || new_length_ll > INT_MAX) {
+    runtimeError("Result string too large in replace.");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  int new_length = (int)new_length_ll;
+  char *result = ALLOCATE(char, new_length + 1);
+  if (result == NULL) {
+    runtimeError("Memory allocation failed in replace.");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  memcpy(result, original->chars, prefix_len);
+  memcpy(result + prefix_len, replace, replace_len);
+  memcpy(result + prefix_len + replace_len, found + search_len, suffix_len);
+  result[new_length] = '\0';
+  
+  push(OBJ_VAL(takeString(result, new_length)));
+  ObjString *result_str = AS_STRING(peek(0));
+  result_str->klass = original->klass;
+  return pop();
+}
+
+static Value replaceAllStringNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_STRING, ARG_STRING, ARG_STRING)) {
+    return NIL_VAL;
+  }
+  
+  ObjString *original = AS_STRING(args[0]);
+  char *search = AS_CSTRING(args[1]);
+  char *replace = AS_CSTRING(args[2]);
+  
+  int search_len = strlen(search);
+  int replace_len = strlen(replace);
+  
+  if (search_len == 0) {
+    return args[0];
+  }
+  
+  int count = 0;
+  char *temp = original->chars;
+  while ((temp = strstr(temp, search)) != NULL) {
+    count++;
+    temp += search_len;
+    if (count > 10000) {
+      runtimeError("Too many replacements in replace_all.");
+      vm.shouldPanic = true;
+      return NIL_VAL;
+    }
+  }
+  
+  if (count == 0) {
+    return args[0];
+  }
+  
+  long long new_length_ll = (long long)original->length + (long long)count * (replace_len - search_len);
+  if (new_length_ll < 0 || new_length_ll > INT_MAX) {
+    runtimeError("Result string too large in replace_all.");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  int new_length = (int)new_length_ll;
+  char *result = ALLOCATE(char, new_length + 1);
+  
+  char *src = original->chars;
+  char *dst = result;
+  char *result_end = result + new_length;
+  
+  while (*src && dst < result_end) {
+    char *found = strstr(src, search);
+    if (found == src) {
+      if (dst + replace_len > result_end) {
+        FREE_ARRAY(char, result, new_length + 1);
+        runtimeError("Buffer overflow in replace_all.");
+        vm.shouldPanic = true;
+        return NIL_VAL;
+      }
+      memcpy(dst, replace, replace_len);
+      dst += replace_len;
+      src += search_len;
+    } else {
+      if (dst >= result_end) {
+        FREE_ARRAY(char, result, new_length + 1);
+        runtimeError("Buffer overflow in replace_all.");
+        vm.shouldPanic = true;
+        return NIL_VAL;
+      }
+      *dst++ = *src++;
+    }
+  }
+  
+  if (dst > result_end) {
+    FREE_ARRAY(char, result, new_length + 1);
+    runtimeError("Buffer overflow in replace_all.");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  *dst = '\0';
+  
+  push(OBJ_VAL(takeString(result, (int)(dst - result))));
+  ObjString *result_str = AS_STRING(peek(0));
+  result_str->klass = original->klass;
+  return pop();
+}
+
 static Value lenStringNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_STRING)) {
     return NIL_VAL;
@@ -681,6 +1140,16 @@ static ObjKlass *createStringClass() {
   defineNativeKlassMethod(stringKlass, "contains", 8, containsStringNative);
   defineNativeKlassMethod(stringKlass, "split", 5, splitStringNative);
   defineNativeKlassMethod(stringKlass, "asnum", 5, asNumberStringNative);
+  defineNativeKlassMethod(stringKlass, "lower", 5, toLowerCaseStringNative);
+  defineNativeKlassMethod(stringKlass, "upper", 5, toUpperCaseStringNative);
+  defineNativeKlassMethod(stringKlass, "index_of", 8, indexOfStringNative);
+  defineNativeKlassMethod(stringKlass, "last_index_of", 13, lastIndexOfStringNative);
+  defineNativeKlassMethod(stringKlass, "starts_with", 11, startsWithStringNative);
+  defineNativeKlassMethod(stringKlass, "ends_with", 9, endsWithStringNative);
+  defineNativeKlassMethod(stringKlass, "trim", 4, trimStringNative);
+  defineNativeKlassMethod(stringKlass, "substring", 9, substringStringNative);
+  defineNativeKlassMethod(stringKlass, "replace", 7, replaceStringNative);
+  defineNativeKlassMethod(stringKlass, "replace_all", 11, replaceAllStringNative);
 
   return stringKlass;
 }

@@ -1,0 +1,124 @@
+use "Math";
+
+# Test variables
+:pi = Math.PI;
+:e = Math.E;
+:nan_val = 0.0 / 0.0;
+:inf_val = 1.0 / 0.0;
+:neg_inf_val = -1.0 / 0.0;
+
+print "$expect$";
+
+# Number Classification Tests
+print true;   # Math.isFinite(5.5)
+print false;  # Math.isFinite(inf_val)
+print false;  # Math.isFinite(nan_val)
+print true;   # Math.isNaN(nan_val)
+print false;  # Math.isNaN(5.5)
+print true;   # Math.isInfinite(inf_val)
+print true;   # Math.isInfinite(neg_inf_val)
+print false;  # Math.isInfinite(5.5)
+print 1;      # Math.sign(42.5)
+print -1;     # Math.sign(-3.7)
+print 0;      # Math.sign(0.0)
+
+# Advanced Rounding Tests
+print 1.5;    # Math.fmod(7.5, 3.0)
+print -1.5;   # Math.fmod(-7.5, 3.0)
+print 1;      # Math.remainder(7, 3)
+print [3, 0.14159]; # Math.modf(3.14159) (approximately)
+
+# Statistical Functions Tests
+print 5;      # Math.clamp(10, 0, 5)
+print 0;      # Math.clamp(-5, 0, 5)
+print 3;      # Math.clamp(3, 0, 5)
+print 5;      # Math.lerp(0, 10, 0.5)
+print 2.5;    # Math.lerp(0, 5, 0.5)
+print 50;     # Math.map(5, 0, 10, 0, 100)
+
+# Angle Conversion Tests
+print 179.999847960504; # Math.degrees(pi)
+print 89.9999239802521; # Math.degrees(pi / 2)
+print 3.14159265358979; # Math.radians(180) (approximately pi)
+
+# Random Functions Tests (using seed for predictable results)
+# Note: These will test the functions work, not exact values
+print "random_works"; # Placeholder for random function tests
+
+# Bitwise Math Tests
+print 31;     # Math.clz32(1)
+print 0;      # Math.clz32(4294967295) - all bits set
+print 6;      # Math.imul(3, 2)
+print -6;     # Math.imul(-3, 2)
+
+# Logarithm Tests  
+print 3;      # Math.logb(8, 2)
+print 3;      # Math.logb(1000, 10) (approximately)
+
+# Special Functions Tests
+print 6;      # Math.factorial(3)
+print 120;    # Math.factorial(5)
+print 6;      # Math.gcd(18, 24)
+print 12;     # Math.lcm(3, 4)
+print 2;      # Math.gcd(14, 8)
+
+print "$actual$";
+
+# Number Classification Tests
+print Math.isFinite(5.5);
+print Math.isFinite(inf_val);
+print Math.isFinite(nan_val);
+print Math.isNaN(nan_val);
+print Math.isNaN(5.5);
+print Math.isInfinite(inf_val);
+print Math.isInfinite(neg_inf_val);
+print Math.isInfinite(5.5);
+print Math.sign(42.5);
+print Math.sign(-3.7);
+print Math.sign(0.0);
+
+# Advanced Rounding Tests
+print Math.fmod(7.5, 3.0);
+print Math.fmod(-7.5, 3.0);
+print Math.remainder(7, 3);
+print Math.modf(3.14159);
+
+# Statistical Functions Tests
+print Math.clamp(10, 0, 5);
+print Math.clamp(-5, 0, 5);
+print Math.clamp(3, 0, 5);
+print Math.lerp(0, 10, 0.5);
+print Math.lerp(0, 5, 0.5);
+print Math.map(5, 0, 10, 0, 100);
+
+# Angle Conversion Tests
+print Math.degrees(pi);
+print Math.degrees(pi / 2);
+print Math.radians(180);
+
+# Random Functions Tests
+Math.seed(12345);
+:r1 = Math.randomInt(1, 10);
+:r2 = Math.randomRange(0.0, 1.0);
+if (r1 >= 1 && r1 <= 10 && r2 >= 0.0 && r2 <= 1.0) {
+    print "random_works";
+} else {
+    print "random_failed";
+}
+
+# Bitwise Math Tests
+print Math.clz32(1);
+print Math.clz32(4294967295);
+print Math.imul(3, 2);
+print Math.imul(-3, 2);
+
+# Logarithm Tests
+print Math.logb(8, 2);
+print Math.logb(1000, 10);
+
+# Special Functions Tests
+print Math.factorial(3);
+print Math.factorial(5);
+print Math.gcd(18, 24);
+print Math.lcm(3, 4);
+print Math.gcd(14, 8);

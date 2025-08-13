@@ -1,0 +1,93 @@
+use "Math";
+
+# Test random number generation functions
+
+print "$expect$";
+
+# Test that seeded random produces consistent results
+print "seed_test_passed";
+
+# Test randomInt bounds
+print "randomInt_bounds_passed";
+
+# Test randomRange bounds  
+print "randomRange_bounds_passed";
+
+# Test that different seeds produce different sequences
+print "different_seeds_passed";
+
+print "$actual$";
+
+# Test that seeded random produces consistent results
+Math.seed(42);
+:first_run = [];
+for (:i = 0; i < 5; i += 1) {
+    first_run.push(Math.randomInt(1, 100));
+}
+
+Math.seed(42);
+:second_run = [];
+for (:i = 0; i < 5; i += 1) {
+    second_run.push(Math.randomInt(1, 100));
+}
+
+:sequences_match = true;
+for (:i = 0; i < 5; i += 1) {
+    if (first_run[i] != second_run[i]) {
+        sequences_match = false;
+        break;
+    }
+}
+
+if (sequences_match) {
+    print "seed_test_passed";
+} else {
+    print "seed_test_failed";
+}
+
+# Test randomInt bounds
+Math.seed(123);
+:randomInt_bounds_ok = true;
+for (:i = 0; i < 50; i += 1) {
+    :val = Math.randomInt(10, 20);
+    if (val < 10 || val > 20) {
+        randomInt_bounds_ok = false;
+        break;
+    }
+}
+
+if (randomInt_bounds_ok) {
+    print "randomInt_bounds_passed";
+} else {
+    print "randomInt_bounds_failed";
+}
+
+# Test randomRange bounds
+Math.seed(456);
+:randomRange_bounds_ok = true;
+for (:i = 0; i < 50; i += 1) {
+    :val = Math.randomRange(5.0, 15.0);
+    if (val < 5.0 || val > 15.0) {
+        randomRange_bounds_ok = false;
+        break;
+    }
+}
+
+if (randomRange_bounds_ok) {
+    print "randomRange_bounds_passed";
+} else {
+    print "randomRange_bounds_failed";
+}
+
+# Test that different seeds produce different sequences
+Math.seed(111);
+:seq1 = Math.randomInt(1, 1000000);
+
+Math.seed(222); 
+:seq2 = Math.randomInt(1, 1000000);
+
+if (seq1 != seq2) {
+    print "different_seeds_passed";
+} else {
+    print "different_seeds_failed";
+}

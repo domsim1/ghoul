@@ -1,0 +1,110 @@
+use "Math";
+
+# Test edge cases and error conditions for new math functions
+
+print "$expect$";
+
+# Test Math.modf with various inputs
+print [0, 0.5];      # Math.modf(0.5)
+print [-1, -0.25];   # Math.modf(-1.25)
+print [42, 0];       # Math.modf(42.0)
+
+# Test Math.clamp edge cases
+print 5;             # Math.clamp(5, 5, 10) - at min boundary
+print 10;            # Math.clamp(10, 5, 10) - at max boundary
+
+# Test Math.lerp edge cases
+print 10;            # Math.lerp(10, 20, 0) - t=0 returns first value
+print 20;            # Math.lerp(10, 20, 1) - t=1 returns second value
+print 30;            # Math.lerp(10, 20, 2) - t>1 extrapolates
+
+# Test Math.map with equal input range (should be avoided but test behavior)
+# This will cause an error, so we'll test valid cases instead
+print 10;            # Math.map(0, 0, 1, 10, 20) - min input
+print 20;            # Math.map(1, 0, 1, 10, 20) - max input
+
+# Test angle conversions with common values  
+print 0;             # Math.degrees(0)
+print 359.999695921009; # Math.degrees(2 * Math.PI)
+print 0;             # Math.radians(0)
+
+# Test special function edge cases
+print 1;             # Math.factorial(0) - 0! = 1
+print 1;             # Math.factorial(1) - 1! = 1
+print 2;             # Math.factorial(2) - 2! = 2
+
+# Test GCD and LCM with special cases
+print 5;             # Math.gcd(5, 0) - gcd with 0
+print 7;             # Math.gcd(0, 7) - gcd with 0
+print 0;             # Math.lcm(5, 0) - lcm with 0
+print 0;             # Math.lcm(0, 7) - lcm with 0
+print 15;            # Math.gcd(15, 15) - identical numbers
+print 15;            # Math.lcm(15, 15) - identical numbers
+
+# Test with negative numbers
+print 3;             # Math.gcd(-6, 9) - negative first arg
+print 4;             # Math.gcd(8, -12) - negative second arg
+print 5;             # Math.gcd(-10, -15) - both negative
+
+# Test sign function with edge cases
+print 1;             # Math.sign(0.0001) - very small positive
+print -1;            # Math.sign(-0.0001) - very small negative
+
+# Test isFinite, isNaN, isInfinite with edge cases
+print true;          # Math.isFinite(-1000000) - large negative
+print true;          # Math.isFinite(1000000) - large positive
+print false;         # Math.isNaN(1.0) - normal number
+print false;         # Math.isInfinite(0.0) - zero
+
+print "$actual$";
+
+# Test Math.modf with various inputs
+print Math.modf(0.5);
+print Math.modf(-1.25);
+print Math.modf(42.0);
+
+# Test Math.clamp edge cases
+print Math.clamp(5, 5, 10);
+print Math.clamp(10, 5, 10);
+
+# Test Math.lerp edge cases
+print Math.lerp(10, 20, 0);
+print Math.lerp(10, 20, 1);
+print Math.lerp(10, 20, 2);
+
+# Test Math.map cases
+print Math.map(0, 0, 1, 10, 20);
+print Math.map(1, 0, 1, 10, 20);
+
+# Test angle conversions with common values
+print Math.degrees(0);
+print Math.degrees(2 * Math.PI);
+print Math.radians(0);
+
+# Test special function edge cases
+print Math.factorial(0);
+print Math.factorial(1);
+print Math.factorial(2);
+
+# Test GCD and LCM with special cases
+print Math.gcd(5, 0);
+print Math.gcd(0, 7);
+print Math.lcm(5, 0);
+print Math.lcm(0, 7);
+print Math.gcd(15, 15);
+print Math.lcm(15, 15);
+
+# Test with negative numbers
+print Math.gcd(-6, 9);
+print Math.gcd(8, -12);
+print Math.gcd(-10, -15);
+
+# Test sign function with edge cases
+print Math.sign(0.0001);
+print Math.sign(-0.0001);
+
+# Test isFinite, isNaN, isInfinite with edge cases
+print Math.isFinite(-1000000);
+print Math.isFinite(1000000);
+print Math.isNaN(1.0);
+print Math.isInfinite(0.0);

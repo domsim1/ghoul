@@ -6,6 +6,9 @@ static ObjKlass *colorKlassRef;
 static ObjKlass *vector2KlassRef;
 static ObjKlass *imgKlassRef;
 static ObjKlass *camera2dRef;
+static ObjKlass *vector3KlassRef;
+static ObjKlass *camera3dRef;
+static ObjKlass *soundKlassRef;
 
 static Value createVector2(double x, double y) {
   ObjInstance *vector2 = newInstance(vector2KlassRef);
@@ -14,6 +17,7 @@ static Value createVector2(double x, double y) {
   setNativeInstanceField(vector2, vm.string.y, NUMBER_VAL(y));
   return pop();
 }
+
 
 static Value createImage(Image img) {
   ObjInstance *imgInst = newInstance(imgKlassRef); 
@@ -246,6 +250,15 @@ static Value setWindowFocusedRLNative(int argCount, Value *args) {
   return NIL_VAL;
 }
 
+static Value getWindowHandleRLNative(int argCount, Value *args) { 
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
+    return NIL_VAL;
+  }
+  // Return handle as a number (pointer converted to number)
+  void *handle = GetWindowHandle();
+  return NUMBER_VAL((long)(uintptr_t)handle);
+}
+
 static Value getScreenWidthRLNative(int argCount, Value *args) { 
   if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
     return NIL_VAL;
@@ -371,12 +384,6 @@ static Value getClipboardTextRLNative(int argCount, Value *args) {
   return OBJ_VAL(copyString(text, strlen(text), &vm.strings));
 }
 
-static Value getClipboardImageRLNative(int argCount, Value *args) { 
-  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
-    return NIL_VAL;
-  }  
-  return createImage(GetClipboardImage());
-}
 
 static Value enableEventWaitingRLNative(int argCount, Value *args) { 
   if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
@@ -391,6 +398,31 @@ static Value disableEventWaitingRLNative(int argCount, Value *args) {
     return NIL_VAL;
   }
   DisableEventWaiting();
+  return NIL_VAL;
+}
+
+// Additional window functions  
+static Value takeScreenshotRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_STRING)) {
+    return NIL_VAL;
+  }
+  TakeScreenshot(AS_CSTRING(args[1]));
+  return NIL_VAL;
+}
+
+static Value setConfigFlagsRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  SetConfigFlags(AS_NUMBER(args[1]));
+  return NIL_VAL;
+}
+
+static Value setExitKeyRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  SetExitKey(AS_NUMBER(args[1]));
   return NIL_VAL;
 }
 
@@ -415,8 +447,7 @@ static Value isCursorHiddenRLNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
     return NIL_VAL;
   }
-  IsCursorHidden();
-  return NIL_VAL;
+  return BOOL_VAL(IsCursorHidden());
 }
 
 static Value enableCursorRLNative(int argCount, Value *args) { 
@@ -439,7 +470,7 @@ static Value isCursorOnScreenRLNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
     return NIL_VAL;
   }
-  return BOOL_VAL(IsCursorOnScreen);
+  return BOOL_VAL(IsCursorOnScreen());
 }
 
 // drawing-related natives
@@ -522,37 +553,84 @@ static Value beginMode3dRLNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
     return NIL_VAL;
   };
+  
   ObjInstance *cam = AS_INSTANCE(args[1]);
-  ObjInstance *position = AS_INSTANCE(readNativeInstanceField(cam, "position", 6));
-  Value positionx;
-  Value positiony;
-  Value positionz;
-  tableGet(&position->fields, vm.string.x, &positionx);
-  tableGet(&position->fields, vm.string.y, &positiony);  
-  tableGet(&position->fields, vm.string.z, &positionz);  
+  if (cam == NULL) {
+    runtimeError("Camera3D object is null");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  // Get position field
+  Value positionValue = readNativeInstanceField(cam, "position", 8);
+  if (!IS_INSTANCE(positionValue)) {
+    runtimeError("Camera3D position field is not a Vector3 instance");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  ObjInstance *position = AS_INSTANCE(positionValue);
+  
+  Value positionx, positiony, positionz;
+  if (!tableGet(&position->fields, vm.string.x, &positionx) || !IS_NUMBER(positionx) ||
+      !tableGet(&position->fields, vm.string.y, &positiony) || !IS_NUMBER(positiony) ||
+      !tableGet(&position->fields, vm.string.z, &positionz) || !IS_NUMBER(positionz)) {
+    runtimeError("Camera3D position Vector3 has invalid x, y, or z fields");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
 
-  ObjInstance *target = AS_INSTANCE(readNativeInstanceField(cam, "target", 6));
-  Value targetx;
-  Value targety;
-  Value targetz;
-  tableGet(&target->fields, vm.string.x, &targetx);
-  tableGet(&target->fields, vm.string.y, &targety);  
-  tableGet(&target->fields, vm.string.z, &targetz);  
+  // Get target field
+  Value targetValue = readNativeInstanceField(cam, "target", 6);
+  if (!IS_INSTANCE(targetValue)) {
+    runtimeError("Camera3D target field is not a Vector3 instance");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  ObjInstance *target = AS_INSTANCE(targetValue);
+  
+  Value targetx, targety, targetz;
+  if (!tableGet(&target->fields, vm.string.x, &targetx) || !IS_NUMBER(targetx) ||
+      !tableGet(&target->fields, vm.string.y, &targety) || !IS_NUMBER(targety) ||
+      !tableGet(&target->fields, vm.string.z, &targetz) || !IS_NUMBER(targetz)) {
+    runtimeError("Camera3D target Vector3 has invalid x, y, or z fields");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
 
-  ObjInstance *up = AS_INSTANCE(readNativeInstanceField(cam, "up", 6));
-  Value upx;
-  Value upy;
-  Value upz;
-  tableGet(&up->fields, vm.string.x, &upx);
-  tableGet(&up->fields, vm.string.y, &upy);  
-  tableGet(&up->fields, vm.string.z, &upz);  
+  // Get up field
+  Value upValue = readNativeInstanceField(cam, "up", 2);
+  if (!IS_INSTANCE(upValue)) {
+    runtimeError("Camera3D up field is not a Vector3 instance");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  ObjInstance *up = AS_INSTANCE(upValue);
+  
+  Value upx, upy, upz;
+  if (!tableGet(&up->fields, vm.string.x, &upx) || !IS_NUMBER(upx) ||
+      !tableGet(&up->fields, vm.string.y, &upy) || !IS_NUMBER(upy) ||
+      !tableGet(&up->fields, vm.string.z, &upz) || !IS_NUMBER(upz)) {
+    runtimeError("Camera3D up Vector3 has invalid x, y, or z fields");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  // Get fovy and projection
+  Value fovyValue = readNativeInstanceField(cam, "fovy", 4);
+  Value projectionValue = readNativeInstanceField(cam, "projection", 10);
+  
+  if (!IS_NUMBER(fovyValue) || !IS_NUMBER(projectionValue)) {
+    runtimeError("Camera3D fovy or projection field is not a number");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
 
   Camera3D cam3d = {
     (Vector3){AS_NUMBER(positionx), AS_NUMBER(positiony), AS_NUMBER(positionz)},
     (Vector3){AS_NUMBER(targetx), AS_NUMBER(targety), AS_NUMBER(targetz)},
     (Vector3){AS_NUMBER(upx), AS_NUMBER(upy), AS_NUMBER(upz)},
-    AS_NUMBER(readNativeInstanceField(cam, "fovy", 4)),
-    AS_NUMBER(readNativeInstanceField(cam, "projection", 10)),
+    AS_NUMBER(fovyValue),
+    AS_NUMBER(projectionValue),
   };
 
   BeginMode3D(cam3d);
@@ -579,24 +657,21 @@ static Value getFrameTimeRLNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
     return NIL_VAL;
   };
-  GetFrameTime();
-  return NIL_VAL;
+  return NUMBER_VAL(GetFrameTime());
 }
 
 static Value getTimeRLNative(int argCount, Value *args) {  
   if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
     return NIL_VAL;
   };
-  GetTime();
-  return NIL_VAL;
+  return NUMBER_VAL(GetTime());
 }
 
 static Value getFpsRLNative(int argCount, Value *args) {  
   if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
     return NIL_VAL;
   };
-  GetFPS();
-  return NIL_VAL;
+  return NUMBER_VAL(GetFPS());
 }
 
 static Value loadImageRLNative(int argCount, Value *args) { 
@@ -604,6 +679,710 @@ static Value loadImageRLNative(int argCount, Value *args) {
     return NIL_VAL;
   };
   return createImage(LoadImage(AS_CSTRING(args[1])));
+}
+
+// input-related natives
+static Value isKeyPressedRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  return BOOL_VAL(IsKeyPressed(AS_NUMBER(args[1])));
+}
+
+static Value isKeyPressedRepeatRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  return BOOL_VAL(IsKeyPressedRepeat(AS_NUMBER(args[1])));
+}
+
+static Value isKeyDownRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  return BOOL_VAL(IsKeyDown(AS_NUMBER(args[1])));
+}
+
+static Value isKeyReleasedRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  return BOOL_VAL(IsKeyReleased(AS_NUMBER(args[1])));
+}
+
+static Value isKeyUpRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  return BOOL_VAL(IsKeyUp(AS_NUMBER(args[1])));
+}
+
+static Value getKeyPressedRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
+    return NIL_VAL;
+  }
+  return NUMBER_VAL(GetKeyPressed());
+}
+
+static Value getCharPressedRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
+    return NIL_VAL;
+  }
+  return NUMBER_VAL(GetCharPressed());
+}
+
+// mouse-related natives
+static Value isMouseButtonPressedRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  return BOOL_VAL(IsMouseButtonPressed(AS_NUMBER(args[1])));
+}
+
+static Value isMouseButtonDownRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  return BOOL_VAL(IsMouseButtonDown(AS_NUMBER(args[1])));
+}
+
+static Value isMouseButtonReleasedRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  return BOOL_VAL(IsMouseButtonReleased(AS_NUMBER(args[1])));
+}
+
+static Value isMouseButtonUpRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  return BOOL_VAL(IsMouseButtonUp(AS_NUMBER(args[1])));
+}
+
+static Value getMouseXRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
+    return NIL_VAL;
+  }
+  return NUMBER_VAL(GetMouseX());
+}
+
+static Value getMouseYRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
+    return NIL_VAL;
+  }
+  return NUMBER_VAL(GetMouseY());
+}
+
+static Value getMousePositionRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
+    return NIL_VAL;
+  }
+  Vector2 pos = GetMousePosition();
+  return createVector2(pos.x, pos.y);
+}
+
+static Value getMouseDeltaRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
+    return NIL_VAL;
+  }
+  Vector2 delta = GetMouseDelta();
+  return createVector2(delta.x, delta.y);
+}
+
+static Value setMousePositionRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  SetMousePosition(AS_NUMBER(args[1]), AS_NUMBER(args[2]));
+  return NIL_VAL;
+}
+
+static Value setMouseOffsetRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  SetMouseOffset(AS_NUMBER(args[1]), AS_NUMBER(args[2]));
+  return NIL_VAL;
+}
+
+static Value setMouseScaleRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  SetMouseScale(AS_NUMBER(args[1]), AS_NUMBER(args[2]));
+  return NIL_VAL;
+}
+
+static Value getMouseWheelMoveRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
+    return NIL_VAL;
+  }
+  return NUMBER_VAL(GetMouseWheelMove());
+}
+
+static Value getMouseWheelMoveVRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
+    return NIL_VAL;
+  }
+  Vector2 move = GetMouseWheelMoveV();
+  return createVector2(move.x, move.y);
+}
+
+static Value setMouseCursorRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  SetMouseCursor(AS_NUMBER(args[1]));
+  return NIL_VAL;
+}
+
+// touch-related natives
+static Value getTouchXRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
+    return NIL_VAL;
+  }
+  return NUMBER_VAL(GetTouchX());
+}
+
+static Value getTouchYRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
+    return NIL_VAL;
+  }
+  return NUMBER_VAL(GetTouchY());
+}
+
+static Value getTouchPositionRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  Vector2 pos = GetTouchPosition(AS_NUMBER(args[1]));
+  return createVector2(pos.x, pos.y);
+}
+
+static Value getTouchPointCountRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
+    return NIL_VAL;
+  }
+  return NUMBER_VAL(GetTouchPointCount());
+}
+
+// drawing primitives
+static Value drawPixelRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 4, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER, ARG_NUMBER, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *color = AS_INSTANCE(args[3]);
+  Value r, g, b, a;
+  tableGet(&color->fields, vm.string.r, &r);
+  tableGet(&color->fields, vm.string.g, &g);
+  tableGet(&color->fields, vm.string.b, &b);
+  tableGet(&color->fields, vm.string.a, &a);
+  
+  DrawPixel(AS_NUMBER(args[1]), AS_NUMBER(args[2]), (Color){AS_NUMBER(r), AS_NUMBER(g), AS_NUMBER(b), AS_NUMBER(a)});
+  return NIL_VAL;
+}
+
+static Value drawPixelVRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *pos = AS_INSTANCE(args[1]);
+  Value x, y;
+  tableGet(&pos->fields, vm.string.x, &x);
+  tableGet(&pos->fields, vm.string.y, &y);
+  
+  ObjInstance *color = AS_INSTANCE(args[2]);
+  Value r, g, b, a;
+  tableGet(&color->fields, vm.string.r, &r);
+  tableGet(&color->fields, vm.string.g, &g);
+  tableGet(&color->fields, vm.string.b, &b);
+  tableGet(&color->fields, vm.string.a, &a);
+  
+  DrawPixelV((Vector2){AS_NUMBER(x), AS_NUMBER(y)}, (Color){AS_NUMBER(r), AS_NUMBER(g), AS_NUMBER(b), AS_NUMBER(a)});
+  return NIL_VAL;
+}
+
+static Value drawLineRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 6, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER, ARG_NUMBER, ARG_NUMBER, ARG_NUMBER, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *color = AS_INSTANCE(args[5]);
+  Value r, g, b, a;
+  tableGet(&color->fields, vm.string.r, &r);
+  tableGet(&color->fields, vm.string.g, &g);
+  tableGet(&color->fields, vm.string.b, &b);
+  tableGet(&color->fields, vm.string.a, &a);
+  
+  DrawLine(AS_NUMBER(args[1]), AS_NUMBER(args[2]), AS_NUMBER(args[3]), AS_NUMBER(args[4]), (Color){AS_NUMBER(r), AS_NUMBER(g), AS_NUMBER(b), AS_NUMBER(a)});
+  return NIL_VAL;
+}
+
+static Value drawLineVRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 4, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_INSTANCE, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *start = AS_INSTANCE(args[1]);
+  Value startX, startY;
+  tableGet(&start->fields, vm.string.x, &startX);
+  tableGet(&start->fields, vm.string.y, &startY);
+  
+  ObjInstance *end = AS_INSTANCE(args[2]);
+  Value endX, endY;
+  tableGet(&end->fields, vm.string.x, &endX);
+  tableGet(&end->fields, vm.string.y, &endY);
+  
+  ObjInstance *color = AS_INSTANCE(args[3]);
+  Value r, g, b, a;
+  tableGet(&color->fields, vm.string.r, &r);
+  tableGet(&color->fields, vm.string.g, &g);
+  tableGet(&color->fields, vm.string.b, &b);
+  tableGet(&color->fields, vm.string.a, &a);
+  
+  DrawLineV((Vector2){AS_NUMBER(startX), AS_NUMBER(startY)}, (Vector2){AS_NUMBER(endX), AS_NUMBER(endY)}, (Color){AS_NUMBER(r), AS_NUMBER(g), AS_NUMBER(b), AS_NUMBER(a)});
+  return NIL_VAL;
+}
+
+static Value drawLineExRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 5, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_INSTANCE, ARG_NUMBER, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *start = AS_INSTANCE(args[1]);
+  Value startX, startY;
+  tableGet(&start->fields, vm.string.x, &startX);
+  tableGet(&start->fields, vm.string.y, &startY);
+  
+  ObjInstance *end = AS_INSTANCE(args[2]);
+  Value endX, endY;
+  tableGet(&end->fields, vm.string.x, &endX);
+  tableGet(&end->fields, vm.string.y, &endY);
+  
+  ObjInstance *color = AS_INSTANCE(args[4]);
+  Value r, g, b, a;
+  tableGet(&color->fields, vm.string.r, &r);
+  tableGet(&color->fields, vm.string.g, &g);
+  tableGet(&color->fields, vm.string.b, &b);
+  tableGet(&color->fields, vm.string.a, &a);
+  
+  DrawLineEx((Vector2){AS_NUMBER(startX), AS_NUMBER(startY)}, (Vector2){AS_NUMBER(endX), AS_NUMBER(endY)}, AS_NUMBER(args[3]), (Color){AS_NUMBER(r), AS_NUMBER(g), AS_NUMBER(b), AS_NUMBER(a)});
+  return NIL_VAL;
+}
+
+static Value drawLine3DRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 4, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_INSTANCE, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  
+  // Get start position Vector3
+  ObjInstance *startPos = AS_INSTANCE(args[1]);
+  Value startX, startY, startZ;
+  tableGet(&startPos->fields, vm.string.x, &startX);
+  tableGet(&startPos->fields, vm.string.y, &startY);
+  tableGet(&startPos->fields, vm.string.z, &startZ);
+  
+  // Get end position Vector3
+  ObjInstance *endPos = AS_INSTANCE(args[2]);
+  Value endX, endY, endZ;
+  tableGet(&endPos->fields, vm.string.x, &endX);
+  tableGet(&endPos->fields, vm.string.y, &endY);
+  tableGet(&endPos->fields, vm.string.z, &endZ);
+  
+  // Get color
+  ObjInstance *color = AS_INSTANCE(args[3]);
+  Value r, g, b, a;
+  tableGet(&color->fields, vm.string.r, &r);
+  tableGet(&color->fields, vm.string.g, &g);
+  tableGet(&color->fields, vm.string.b, &b);
+  tableGet(&color->fields, vm.string.a, &a);
+  
+  DrawLine3D((Vector3){AS_NUMBER(startX), AS_NUMBER(startY), AS_NUMBER(startZ)}, 
+             (Vector3){AS_NUMBER(endX), AS_NUMBER(endY), AS_NUMBER(endZ)}, 
+             (Color){AS_NUMBER(r), AS_NUMBER(g), AS_NUMBER(b), AS_NUMBER(a)});
+  return NIL_VAL;
+}
+
+static Value drawCircleRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 5, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER, ARG_NUMBER, ARG_NUMBER, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *color = AS_INSTANCE(args[4]);
+  Value r, g, b, a;
+  tableGet(&color->fields, vm.string.r, &r);
+  tableGet(&color->fields, vm.string.g, &g);
+  tableGet(&color->fields, vm.string.b, &b);
+  tableGet(&color->fields, vm.string.a, &a);
+  
+  DrawCircle(AS_NUMBER(args[1]), AS_NUMBER(args[2]), AS_NUMBER(args[3]), (Color){AS_NUMBER(r), AS_NUMBER(g), AS_NUMBER(b), AS_NUMBER(a)});
+  return NIL_VAL;
+}
+
+static Value drawCircleVRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 4, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_NUMBER, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *center = AS_INSTANCE(args[1]);
+  Value x, y;
+  tableGet(&center->fields, vm.string.x, &x);
+  tableGet(&center->fields, vm.string.y, &y);
+  
+  ObjInstance *color = AS_INSTANCE(args[3]);
+  Value r, g, b, a;
+  tableGet(&color->fields, vm.string.r, &r);
+  tableGet(&color->fields, vm.string.g, &g);
+  tableGet(&color->fields, vm.string.b, &b);
+  tableGet(&color->fields, vm.string.a, &a);
+  
+  DrawCircleV((Vector2){AS_NUMBER(x), AS_NUMBER(y)}, AS_NUMBER(args[2]), (Color){AS_NUMBER(r), AS_NUMBER(g), AS_NUMBER(b), AS_NUMBER(a)});
+  return NIL_VAL;
+}
+
+static Value drawRectangleRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 6, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER, ARG_NUMBER, ARG_NUMBER, ARG_NUMBER, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *color = AS_INSTANCE(args[5]);
+  Value r, g, b, a;
+  tableGet(&color->fields, vm.string.r, &r);
+  tableGet(&color->fields, vm.string.g, &g);
+  tableGet(&color->fields, vm.string.b, &b);
+  tableGet(&color->fields, vm.string.a, &a);
+  
+  DrawRectangle(AS_NUMBER(args[1]), AS_NUMBER(args[2]), AS_NUMBER(args[3]), AS_NUMBER(args[4]), (Color){AS_NUMBER(r), AS_NUMBER(g), AS_NUMBER(b), AS_NUMBER(a)});
+  return NIL_VAL;
+}
+
+static Value drawRectangleVRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 4, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_INSTANCE, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *position = AS_INSTANCE(args[1]);
+  Value posX, posY;
+  tableGet(&position->fields, vm.string.x, &posX);
+  tableGet(&position->fields, vm.string.y, &posY);
+  
+  ObjInstance *size = AS_INSTANCE(args[2]);
+  Value sizeX, sizeY;
+  tableGet(&size->fields, vm.string.x, &sizeX);
+  tableGet(&size->fields, vm.string.y, &sizeY);
+  
+  ObjInstance *color = AS_INSTANCE(args[3]);
+  Value r, g, b, a;
+  tableGet(&color->fields, vm.string.r, &r);
+  tableGet(&color->fields, vm.string.g, &g);
+  tableGet(&color->fields, vm.string.b, &b);
+  tableGet(&color->fields, vm.string.a, &a);
+  
+  DrawRectangleV((Vector2){AS_NUMBER(posX), AS_NUMBER(posY)}, (Vector2){AS_NUMBER(sizeX), AS_NUMBER(sizeY)}, (Color){AS_NUMBER(r), AS_NUMBER(g), AS_NUMBER(b), AS_NUMBER(a)});
+  return NIL_VAL;
+}
+
+// Additional 2D drawing functions
+static Value drawTriangleRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 5, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_INSTANCE, ARG_INSTANCE, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *v1 = AS_INSTANCE(args[1]);
+  Value v1x, v1y;
+  tableGet(&v1->fields, vm.string.x, &v1x);
+  tableGet(&v1->fields, vm.string.y, &v1y);
+  
+  ObjInstance *v2 = AS_INSTANCE(args[2]);
+  Value v2x, v2y;
+  tableGet(&v2->fields, vm.string.x, &v2x);
+  tableGet(&v2->fields, vm.string.y, &v2y);
+  
+  ObjInstance *v3 = AS_INSTANCE(args[3]);
+  Value v3x, v3y;
+  tableGet(&v3->fields, vm.string.x, &v3x);
+  tableGet(&v3->fields, vm.string.y, &v3y);
+  
+  ObjInstance *color = AS_INSTANCE(args[4]);
+  Value r, g, b, a;
+  tableGet(&color->fields, vm.string.r, &r);
+  tableGet(&color->fields, vm.string.g, &g);
+  tableGet(&color->fields, vm.string.b, &b);
+  tableGet(&color->fields, vm.string.a, &a);
+  
+  DrawTriangle((Vector2){AS_NUMBER(v1x), AS_NUMBER(v1y)}, (Vector2){AS_NUMBER(v2x), AS_NUMBER(v2y)}, (Vector2){AS_NUMBER(v3x), AS_NUMBER(v3y)}, (Color){AS_NUMBER(r), AS_NUMBER(g), AS_NUMBER(b), AS_NUMBER(a)});
+  return NIL_VAL;
+}
+
+static Value drawCircleLinesRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 5, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER, ARG_NUMBER, ARG_NUMBER, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *color = AS_INSTANCE(args[4]);
+  Value r, g, b, a;
+  tableGet(&color->fields, vm.string.r, &r);
+  tableGet(&color->fields, vm.string.g, &g);
+  tableGet(&color->fields, vm.string.b, &b);
+  tableGet(&color->fields, vm.string.a, &a);
+  
+  DrawCircleLines(AS_NUMBER(args[1]), AS_NUMBER(args[2]), AS_NUMBER(args[3]), (Color){AS_NUMBER(r), AS_NUMBER(g), AS_NUMBER(b), AS_NUMBER(a)});
+  return NIL_VAL;
+}
+
+static Value drawRectangleLinesRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 6, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER, ARG_NUMBER, ARG_NUMBER, ARG_NUMBER, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *color = AS_INSTANCE(args[5]);
+  Value r, g, b, a;
+  tableGet(&color->fields, vm.string.r, &r);
+  tableGet(&color->fields, vm.string.g, &g);
+  tableGet(&color->fields, vm.string.b, &b);
+  tableGet(&color->fields, vm.string.a, &a);
+  
+  DrawRectangleLines(AS_NUMBER(args[1]), AS_NUMBER(args[2]), AS_NUMBER(args[3]), AS_NUMBER(args[4]), (Color){AS_NUMBER(r), AS_NUMBER(g), AS_NUMBER(b), AS_NUMBER(a)});
+  return NIL_VAL;
+}
+
+static Value drawTextRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 6, args, NATIVE_NORMAL, ARG_ANY, ARG_STRING, ARG_NUMBER, ARG_NUMBER, ARG_NUMBER, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *color = AS_INSTANCE(args[5]);
+  Value r, g, b, a;
+  tableGet(&color->fields, vm.string.r, &r);
+  tableGet(&color->fields, vm.string.g, &g);
+  tableGet(&color->fields, vm.string.b, &b);
+  tableGet(&color->fields, vm.string.a, &a);
+  
+  DrawText(AS_CSTRING(args[1]), AS_NUMBER(args[2]), AS_NUMBER(args[3]), AS_NUMBER(args[4]), (Color){AS_NUMBER(r), AS_NUMBER(g), AS_NUMBER(b), AS_NUMBER(a)});
+  return NIL_VAL;
+}
+
+static Value drawFpsRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  DrawFPS(AS_NUMBER(args[1]), AS_NUMBER(args[2]));
+  return NIL_VAL;
+}
+
+// More 3D drawing functions
+static Value drawCubeRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 6, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_NUMBER, ARG_NUMBER, ARG_NUMBER, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *position = AS_INSTANCE(args[1]);
+  Value x, y, z;
+  tableGet(&position->fields, vm.string.x, &x);
+  tableGet(&position->fields, vm.string.y, &y);
+  tableGet(&position->fields, vm.string.z, &z);
+  
+  ObjInstance *color = AS_INSTANCE(args[5]);
+  Value r, g, b, a;
+  tableGet(&color->fields, vm.string.r, &r);
+  tableGet(&color->fields, vm.string.g, &g);
+  tableGet(&color->fields, vm.string.b, &b);
+  tableGet(&color->fields, vm.string.a, &a);
+  
+  DrawCube((Vector3){AS_NUMBER(x), AS_NUMBER(y), AS_NUMBER(z)}, AS_NUMBER(args[2]), AS_NUMBER(args[3]), AS_NUMBER(args[4]), (Color){AS_NUMBER(r), AS_NUMBER(g), AS_NUMBER(b), AS_NUMBER(a)});
+  return NIL_VAL;
+}
+
+static Value drawCubeWiresRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 6, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_NUMBER, ARG_NUMBER, ARG_NUMBER, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *position = AS_INSTANCE(args[1]);
+  Value x, y, z;
+  tableGet(&position->fields, vm.string.x, &x);
+  tableGet(&position->fields, vm.string.y, &y);
+  tableGet(&position->fields, vm.string.z, &z);
+  
+  ObjInstance *color = AS_INSTANCE(args[5]);
+  Value r, g, b, a;
+  tableGet(&color->fields, vm.string.r, &r);
+  tableGet(&color->fields, vm.string.g, &g);
+  tableGet(&color->fields, vm.string.b, &b);
+  tableGet(&color->fields, vm.string.a, &a);
+  
+  DrawCubeWires((Vector3){AS_NUMBER(x), AS_NUMBER(y), AS_NUMBER(z)}, AS_NUMBER(args[2]), AS_NUMBER(args[3]), AS_NUMBER(args[4]), (Color){AS_NUMBER(r), AS_NUMBER(g), AS_NUMBER(b), AS_NUMBER(a)});
+  return NIL_VAL;
+}
+
+static Value drawSphereRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 4, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_NUMBER, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *center = AS_INSTANCE(args[1]);
+  Value x, y, z;
+  tableGet(&center->fields, vm.string.x, &x);
+  tableGet(&center->fields, vm.string.y, &y);
+  tableGet(&center->fields, vm.string.z, &z);
+  
+  ObjInstance *color = AS_INSTANCE(args[3]);
+  Value r, g, b, a;
+  tableGet(&color->fields, vm.string.r, &r);
+  tableGet(&color->fields, vm.string.g, &g);
+  tableGet(&color->fields, vm.string.b, &b);
+  tableGet(&color->fields, vm.string.a, &a);
+  
+  DrawSphere((Vector3){AS_NUMBER(x), AS_NUMBER(y), AS_NUMBER(z)}, AS_NUMBER(args[2]), (Color){AS_NUMBER(r), AS_NUMBER(g), AS_NUMBER(b), AS_NUMBER(a)});
+  return NIL_VAL;
+}
+
+static Value drawSphereWiresRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 6, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_NUMBER, ARG_NUMBER, ARG_NUMBER, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *center = AS_INSTANCE(args[1]);
+  Value x, y, z;
+  tableGet(&center->fields, vm.string.x, &x);
+  tableGet(&center->fields, vm.string.y, &y);
+  tableGet(&center->fields, vm.string.z, &z);
+  
+  ObjInstance *color = AS_INSTANCE(args[5]);
+  Value r, g, b, a;
+  tableGet(&color->fields, vm.string.r, &r);
+  tableGet(&color->fields, vm.string.g, &g);
+  tableGet(&color->fields, vm.string.b, &b);
+  tableGet(&color->fields, vm.string.a, &a);
+  
+  DrawSphereWires((Vector3){AS_NUMBER(x), AS_NUMBER(y), AS_NUMBER(z)}, AS_NUMBER(args[2]), AS_NUMBER(args[3]), AS_NUMBER(args[4]), (Color){AS_NUMBER(r), AS_NUMBER(g), AS_NUMBER(b), AS_NUMBER(a)});
+  return NIL_VAL;
+}
+
+static Value drawGridRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  DrawGrid(AS_NUMBER(args[1]), AS_NUMBER(args[2]));
+  return NIL_VAL;
+}
+
+static Value drawPoint3DRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *position = AS_INSTANCE(args[1]);
+  Value x, y, z;
+  tableGet(&position->fields, vm.string.x, &x);
+  tableGet(&position->fields, vm.string.y, &y);
+  tableGet(&position->fields, vm.string.z, &z);
+  
+  ObjInstance *color = AS_INSTANCE(args[2]);
+  Value r, g, b, a;
+  tableGet(&color->fields, vm.string.r, &r);
+  tableGet(&color->fields, vm.string.g, &g);
+  tableGet(&color->fields, vm.string.b, &b);
+  tableGet(&color->fields, vm.string.a, &a);
+  
+  DrawPoint3D((Vector3){AS_NUMBER(x), AS_NUMBER(y), AS_NUMBER(z)}, (Color){AS_NUMBER(r), AS_NUMBER(g), AS_NUMBER(b), AS_NUMBER(a)});
+  return NIL_VAL;
+}
+
+// basic audio natives
+static Value initAudioDeviceRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
+    return NIL_VAL;
+  }
+  InitAudioDevice();
+  return NIL_VAL;
+}
+
+static Value closeAudioDeviceRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
+    return NIL_VAL;
+  }
+  CloseAudioDevice();
+  return NIL_VAL;
+}
+
+static Value isAudioDeviceReadyRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
+    return NIL_VAL;
+  }
+  return BOOL_VAL(IsAudioDeviceReady());
+}
+
+static Value setMasterVolumeRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  SetMasterVolume(AS_NUMBER(args[1]));
+  return NIL_VAL;
+}
+
+static Value getMasterVolumeRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_ANY)) {
+    return NIL_VAL;
+  }
+  return NUMBER_VAL(GetMasterVolume());
+}
+
+static Value createSound(Sound sound) {
+  ObjInstance *soundInst = newInstance(soundKlassRef);
+  push(OBJ_VAL(soundInst));
+  // Store the Sound struct fields in the instance
+  defineNativeInstanceField(soundInst, "*stream_buffer", 14, OBJ_VAL(sound.stream.buffer));
+  defineNativeInstanceField(soundInst, "stream_processor", 16, OBJ_VAL(sound.stream.processor));
+  defineNativeInstanceField(soundInst, "stream_sampleRate", 17, NUMBER_VAL(sound.stream.sampleRate));
+  defineNativeInstanceField(soundInst, "stream_sampleSize", 17, NUMBER_VAL(sound.stream.sampleSize));
+  defineNativeInstanceField(soundInst, "stream_channels", 15, NUMBER_VAL(sound.stream.channels));
+  defineNativeInstanceField(soundInst, "frameCount", 10, NUMBER_VAL(sound.frameCount));
+  return pop();
+}
+
+static Sound extractSound(ObjInstance *soundInst) {
+  Sound sound = {0};
+  sound.stream.buffer = (void*)AS_OBJ(readNativeInstanceField(soundInst, "*stream_buffer", 14));
+  sound.stream.processor = (void*)AS_OBJ(readNativeInstanceField(soundInst, "stream_processor", 16));
+  sound.stream.sampleRate = AS_NUMBER(readNativeInstanceField(soundInst, "stream_sampleRate", 17));
+  sound.stream.sampleSize = AS_NUMBER(readNativeInstanceField(soundInst, "stream_sampleSize", 17));
+  sound.stream.channels = AS_NUMBER(readNativeInstanceField(soundInst, "stream_channels", 15));
+  sound.frameCount = AS_NUMBER(readNativeInstanceField(soundInst, "frameCount", 10));
+  return sound;
+}
+
+// Extended audio functions
+static Value loadSoundRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_STRING)) {
+    return NIL_VAL;
+  }
+  Sound sound = LoadSound(AS_CSTRING(args[1]));
+  return createSound(sound);
+}
+
+static Value playSoundRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *soundInst = AS_INSTANCE(args[1]);
+  Sound sound = extractSound(soundInst);
+  PlaySound(sound);
+  return NIL_VAL;
+}
+
+static Value stopSoundRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *soundInst = AS_INSTANCE(args[1]);
+  Sound sound = extractSound(soundInst);
+  StopSound(sound);
+  return NIL_VAL;
+}
+
+static Value unloadSoundRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *soundInst = AS_INSTANCE(args[1]);
+  Sound sound = extractSound(soundInst);
+  UnloadSound(sound);
+  return NIL_VAL;
+}
+
+static Value isSoundPlayingRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *soundInst = AS_INSTANCE(args[1]);
+  Sound sound = extractSound(soundInst);
+  return BOOL_VAL(IsSoundPlaying(sound));
 }
 
 static Value createColor(double r, double g, double b, double a) {
@@ -703,6 +1482,27 @@ static Value initVector2Native(int argCount, Value *args) {
   return pop();
 }
 
+static Value initVector3Native(int argCount, Value *args) {
+  if (!checkArgs(argCount, 4, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER, ARG_NUMBER, ARG_NUMBER)) {
+    return NIL_VAL;
+  };
+  ObjInstance *vector3 = NULL;
+  if (IS_KLASS(args[0])) {
+    vector3 = newInstance(AS_KLASS(args[0]));
+  } else if (IS_INSTANCE(args[0])) {
+    vector3 = AS_INSTANCE(args[0]);
+  } else {
+    runtimeError("Could not init Vector3.");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  push(OBJ_VAL(vector3));
+  setNativeInstanceField(vector3, vm.string.x, args[1]);
+  setNativeInstanceField(vector3, vm.string.y, args[2]);
+  setNativeInstanceField(vector3, vm.string.z, args[3]);
+  return pop();
+}
+
 void registerRaylibNatives() {
   static bool isRegistered = false;
   if (isRegistered)
@@ -723,6 +1523,12 @@ void registerRaylibNatives() {
   defineNativeKlassMethod(vector2Klass, "init", 4, initVector2Native);
   defineNativeInstanceField(raylibInstance, "Vector2", 7, pop());
 
+  ObjKlass *vector3Klass = newKlass(copyString("Vector3", 7, &vm.strings), OBJ_INSTANCE); 
+  push(OBJ_VAL(vector3Klass));
+  vector3KlassRef = vector3Klass;
+  defineNativeKlassMethod(vector3Klass, "init", 4, initVector3Native);
+  defineNativeInstanceField(raylibInstance, "Vector3", 7, pop());
+
   ObjKlass *camera2dKlass = newKlass(copyString("Camera2D", 8, &vm.strings), OBJ_INSTANCE);
   push(OBJ_VAL(camera2dKlass));
   camera2dRef = camera2dKlass;
@@ -731,9 +1537,14 @@ void registerRaylibNatives() {
 
   ObjKlass *camera3dKlass = newKlass(copyString("Camera3D", 8, &vm.strings), OBJ_INSTANCE);
   push(OBJ_VAL(camera3dKlass));
-  camera2dRef = camera3dKlass;
+  camera3dRef = camera3dKlass;
   defineNativeKlassMethod(camera3dKlass, "init", 4, initCamera3dNative);
   defineNativeInstanceField(raylibInstance, "Camera3D", 8, pop());
+
+  ObjKlass *soundKlass = newKlass(copyString("Sound", 5, &vm.strings), OBJ_INSTANCE);
+  push(OBJ_VAL(soundKlass));
+  soundKlassRef = soundKlass;
+  defineNativeInstanceField(raylibInstance, "Sound", 5, pop());
 
   ObjKlass *imgKlass = newKlass(copyString("Image", 5, &vm.strings), OBJ_INSTANCE);
   push(OBJ_VAL(imgKlass));
@@ -769,6 +1580,7 @@ void registerRaylibNatives() {
   defineNativeInstanceMethod(raylibInstance, "set_window_size", 15, setWindowSizeRLNative);
   defineNativeInstanceMethod(raylibInstance, "set_window_opacity", 18, setWindowOpacityRLNative);
   defineNativeInstanceMethod(raylibInstance, "set_window_focused", 18, setWindowFocusedRLNative);
+  defineNativeInstanceMethod(raylibInstance, "get_window_handle", 17, getWindowHandleRLNative);
   defineNativeInstanceMethod(raylibInstance, "get_screen_width", 16, getScreenWidthRLNative);
   defineNativeInstanceMethod(raylibInstance, "get_screen_height", 17, getScreenHeightRLNative);
   defineNativeInstanceMethod(raylibInstance, "get_render_width", 16, getRenderWidthRLNative);
@@ -786,9 +1598,12 @@ void registerRaylibNatives() {
   defineNativeInstanceMethod(raylibInstance, "get_monitor_name", 16, getMonitorNameRLNative);
   defineNativeInstanceMethod(raylibInstance, "set_clipboard_text", 18, setClipboardTextRLNative);
   defineNativeInstanceMethod(raylibInstance, "get_clipboard_text", 18, getClipboardTextRLNative);  
-  defineNativeInstanceMethod(raylibInstance, "get_clipboard_image", 19, getClipboardImageRLNative);  
+  
   defineNativeInstanceMethod(raylibInstance, "enable_event_waiting", 20, enableEventWaitingRLNative);
   defineNativeInstanceMethod(raylibInstance, "disable_event_waiting", 21, disableEventWaitingRLNative);
+  defineNativeInstanceMethod(raylibInstance, "take_screenshot", 15, takeScreenshotRLNative);
+  defineNativeInstanceMethod(raylibInstance, "set_config_flags", 16, setConfigFlagsRLNative);
+  defineNativeInstanceMethod(raylibInstance, "set_exit_key", 12, setExitKeyRLNative);
 
   // cursor-related methods
   defineNativeInstanceMethod(raylibInstance, "show_cursor", 11, showCursorRLNative);
@@ -812,6 +1627,74 @@ void registerRaylibNatives() {
   defineNativeInstanceMethod(raylibInstance, "get_frame_time", 14, getFrameTimeRLNative);
   defineNativeInstanceMethod(raylibInstance, "get_time", 8, getTimeRLNative);
   defineNativeInstanceMethod(raylibInstance, "get_fps", 7, getFpsRLNative);
+
+  // input-related methods
+  defineNativeInstanceMethod(raylibInstance, "is_key_pressed", 14, isKeyPressedRLNative);
+  defineNativeInstanceMethod(raylibInstance, "is_key_pressed_repeat", 21, isKeyPressedRepeatRLNative);
+  defineNativeInstanceMethod(raylibInstance, "is_key_down", 11, isKeyDownRLNative);
+  defineNativeInstanceMethod(raylibInstance, "is_key_released", 15, isKeyReleasedRLNative);
+  defineNativeInstanceMethod(raylibInstance, "is_key_up", 9, isKeyUpRLNative);
+  defineNativeInstanceMethod(raylibInstance, "get_key_pressed", 15, getKeyPressedRLNative);
+  defineNativeInstanceMethod(raylibInstance, "get_char_pressed", 16, getCharPressedRLNative);
+  
+  // mouse-related methods
+  defineNativeInstanceMethod(raylibInstance, "is_mouse_button_pressed", 23, isMouseButtonPressedRLNative);
+  defineNativeInstanceMethod(raylibInstance, "is_mouse_button_down", 20, isMouseButtonDownRLNative);
+  defineNativeInstanceMethod(raylibInstance, "is_mouse_button_released", 24, isMouseButtonReleasedRLNative);
+  defineNativeInstanceMethod(raylibInstance, "is_mouse_button_up", 18, isMouseButtonUpRLNative);
+  defineNativeInstanceMethod(raylibInstance, "get_mouse_x", 11, getMouseXRLNative);
+  defineNativeInstanceMethod(raylibInstance, "get_mouse_y", 11, getMouseYRLNative);
+  defineNativeInstanceMethod(raylibInstance, "get_mouse_position", 18, getMousePositionRLNative);
+  defineNativeInstanceMethod(raylibInstance, "get_mouse_delta", 15, getMouseDeltaRLNative);
+  defineNativeInstanceMethod(raylibInstance, "set_mouse_position", 18, setMousePositionRLNative);
+  defineNativeInstanceMethod(raylibInstance, "set_mouse_offset", 16, setMouseOffsetRLNative);
+  defineNativeInstanceMethod(raylibInstance, "set_mouse_scale", 15, setMouseScaleRLNative);
+  defineNativeInstanceMethod(raylibInstance, "get_mouse_wheel_move", 20, getMouseWheelMoveRLNative);
+  defineNativeInstanceMethod(raylibInstance, "get_mouse_wheel_move_v", 22, getMouseWheelMoveVRLNative);
+  defineNativeInstanceMethod(raylibInstance, "set_mouse_cursor", 16, setMouseCursorRLNative);
+  
+  // touch-related methods
+  defineNativeInstanceMethod(raylibInstance, "get_touch_x", 11, getTouchXRLNative);
+  defineNativeInstanceMethod(raylibInstance, "get_touch_y", 11, getTouchYRLNative);
+  defineNativeInstanceMethod(raylibInstance, "get_touch_position", 18, getTouchPositionRLNative);
+  defineNativeInstanceMethod(raylibInstance, "get_touch_point_count", 21, getTouchPointCountRLNative);
+  
+  // drawing primitives
+  defineNativeInstanceMethod(raylibInstance, "draw_pixel", 10, drawPixelRLNative);
+  defineNativeInstanceMethod(raylibInstance, "draw_pixel_v", 12, drawPixelVRLNative);
+  defineNativeInstanceMethod(raylibInstance, "draw_line", 9, drawLineRLNative);
+  defineNativeInstanceMethod(raylibInstance, "draw_line_v", 11, drawLineVRLNative);
+  defineNativeInstanceMethod(raylibInstance, "draw_line_ex", 12, drawLineExRLNative);
+  defineNativeInstanceMethod(raylibInstance, "draw_line_3d", 12, drawLine3DRLNative);
+  defineNativeInstanceMethod(raylibInstance, "draw_circle", 11, drawCircleRLNative);
+  defineNativeInstanceMethod(raylibInstance, "draw_circle_v", 13, drawCircleVRLNative);
+  defineNativeInstanceMethod(raylibInstance, "draw_rectangle", 14, drawRectangleRLNative);
+  defineNativeInstanceMethod(raylibInstance, "draw_rectangle_v", 16, drawRectangleVRLNative);
+  defineNativeInstanceMethod(raylibInstance, "draw_rectangle_lines", 19, drawRectangleLinesRLNative);
+  defineNativeInstanceMethod(raylibInstance, "draw_triangle", 13, drawTriangleRLNative);
+  defineNativeInstanceMethod(raylibInstance, "draw_circle_lines", 17, drawCircleLinesRLNative);
+  defineNativeInstanceMethod(raylibInstance, "draw_text", 9, drawTextRLNative);
+  defineNativeInstanceMethod(raylibInstance, "draw_fps", 8, drawFpsRLNative);
+  
+  // 3D drawing functions
+  defineNativeInstanceMethod(raylibInstance, "draw_cube", 9, drawCubeRLNative);
+  defineNativeInstanceMethod(raylibInstance, "draw_cube_wires", 15, drawCubeWiresRLNative);
+  defineNativeInstanceMethod(raylibInstance, "draw_sphere", 11, drawSphereRLNative);
+  defineNativeInstanceMethod(raylibInstance, "draw_sphere_wires", 17, drawSphereWiresRLNative);
+  defineNativeInstanceMethod(raylibInstance, "draw_grid", 9, drawGridRLNative);
+  defineNativeInstanceMethod(raylibInstance, "draw_point_3d", 13, drawPoint3DRLNative);
+  
+  // audio-related methods
+  defineNativeInstanceMethod(raylibInstance, "init_audio_device", 17, initAudioDeviceRLNative);
+  defineNativeInstanceMethod(raylibInstance, "close_audio_device", 18, closeAudioDeviceRLNative);
+  defineNativeInstanceMethod(raylibInstance, "is_audio_device_ready", 20, isAudioDeviceReadyRLNative);
+  defineNativeInstanceMethod(raylibInstance, "set_master_volume", 17, setMasterVolumeRLNative);
+  defineNativeInstanceMethod(raylibInstance, "get_master_volume", 17, getMasterVolumeRLNative);
+  defineNativeInstanceMethod(raylibInstance, "load_sound", 10, loadSoundRLNative);
+  defineNativeInstanceMethod(raylibInstance, "play_sound", 10, playSoundRLNative);
+  defineNativeInstanceMethod(raylibInstance, "stop_sound", 10, stopSoundRLNative);
+  defineNativeInstanceMethod(raylibInstance, "unload_sound", 12, unloadSoundRLNative);
+  defineNativeInstanceMethod(raylibInstance, "is_sound_playing", 16, isSoundPlayingRLNative);
 
   // rtextures
   defineNativeInstanceMethod(raylibInstance, "load_image", 10, loadImageRLNative);
@@ -865,5 +1748,88 @@ void registerRaylibNatives() {
   // camera projection
   defineNativeInstanceField(raylibInstance, "CAMERA_PERSPECTIVE", 18, NUMBER_VAL(CAMERA_PERSPECTIVE));
   defineNativeInstanceField(raylibInstance, "CAMERA_ORTHOGRAPHIC", 19, NUMBER_VAL(CAMERA_ORTHOGRAPHIC));
+  
+  // keyboard keys
+  defineNativeInstanceField(raylibInstance, "KEY_NULL", 8, NUMBER_VAL(KEY_NULL));
+  defineNativeInstanceField(raylibInstance, "KEY_APOSTROPHE", 14, NUMBER_VAL(KEY_APOSTROPHE));
+  defineNativeInstanceField(raylibInstance, "KEY_COMMA", 9, NUMBER_VAL(KEY_COMMA));
+  defineNativeInstanceField(raylibInstance, "KEY_MINUS", 9, NUMBER_VAL(KEY_MINUS));
+  defineNativeInstanceField(raylibInstance, "KEY_PERIOD", 10, NUMBER_VAL(KEY_PERIOD));
+  defineNativeInstanceField(raylibInstance, "KEY_SLASH", 9, NUMBER_VAL(KEY_SLASH));
+  defineNativeInstanceField(raylibInstance, "KEY_ZERO", 8, NUMBER_VAL(KEY_ZERO));
+  defineNativeInstanceField(raylibInstance, "KEY_ONE", 7, NUMBER_VAL(KEY_ONE));
+  defineNativeInstanceField(raylibInstance, "KEY_TWO", 7, NUMBER_VAL(KEY_TWO));
+  defineNativeInstanceField(raylibInstance, "KEY_THREE", 9, NUMBER_VAL(KEY_THREE));
+  defineNativeInstanceField(raylibInstance, "KEY_FOUR", 8, NUMBER_VAL(KEY_FOUR));
+  defineNativeInstanceField(raylibInstance, "KEY_FIVE", 8, NUMBER_VAL(KEY_FIVE));
+  defineNativeInstanceField(raylibInstance, "KEY_SIX", 7, NUMBER_VAL(KEY_SIX));
+  defineNativeInstanceField(raylibInstance, "KEY_SEVEN", 9, NUMBER_VAL(KEY_SEVEN));
+  defineNativeInstanceField(raylibInstance, "KEY_EIGHT", 9, NUMBER_VAL(KEY_EIGHT));
+  defineNativeInstanceField(raylibInstance, "KEY_NINE", 8, NUMBER_VAL(KEY_NINE));
+  defineNativeInstanceField(raylibInstance, "KEY_SEMICOLON", 13, NUMBER_VAL(KEY_SEMICOLON));
+  defineNativeInstanceField(raylibInstance, "KEY_EQUAL", 9, NUMBER_VAL(KEY_EQUAL));
+  defineNativeInstanceField(raylibInstance, "KEY_A", 5, NUMBER_VAL(KEY_A));
+  defineNativeInstanceField(raylibInstance, "KEY_B", 5, NUMBER_VAL(KEY_B));
+  defineNativeInstanceField(raylibInstance, "KEY_C", 5, NUMBER_VAL(KEY_C));
+  defineNativeInstanceField(raylibInstance, "KEY_D", 5, NUMBER_VAL(KEY_D));
+  defineNativeInstanceField(raylibInstance, "KEY_E", 5, NUMBER_VAL(KEY_E));
+  defineNativeInstanceField(raylibInstance, "KEY_F", 5, NUMBER_VAL(KEY_F));
+  defineNativeInstanceField(raylibInstance, "KEY_G", 5, NUMBER_VAL(KEY_G));
+  defineNativeInstanceField(raylibInstance, "KEY_H", 5, NUMBER_VAL(KEY_H));
+  defineNativeInstanceField(raylibInstance, "KEY_I", 5, NUMBER_VAL(KEY_I));
+  defineNativeInstanceField(raylibInstance, "KEY_J", 5, NUMBER_VAL(KEY_J));
+  defineNativeInstanceField(raylibInstance, "KEY_K", 5, NUMBER_VAL(KEY_K));
+  defineNativeInstanceField(raylibInstance, "KEY_L", 5, NUMBER_VAL(KEY_L));
+  defineNativeInstanceField(raylibInstance, "KEY_M", 5, NUMBER_VAL(KEY_M));
+  defineNativeInstanceField(raylibInstance, "KEY_N", 5, NUMBER_VAL(KEY_N));
+  defineNativeInstanceField(raylibInstance, "KEY_O", 5, NUMBER_VAL(KEY_O));
+  defineNativeInstanceField(raylibInstance, "KEY_P", 5, NUMBER_VAL(KEY_P));
+  defineNativeInstanceField(raylibInstance, "KEY_Q", 5, NUMBER_VAL(KEY_Q));
+  defineNativeInstanceField(raylibInstance, "KEY_R", 5, NUMBER_VAL(KEY_R));
+  defineNativeInstanceField(raylibInstance, "KEY_S", 5, NUMBER_VAL(KEY_S));
+  defineNativeInstanceField(raylibInstance, "KEY_T", 5, NUMBER_VAL(KEY_T));
+  defineNativeInstanceField(raylibInstance, "KEY_U", 5, NUMBER_VAL(KEY_U));
+  defineNativeInstanceField(raylibInstance, "KEY_V", 5, NUMBER_VAL(KEY_V));
+  defineNativeInstanceField(raylibInstance, "KEY_W", 5, NUMBER_VAL(KEY_W));
+  defineNativeInstanceField(raylibInstance, "KEY_X", 5, NUMBER_VAL(KEY_X));
+  defineNativeInstanceField(raylibInstance, "KEY_Y", 5, NUMBER_VAL(KEY_Y));
+  defineNativeInstanceField(raylibInstance, "KEY_Z", 5, NUMBER_VAL(KEY_Z));
+  defineNativeInstanceField(raylibInstance, "KEY_LEFT_BRACKET", 16, NUMBER_VAL(KEY_LEFT_BRACKET));
+  defineNativeInstanceField(raylibInstance, "KEY_BACKSLASH", 13, NUMBER_VAL(KEY_BACKSLASH));
+  defineNativeInstanceField(raylibInstance, "KEY_RIGHT_BRACKET", 17, NUMBER_VAL(KEY_RIGHT_BRACKET));
+  defineNativeInstanceField(raylibInstance, "KEY_GRAVE", 9, NUMBER_VAL(KEY_GRAVE));
+  defineNativeInstanceField(raylibInstance, "KEY_SPACE", 9, NUMBER_VAL(KEY_SPACE));
+  defineNativeInstanceField(raylibInstance, "KEY_ESCAPE", 10, NUMBER_VAL(KEY_ESCAPE));
+  defineNativeInstanceField(raylibInstance, "KEY_ENTER", 9, NUMBER_VAL(KEY_ENTER));
+  defineNativeInstanceField(raylibInstance, "KEY_TAB", 7, NUMBER_VAL(KEY_TAB));
+  defineNativeInstanceField(raylibInstance, "KEY_BACKSPACE", 13, NUMBER_VAL(KEY_BACKSPACE));
+  defineNativeInstanceField(raylibInstance, "KEY_INSERT", 10, NUMBER_VAL(KEY_INSERT));
+  defineNativeInstanceField(raylibInstance, "KEY_DELETE", 10, NUMBER_VAL(KEY_DELETE));
+  defineNativeInstanceField(raylibInstance, "KEY_RIGHT", 9, NUMBER_VAL(KEY_RIGHT));
+  defineNativeInstanceField(raylibInstance, "KEY_LEFT", 8, NUMBER_VAL(KEY_LEFT));
+  defineNativeInstanceField(raylibInstance, "KEY_DOWN", 8, NUMBER_VAL(KEY_DOWN));
+  defineNativeInstanceField(raylibInstance, "KEY_UP", 6, NUMBER_VAL(KEY_UP));
+  
+  // mouse buttons
+  defineNativeInstanceField(raylibInstance, "MOUSE_BUTTON_LEFT", 17, NUMBER_VAL(MOUSE_BUTTON_LEFT));
+  defineNativeInstanceField(raylibInstance, "MOUSE_BUTTON_RIGHT", 18, NUMBER_VAL(MOUSE_BUTTON_RIGHT));
+  defineNativeInstanceField(raylibInstance, "MOUSE_BUTTON_MIDDLE", 19, NUMBER_VAL(MOUSE_BUTTON_MIDDLE));
+  defineNativeInstanceField(raylibInstance, "MOUSE_BUTTON_SIDE", 17, NUMBER_VAL(MOUSE_BUTTON_SIDE));
+  defineNativeInstanceField(raylibInstance, "MOUSE_BUTTON_EXTRA", 18, NUMBER_VAL(MOUSE_BUTTON_EXTRA));
+  defineNativeInstanceField(raylibInstance, "MOUSE_BUTTON_FORWARD", 20, NUMBER_VAL(MOUSE_BUTTON_FORWARD));
+  defineNativeInstanceField(raylibInstance, "MOUSE_BUTTON_BACK", 17, NUMBER_VAL(MOUSE_BUTTON_BACK));
+  
+  // mouse cursor
+  defineNativeInstanceField(raylibInstance, "MOUSE_CURSOR_DEFAULT", 20, NUMBER_VAL(MOUSE_CURSOR_DEFAULT));
+  defineNativeInstanceField(raylibInstance, "MOUSE_CURSOR_ARROW", 18, NUMBER_VAL(MOUSE_CURSOR_ARROW));
+  defineNativeInstanceField(raylibInstance, "MOUSE_CURSOR_IBEAM", 18, NUMBER_VAL(MOUSE_CURSOR_IBEAM));
+  defineNativeInstanceField(raylibInstance, "MOUSE_CURSOR_CROSSHAIR", 22, NUMBER_VAL(MOUSE_CURSOR_CROSSHAIR));
+  defineNativeInstanceField(raylibInstance, "MOUSE_CURSOR_POINTING_HAND", 26, NUMBER_VAL(MOUSE_CURSOR_POINTING_HAND));
+  defineNativeInstanceField(raylibInstance, "MOUSE_CURSOR_RESIZE_EW", 22, NUMBER_VAL(MOUSE_CURSOR_RESIZE_EW));
+  defineNativeInstanceField(raylibInstance, "MOUSE_CURSOR_RESIZE_NS", 22, NUMBER_VAL(MOUSE_CURSOR_RESIZE_NS));
+  defineNativeInstanceField(raylibInstance, "MOUSE_CURSOR_RESIZE_NWSE", 24, NUMBER_VAL(MOUSE_CURSOR_RESIZE_NWSE));
+  defineNativeInstanceField(raylibInstance, "MOUSE_CURSOR_RESIZE_NESW", 24, NUMBER_VAL(MOUSE_CURSOR_RESIZE_NESW));
+  defineNativeInstanceField(raylibInstance, "MOUSE_CURSOR_RESIZE_ALL", 23, NUMBER_VAL(MOUSE_CURSOR_RESIZE_ALL));
+  defineNativeInstanceField(raylibInstance, "MOUSE_CURSOR_NOT_ALLOWED", 24, NUMBER_VAL(MOUSE_CURSOR_NOT_ALLOWED));
 }
 

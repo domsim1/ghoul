@@ -41,9 +41,9 @@ uninstall:
 	rm -rf /usr/share/ghoul
 
 clean:
-	rm ./$(EXE)
-	rm -rf /tests/std
-	rm ./tests/$(EXE)
+	rm -f ./$(EXE)
+	rm -rf ./tests/std
+	rm -f ./tests/$(EXE)
 
 bear:
 	bear -- make

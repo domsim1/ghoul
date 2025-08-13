@@ -1,0 +1,273 @@
+# GRID RUNNER #
+#  BY DOMSIM1 #
+
+use "RL";
+use "Math";
+
+RL.init_window(2048, 1536, "Grid Runner");
+RL.set_target_fps(60);
+
+RL.init_audio_device();
+:music_sound = RL.load_sound("Martian Soil.mp3");
+print "Loaded audio: Martian Soil.mp3";
+
+RL.play_sound(music_sound);
+print "Transmission active";
+
+:camera_pos = RL.Vector3(0.0, 1.5, 0.0);
+:camera_target = RL.Vector3(0.0, 2.0, -10.0);
+:camera_up = RL.Vector3(0.0, 1.0, 0.0);
+:camera = RL.Camera3D(camera_pos, camera_target, camera_up, 75.0, RL.CAMERA_PERSPECTIVE);
+
+:time = 0.0;
+:grid_offset = 0.0;
+:sun_pulse = 0.0;
+:speed = 5.0;
+
+print "Welcome to the Grid...";
+print "Controls:";
+print "- A/D: Bank left/right";
+print "- W/S: Speed up/slow down";
+print "- M: Toggle music";
+print "- ESC or close window: Exit the Grid";
+
+:music_playing = true;
+
+while (!RL.window_should_close()) {
+    :frame_time = RL.get_frame_time();
+    time += frame_time;
+    grid_offset += speed * frame_time;
+    sun_pulse += frame_time * 2.0;
+
+    if (RL.is_key_down(RL.KEY_A)) {
+        camera_pos.x -= 3.0 * frame_time;
+        if (camera_pos.x < -15.0) {
+            camera_pos.x = -15.0;
+        }
+    }
+    if (RL.is_key_down(RL.KEY_D)) {
+        camera_pos.x += 3.0 * frame_time;
+        if (camera_pos.x > 15.0) {
+            camera_pos.x = 15.0;
+        }
+    }
+
+    if (RL.is_key_down(RL.KEY_W)) {
+        speed += 10.0 * frame_time;
+        if (speed > 15.0) {
+            speed = 15.0;
+        }
+    }
+    if (RL.is_key_down(RL.KEY_S)) {
+        speed -= 10.0 * frame_time;
+        if (speed < 1.0) {
+            speed = 1.0;
+        }
+    }
+
+    if (RL.is_key_pressed(RL.KEY_M)) {
+        if (music_playing) {
+            RL.stop_sound(music_sound);
+            print "Transmission ended";
+            music_playing = false;
+        } else {
+            RL.play_sound(music_sound);
+            print "Transmission active";
+            music_playing = true;
+        }
+    }
+
+    camera_target.x = camera_pos.x;
+    camera_target.y = 2.0;
+    camera_target.z = camera_pos.z - 15.0;
+    :updated_camera = RL.Camera3D(camera_pos, camera_target, camera_up, 75.0, RL.CAMERA_PERSPECTIVE);
+
+    RL.begin_drawing();
+        RL.clear_background(RL.BLACK);
+        for (:i = 0; i < 50; i += 1) {
+            :y = i * (1536 / 50);
+            :alpha = 255 - (i * 3);
+            if (alpha < 0) {
+                alpha = 0;
+            }
+            :gradient_color = RL.Color(60, 20, 80, alpha);
+            RL.draw_rectangle(0, y, 2048, 1536 / 50 + 1, gradient_color);
+        }
+
+        RL.begin_mode_3d(updated_camera);
+
+            :grid_range = 50;
+            :grid_spacing = 2.0;
+
+            :neon_cyan = RL.Color(0, 255, 255, 200);
+            :neon_pink = RL.Color(255, 0, 255, 150);
+
+            for (:i = -grid_range; i <= grid_range; i += 1) {
+                :pos = i * grid_spacing;
+
+                :distance = Math.abs(pos);
+                :alpha = 255;
+                if (distance > 20) {
+                    alpha = 50;
+                } else if (distance > 10) {
+                    alpha = 150;
+                }
+
+                :line_color = RL.Color(0, 255, 255, alpha);
+
+                :start_vertical = RL.Vector3(pos, 0, camera_pos.z - 100);
+                :end_vertical = RL.Vector3(pos, 0, camera_pos.z + 20);
+                RL.draw_line_3d(start_vertical, end_vertical, line_color);
+
+                :grid_z = (i * grid_spacing) + (grid_offset % grid_spacing);
+                if (grid_z > camera_pos.z - 100 && grid_z < camera_pos.z + 20) {
+                    :start_horizontal = RL.Vector3(-grid_range * grid_spacing, 0, grid_z);
+                    :end_horizontal = RL.Vector3(grid_range * grid_spacing, 0, grid_z);
+                    RL.draw_line_3d(start_horizontal, end_horizontal, line_color);
+                }
+            }
+
+            :sun_distance = camera_pos.z - 80.0;
+            :sun_height = 3.0 + (Math.sin(sun_pulse) * 0.3);
+            :sun_center = RL.Vector3(0, sun_height, sun_distance);
+
+            for (:ring = 1; ring <= 12; ring += 1) {
+                :ring_radius = ring * 2.5;
+                :ring_segments = 32;
+                :ring_alpha = 255 - (ring * 15);
+                if (ring_alpha < 30) {
+                    ring_alpha = 30;
+                }
+
+                :sun_color = RL.Color(255, 120, 180, ring_alpha);
+
+                for (:seg = 0; seg < ring_segments; seg += 1) {
+                    :angle1 = (seg / ring_segments) * 2.0 * Math.PI;
+                    :angle2 = ((seg + 1) / ring_segments) * 2.0 * Math.PI;
+
+                    :x1 = sun_center.x + (Math.cos(angle1) * ring_radius);
+                    :y1 = sun_center.y + (Math.sin(angle1) * ring_radius * 0.3);
+                    :x2 = sun_center.x + (Math.cos(angle2) * ring_radius);
+                    :y2 = sun_center.y + (Math.sin(angle2) * ring_radius * 0.3);
+
+                    :p1 = RL.Vector3(x1, y1, sun_center.z);
+                    :p2 = RL.Vector3(x2, y2, sun_center.z);
+                    RL.draw_line_3d(p1, p2, sun_color);
+                }
+
+                for (:scan = -ring; scan <= ring; scan += 1) {
+                    :scan_y = sun_center.y + (scan * 0.4);
+                    :scan_width = Math.sqrt(ring_radius * ring_radius - (scan * scan * 0.16));
+                    if (scan_width > 0.3) {
+                        :scan_left = RL.Vector3(sun_center.x - scan_width, scan_y, sun_center.z);
+                        :scan_right = RL.Vector3(sun_center.x + scan_width, scan_y, sun_center.z);
+                        RL.draw_line_3d(scan_left, scan_right, sun_color);
+                    }
+                }
+            }
+
+            :base_positions = [
+                RL.Vector3(-8.0, 3.0, -15.0),
+                RL.Vector3(6.0, 4.0, -12.0),
+                RL.Vector3(-4.0, 2.5, -20.0),
+                RL.Vector3(12.0, 5.0, -25.0),
+                RL.Vector3(-10.0, 3.5, -30.0)
+            ];
+
+            for (:i = 0; i < base_positions.len(); i += 1) {
+                :base_pos = base_positions[i];
+                :floating_offset = Math.sin(time * 1.5 + i * 0.8) * 0.8;
+                :rotation_offset = Math.cos(time * 0.8 + i) * 0.3;
+
+                :shape_cycle = (grid_offset + base_pos.z) % 60.0;  # Cycle every 60 units
+                :shape_z = camera_pos.z - 40.0 + shape_cycle;
+
+                :actual_pos = RL.Vector3(base_pos.x + rotation_offset, base_pos.y + floating_offset, shape_z);
+
+                if (i % 3 == 0) {
+                    RL.draw_cube_wires(actual_pos, 1.0, 1.0, 1.0, neon_pink);
+                } else if (i % 3 == 1) {
+                    RL.draw_sphere_wires(actual_pos, 0.8, 8, 8, neon_cyan);
+                } else {
+                    :diamond_size = 0.6;
+                    :top = RL.Vector3(actual_pos.x, actual_pos.y + diamond_size, actual_pos.z);
+                    :bottom = RL.Vector3(actual_pos.x, actual_pos.y - diamond_size, actual_pos.z);
+                    :left = RL.Vector3(actual_pos.x - diamond_size, actual_pos.y, actual_pos.z);
+                    :right = RL.Vector3(actual_pos.x + diamond_size, actual_pos.y, actual_pos.z);
+                    :front = RL.Vector3(actual_pos.x, actual_pos.y, actual_pos.z + diamond_size);
+                    :back = RL.Vector3(actual_pos.x, actual_pos.y, actual_pos.z - diamond_size);
+
+                    RL.draw_line_3d(top, left, neon_pink);
+                    RL.draw_line_3d(top, right, neon_pink);
+                    RL.draw_line_3d(top, front, neon_pink);
+                    RL.draw_line_3d(top, back, neon_pink);
+                    RL.draw_line_3d(bottom, left, neon_pink);
+                    RL.draw_line_3d(bottom, right, neon_pink);
+                    RL.draw_line_3d(bottom, front, neon_pink);
+                    RL.draw_line_3d(bottom, back, neon_pink);
+                }
+            }
+
+        RL.end_mode_3d();
+
+        :ui_cyan = RL.Color(0, 255, 255, 255);
+        :ui_pink = RL.Color(255, 0, 255, 255);
+        :ui_yellow = RL.Color(255, 255, 0, 255);
+
+        RL.draw_text("GRID RUNNER", 20, 20, 48, ui_pink);
+        RL.draw_text("SYSTEM ONLINE", 20, 55, 24, ui_cyan);
+
+        RL.draw_text("SPEED: " ++ String(speed), 20, 90, 28, ui_yellow);
+        RL.draw_text("POSITION: " ++ String(camera_pos.x), 20, 115, 22, ui_cyan);
+        RL.draw_text("DISTANCE: " ++ String(grid_offset), 20, 135, 22, ui_cyan);
+
+        RL.draw_text("A/D: BANK LEFT/RIGHT", 20, RL.get_screen_height() - 120, 20, ui_cyan);
+        RL.draw_text("W/S: THRUST CONTROL", 20, RL.get_screen_height() - 100, 20, ui_cyan);
+        RL.draw_text("M: SYNTHWAVE AUDIO", 20, RL.get_screen_height() - 80, 20, ui_cyan);
+
+        :music_status = "OFFLINE";
+        :status_color = RL.RED;
+        if (music_playing) {
+            music_status = "TRANSMITTING";
+            status_color = ui_pink;
+        }
+        RL.draw_text("AUDIO: " ++ music_status, RL.get_screen_width() - 300, 20, 24, status_color);
+
+        RL.draw_text("FPS: " ++ String(RL.get_fps()), RL.get_screen_width() - 200, 45, 20, ui_yellow);
+        RL.draw_text("TIME: " ++ String(time), RL.get_screen_width() - 220, 65, 18, ui_cyan);
+
+        :scan_y = (time * 200.0) % 1536;
+        :wave_intensity = Math.sin(time * 3.0) * 20.0;
+
+        for (:offset = -2; offset <= 2; offset += 1) {
+            :line_y = scan_y + offset;
+            :alpha = 100 - (Math.abs(offset) * 30);
+            if (alpha > 0 && line_y >= 0 && line_y < 1536) {
+                for (:x = 0; x < 2048; x += 8) {
+                    :wave_offset = Math.sin((x / 200.0) + time * 2.0) * wave_intensity * 0.1;
+                    :actual_y = line_y + wave_offset;
+                    RL.draw_pixel(x, actual_y, RL.Color(0, 255, 255, alpha));
+                }
+            }
+        }
+
+        :corruption_chance = Math.sin(time * 0.5) * 0.5 + 0.5;  # 0 to 1
+        if (corruption_chance > 0.95) {
+            for (:glitch = 0; glitch < 20; glitch += 1) {
+                :glitch_x = (Math.sin(time * 10.0 + glitch) * 1024.0) + 1024.0;
+                :glitch_y = (Math.cos(time * 7.0 + glitch) * 768.0) + 768.0;
+                if (glitch_x >= 0 && glitch_x < 2048 && glitch_y >= 0 && glitch_y < 1536) {
+                    RL.draw_pixel(glitch_x, glitch_y, RL.Color(255, 0, 255, 200));
+                }
+            }
+        }
+
+    RL.end_drawing();
+}
+
+print "Cleaning up...";
+RL.stop_sound(music_sound);
+RL.unload_sound(music_sound);
+RL.close_audio_device();
+RL.close_window();
+

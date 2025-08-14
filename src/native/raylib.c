@@ -9,6 +9,9 @@ static ObjKlass *camera2dRef;
 static ObjKlass *vector3KlassRef;
 static ObjKlass *camera3dRef;
 static ObjKlass *soundKlassRef;
+static ObjKlass *waveKlassRef;
+static ObjKlass *musicKlassRef;
+static ObjKlass *audioStreamKlassRef;
 
 static Value createVector2(double x, double y) {
   ObjInstance *vector2 = newInstance(vector2KlassRef);
@@ -1314,27 +1317,194 @@ static Value getMasterVolumeRLNative(int argCount, Value *args) {
 }
 
 static Value createSound(Sound sound) {
+  // Validate sound data
+  if (sound.frameCount <= 0) {
+    runtimeError("Invalid sound data loaded");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  // Allocate memory for Sound struct
+  Sound *soundPtr = (Sound*)malloc(sizeof(Sound));
+  if (!soundPtr) {
+    runtimeError("Failed to allocate memory for sound");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  // Copy the entire Sound struct
+  *soundPtr = sound;
+  
   ObjInstance *soundInst = newInstance(soundKlassRef);
   push(OBJ_VAL(soundInst));
-  // Store the Sound struct fields in the instance
-  defineNativeInstanceField(soundInst, "*stream_buffer", 14, OBJ_VAL(sound.stream.buffer));
-  defineNativeInstanceField(soundInst, "stream_processor", 16, OBJ_VAL(sound.stream.processor));
-  defineNativeInstanceField(soundInst, "stream_sampleRate", 17, NUMBER_VAL(sound.stream.sampleRate));
-  defineNativeInstanceField(soundInst, "stream_sampleSize", 17, NUMBER_VAL(sound.stream.sampleSize));
-  defineNativeInstanceField(soundInst, "stream_channels", 15, NUMBER_VAL(sound.stream.channels));
-  defineNativeInstanceField(soundInst, "frameCount", 10, NUMBER_VAL(sound.frameCount));
+  
+  // Store the Sound pointer - let Raylib manage the sound data
+  defineNativeInstanceField(soundInst, "*sound_ptr", 10, NUMBER_VAL((uintptr_t)soundPtr));
+  
   return pop();
 }
 
 static Sound extractSound(ObjInstance *soundInst) {
-  Sound sound = {0};
-  sound.stream.buffer = (void*)AS_OBJ(readNativeInstanceField(soundInst, "*stream_buffer", 14));
-  sound.stream.processor = (void*)AS_OBJ(readNativeInstanceField(soundInst, "stream_processor", 16));
-  sound.stream.sampleRate = AS_NUMBER(readNativeInstanceField(soundInst, "stream_sampleRate", 17));
-  sound.stream.sampleSize = AS_NUMBER(readNativeInstanceField(soundInst, "stream_sampleSize", 17));
-  sound.stream.channels = AS_NUMBER(readNativeInstanceField(soundInst, "stream_channels", 15));
-  sound.frameCount = AS_NUMBER(readNativeInstanceField(soundInst, "frameCount", 10));
-  return sound;
+  Sound emptySound = {0};
+  
+  // Extract the Sound pointer
+  Value soundPtrVal = readNativeInstanceField(soundInst, "*sound_ptr", 10);
+  if (!IS_NUMBER(soundPtrVal)) {
+    runtimeError("Invalid sound instance: missing sound pointer");
+    vm.shouldPanic = true;
+    return emptySound;
+  }
+  
+  Sound *soundPtr = (Sound*)(uintptr_t)AS_NUMBER(soundPtrVal);
+  if (!soundPtr) {
+    runtimeError("Invalid sound pointer");
+    vm.shouldPanic = true;
+    return emptySound;
+  }
+  
+  // Return the sound struct (Raylib manages the actual data)
+  return *soundPtr;
+}
+
+static Value createWave(Wave wave) {
+  // Validate wave data
+  if (wave.frameCount <= 0 || wave.data == NULL) {
+    runtimeError("Invalid wave data loaded");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  // Allocate memory for Wave struct and let Raylib manage it
+  Wave *wavePtr = (Wave*)malloc(sizeof(Wave));
+  if (!wavePtr) {
+    runtimeError("Failed to allocate memory for wave");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  // Copy the entire Wave struct
+  *wavePtr = wave;
+  
+  ObjInstance *waveInst = newInstance(waveKlassRef);
+  push(OBJ_VAL(waveInst));
+  
+  // Store the Wave pointer directly - let Raylib manage the wave data
+  defineNativeInstanceField(waveInst, "*wave_ptr", 9, NUMBER_VAL((uintptr_t)wavePtr));
+  
+  return pop();
+}
+
+static Wave extractWave(ObjInstance *waveInst) {
+  Wave emptyWave = {0};
+  
+  // Extract the Wave pointer
+  Value wavePtrVal = readNativeInstanceField(waveInst, "*wave_ptr", 9);
+  if (!IS_NUMBER(wavePtrVal)) {
+    runtimeError("Invalid wave instance: missing wave pointer");
+    vm.shouldPanic = true;
+    return emptyWave;
+  }
+  
+  Wave *wavePtr = (Wave*)(uintptr_t)AS_NUMBER(wavePtrVal);
+  if (!wavePtr) {
+    runtimeError("Invalid wave pointer");
+    vm.shouldPanic = true;
+    return emptyWave;
+  }
+  
+  // Return the wave struct (Raylib manages the actual data)
+  return *wavePtr;
+}
+
+static Value createMusic(Music music) {
+  // Validate music data
+  if (music.frameCount <= 0) {
+    runtimeError("Invalid music data loaded");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  // Allocate memory for Music struct
+  Music *musicPtr = (Music*)malloc(sizeof(Music));
+  if (!musicPtr) {
+    runtimeError("Failed to allocate memory for music");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  // Copy the entire Music struct
+  *musicPtr = music;
+  
+  ObjInstance *musicInst = newInstance(musicKlassRef);
+  push(OBJ_VAL(musicInst));
+  
+  // Store the Music pointer
+  defineNativeInstanceField(musicInst, "*music_ptr", 10, NUMBER_VAL((uintptr_t)musicPtr));
+  
+  return pop();
+}
+
+static Music extractMusic(ObjInstance *musicInst) {
+  Music emptyMusic = {0};
+  
+  // Extract the Music pointer
+  Value musicPtrVal = readNativeInstanceField(musicInst, "*music_ptr", 10);
+  if (!IS_NUMBER(musicPtrVal)) {
+    runtimeError("Invalid music instance: missing music pointer");
+    vm.shouldPanic = true;
+    return emptyMusic;
+  }
+  
+  Music *musicPtr = (Music*)(uintptr_t)AS_NUMBER(musicPtrVal);
+  if (!musicPtr) {
+    runtimeError("Invalid music pointer");
+    vm.shouldPanic = true;
+    return emptyMusic;
+  }
+  
+  return *musicPtr;
+}
+
+static Value createAudioStream(AudioStream stream) {
+  // Allocate memory for AudioStream struct
+  AudioStream *streamPtr = (AudioStream*)malloc(sizeof(AudioStream));
+  if (!streamPtr) {
+    runtimeError("Failed to allocate memory for audio stream");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  // Copy the entire AudioStream struct
+  *streamPtr = stream;
+  
+  ObjInstance *streamInst = newInstance(audioStreamKlassRef);
+  push(OBJ_VAL(streamInst));
+  
+  // Store the AudioStream pointer
+  defineNativeInstanceField(streamInst, "*stream_ptr", 11, NUMBER_VAL((uintptr_t)streamPtr));
+  
+  return pop();
+}
+
+static AudioStream extractAudioStream(ObjInstance *streamInst) {
+  AudioStream emptyStream = {0};
+  
+  // Extract the AudioStream pointer
+  Value streamPtrVal = readNativeInstanceField(streamInst, "*stream_ptr", 11);
+  if (!IS_NUMBER(streamPtrVal)) {
+    runtimeError("Invalid audio stream instance: missing stream pointer");
+    vm.shouldPanic = true;
+    return emptyStream;
+  }
+  
+  AudioStream *streamPtr = (AudioStream*)(uintptr_t)AS_NUMBER(streamPtrVal);
+  if (!streamPtr) {
+    runtimeError("Invalid audio stream pointer");
+    vm.shouldPanic = true;
+    return emptyStream;
+  }
+  
+  return *streamPtr;
 }
 
 // Extended audio functions
@@ -1342,8 +1512,25 @@ static Value loadSoundRLNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_STRING)) {
     return NIL_VAL;
   }
-  Sound sound = LoadSound(AS_CSTRING(args[1]));
-  return createSound(sound);
+  
+  const char *filename = AS_CSTRING(args[1]);
+  if (!filename || strlen(filename) == 0) {
+    runtimeError("Invalid filename for sound loading");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  Sound sound = LoadSound(filename);
+  
+  // Check if sound loaded successfully
+  if (sound.frameCount == 0) {
+    runtimeError("Failed to load sound file: %s", filename);
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  Value result = createSound(sound);
+  return result;
 }
 
 static Value playSoundRLNative(int argCount, Value *args) {
@@ -1370,9 +1557,25 @@ static Value unloadSoundRLNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
     return NIL_VAL;
   }
+  
   ObjInstance *soundInst = AS_INSTANCE(args[1]);
-  Sound sound = extractSound(soundInst);
-  UnloadSound(sound);
+  push(OBJ_VAL(soundInst));
+  
+  // Get the Sound pointer
+  Value soundPtrVal = readNativeInstanceField(soundInst, "*sound_ptr", 10);
+  if (IS_NUMBER(soundPtrVal)) {
+    Sound *soundPtr = (Sound*)(uintptr_t)AS_NUMBER(soundPtrVal);
+    if (soundPtr) {
+      // Let Raylib unload the sound data
+      UnloadSound(*soundPtr);
+      // Free our allocated struct
+      free(soundPtr);
+      // Clear the pointer to prevent double-free
+      defineNativeInstanceField(soundInst, "*sound_ptr", 10, NUMBER_VAL(0));
+    }
+  }
+  
+  pop();
   return NIL_VAL;
 }
 
@@ -1383,6 +1586,525 @@ static Value isSoundPlayingRLNative(int argCount, Value *args) {
   ObjInstance *soundInst = AS_INSTANCE(args[1]);
   Sound sound = extractSound(soundInst);
   return BOOL_VAL(IsSoundPlaying(sound));
+}
+
+// Wave/Sound loading/unloading functions
+static Value loadWaveRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_STRING)) {
+    return NIL_VAL;
+  }
+  
+  const char *filename = AS_CSTRING(args[1]);
+  if (!filename || strlen(filename) == 0) {
+    runtimeError("Invalid filename for wave loading");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  Wave wave = LoadWave(filename);
+  
+  // Check if wave loaded successfully
+  if (wave.data == NULL || wave.frameCount == 0) {
+    runtimeError("Failed to load wave file: %s", filename);
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  Value result = createWave(wave);
+  return result;
+}
+
+
+static Value loadSoundFromWaveRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  
+  ObjInstance *waveInst = AS_INSTANCE(args[1]);
+  push(OBJ_VAL(waveInst)); // GC protection
+  
+  Wave wave = extractWave(waveInst);
+  if (vm.shouldPanic) {
+    pop(); // Clean up GC stack
+    return NIL_VAL;
+  }
+  
+  Sound sound = LoadSoundFromWave(wave);
+  pop(); // Clean up GC stack
+  
+  if (sound.frameCount == 0) {
+    runtimeError("Failed to create sound from wave data");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  return createSound(sound);
+}
+
+static Value loadSoundAliasRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *soundInst = AS_INSTANCE(args[1]);
+  Sound source = extractSound(soundInst);
+  Sound alias = LoadSoundAlias(source);
+  return createSound(alias);
+}
+
+
+static Value unloadWaveRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  
+  ObjInstance *waveInst = AS_INSTANCE(args[1]);
+  push(OBJ_VAL(waveInst));
+  
+  // Get the Wave pointer
+  Value wavePtrVal = readNativeInstanceField(waveInst, "*wave_ptr", 9);
+  if (IS_NUMBER(wavePtrVal)) {
+    Wave *wavePtr = (Wave*)(uintptr_t)AS_NUMBER(wavePtrVal);
+    if (wavePtr) {
+      // Let Raylib unload the wave data
+      UnloadWave(*wavePtr);
+      // Free our allocated struct
+      free(wavePtr);
+      // Clear the pointer to prevent double-free
+      defineNativeInstanceField(waveInst, "*wave_ptr", 9, NUMBER_VAL(0));
+    }
+  }
+  
+  pop();
+  return NIL_VAL;
+}
+
+static Value unloadSoundAliasRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *soundInst = AS_INSTANCE(args[1]);
+  Sound alias = extractSound(soundInst);
+  UnloadSoundAlias(alias);
+  return NIL_VAL;
+}
+
+static Value exportWaveRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_STRING)) {
+    return NIL_VAL;
+  }
+  
+  ObjInstance *waveInst = AS_INSTANCE(args[1]);
+  push(OBJ_VAL(waveInst)); // GC protection
+  
+  Wave wave = extractWave(waveInst);
+  if (vm.shouldPanic) {
+    pop();
+    return NIL_VAL;
+  }
+  
+  // Safety checks
+  if (wave.data == NULL || wave.frameCount == 0) {
+    pop();
+    runtimeError("Invalid wave data for export");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  const char *filename = AS_CSTRING(args[2]);
+  if (!filename || strlen(filename) == 0) {
+    pop();
+    runtimeError("Invalid filename for wave export");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  bool result = ExportWave(wave, filename);
+  pop(); // Clean up GC stack
+  
+  return BOOL_VAL(result);
+}
+
+
+// Wave/Sound management functions
+static Value pauseSoundRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *soundInst = AS_INSTANCE(args[1]);
+  Sound sound = extractSound(soundInst);
+  PauseSound(sound);
+  return NIL_VAL;
+}
+
+static Value resumeSoundRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *soundInst = AS_INSTANCE(args[1]);
+  Sound sound = extractSound(soundInst);
+  ResumeSound(sound);
+  return NIL_VAL;
+}
+
+static Value setSoundVolumeRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  ObjInstance *soundInst = AS_INSTANCE(args[1]);
+  Sound sound = extractSound(soundInst);
+  SetSoundVolume(sound, AS_NUMBER(args[2]));
+  return NIL_VAL;
+}
+
+static Value setSoundPitchRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  ObjInstance *soundInst = AS_INSTANCE(args[1]);
+  Sound sound = extractSound(soundInst);
+  SetSoundPitch(sound, AS_NUMBER(args[2]));
+  return NIL_VAL;
+}
+
+static Value setSoundPanRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  ObjInstance *soundInst = AS_INSTANCE(args[1]);
+  Sound sound = extractSound(soundInst);
+  SetSoundPan(sound, AS_NUMBER(args[2]));
+  return NIL_VAL;
+}
+
+static Value waveCopyRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  
+  ObjInstance *waveInst = AS_INSTANCE(args[1]);
+  push(OBJ_VAL(waveInst)); // GC protection
+  
+  Wave wave = extractWave(waveInst);
+  if (vm.shouldPanic) {
+    pop();
+    return NIL_VAL;
+  }
+  
+  Wave copy = WaveCopy(wave);
+  pop(); // Clean up GC stack
+  
+  if (copy.data == NULL || copy.frameCount == 0) {
+    runtimeError("Failed to copy wave data");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  return createWave(copy);
+}
+
+static Value waveCropRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 4, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_NUMBER, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  ObjInstance *waveInst = AS_INSTANCE(args[1]);
+  Wave wave = extractWave(waveInst);
+  WaveCrop(&wave, AS_NUMBER(args[2]), AS_NUMBER(args[3]));
+  return NIL_VAL;
+}
+
+static Value waveFormatRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 5, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_NUMBER, ARG_NUMBER, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  ObjInstance *waveInst = AS_INSTANCE(args[1]);
+  Wave wave = extractWave(waveInst);
+  WaveFormat(&wave, AS_NUMBER(args[2]), AS_NUMBER(args[3]), AS_NUMBER(args[4]));
+  return NIL_VAL;
+}
+
+// Music management functions
+static Value loadMusicStreamRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_STRING)) {
+    return NIL_VAL;
+  }
+  Music music = LoadMusicStream(AS_CSTRING(args[1]));
+  return createMusic(music);
+}
+
+
+static Value unloadMusicStreamRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  
+  ObjInstance *musicInst = AS_INSTANCE(args[1]);
+  push(OBJ_VAL(musicInst));
+  
+  // Get the Music pointer
+  Value musicPtrVal = readNativeInstanceField(musicInst, "*music_ptr", 10);
+  if (IS_NUMBER(musicPtrVal)) {
+    Music *musicPtr = (Music*)(uintptr_t)AS_NUMBER(musicPtrVal);
+    if (musicPtr) {
+      // Let Raylib unload the music data
+      UnloadMusicStream(*musicPtr);
+      // Free our allocated struct
+      free(musicPtr);
+      // Clear the pointer
+      defineNativeInstanceField(musicInst, "*music_ptr", 10, NUMBER_VAL(0));
+    }
+  }
+  
+  pop();
+  return NIL_VAL;
+}
+
+static Value playMusicStreamRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *musicInst = AS_INSTANCE(args[1]);
+  Music music = extractMusic(musicInst);
+  PlayMusicStream(music);
+  return NIL_VAL;
+}
+
+static Value isMusicStreamPlayingRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *musicInst = AS_INSTANCE(args[1]);
+  Music music = extractMusic(musicInst);
+  return BOOL_VAL(IsMusicStreamPlaying(music));
+}
+
+static Value updateMusicStreamRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *musicInst = AS_INSTANCE(args[1]);
+  Music music = extractMusic(musicInst);
+  UpdateMusicStream(music);
+  return NIL_VAL;
+}
+
+static Value stopMusicStreamRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *musicInst = AS_INSTANCE(args[1]);
+  Music music = extractMusic(musicInst);
+  StopMusicStream(music);
+  return NIL_VAL;
+}
+
+static Value pauseMusicStreamRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *musicInst = AS_INSTANCE(args[1]);
+  Music music = extractMusic(musicInst);
+  PauseMusicStream(music);
+  return NIL_VAL;
+}
+
+static Value resumeMusicStreamRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *musicInst = AS_INSTANCE(args[1]);
+  Music music = extractMusic(musicInst);
+  ResumeMusicStream(music);
+  return NIL_VAL;
+}
+
+static Value seekMusicStreamRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  ObjInstance *musicInst = AS_INSTANCE(args[1]);
+  Music music = extractMusic(musicInst);
+  SeekMusicStream(music, AS_NUMBER(args[2]));
+  return NIL_VAL;
+}
+
+static Value setMusicVolumeRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  ObjInstance *musicInst = AS_INSTANCE(args[1]);
+  Music music = extractMusic(musicInst);
+  SetMusicVolume(music, AS_NUMBER(args[2]));
+  return NIL_VAL;
+}
+
+static Value setMusicPitchRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  ObjInstance *musicInst = AS_INSTANCE(args[1]);
+  Music music = extractMusic(musicInst);
+  SetMusicPitch(music, AS_NUMBER(args[2]));
+  return NIL_VAL;
+}
+
+static Value setMusicPanRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  ObjInstance *musicInst = AS_INSTANCE(args[1]);
+  Music music = extractMusic(musicInst);
+  SetMusicPan(music, AS_NUMBER(args[2]));
+  return NIL_VAL;
+}
+
+static Value getMusicTimeLengthRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *musicInst = AS_INSTANCE(args[1]);
+  Music music = extractMusic(musicInst);
+  return NUMBER_VAL(GetMusicTimeLength(music));
+}
+
+static Value getMusicTimePlayedRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *musicInst = AS_INSTANCE(args[1]);
+  Music music = extractMusic(musicInst);
+  return NUMBER_VAL(GetMusicTimePlayed(music));
+}
+
+// AudioStream management functions
+static Value loadAudioStreamRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 4, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER, ARG_NUMBER, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  AudioStream stream = LoadAudioStream(AS_NUMBER(args[1]), AS_NUMBER(args[2]), AS_NUMBER(args[3]));
+  return createAudioStream(stream);
+}
+
+
+static Value unloadAudioStreamRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  
+  ObjInstance *streamInst = AS_INSTANCE(args[1]);
+  push(OBJ_VAL(streamInst));
+  
+  // Get the AudioStream pointer
+  Value streamPtrVal = readNativeInstanceField(streamInst, "*stream_ptr", 11);
+  if (IS_NUMBER(streamPtrVal)) {
+    AudioStream *streamPtr = (AudioStream*)(uintptr_t)AS_NUMBER(streamPtrVal);
+    if (streamPtr) {
+      // Let Raylib unload the stream data
+      UnloadAudioStream(*streamPtr);
+      // Free our allocated struct
+      free(streamPtr);
+      // Clear the pointer
+      defineNativeInstanceField(streamInst, "*stream_ptr", 11, NUMBER_VAL(0));
+    }
+  }
+  
+  pop();
+  return NIL_VAL;
+}
+
+static Value isAudioStreamProcessedRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *streamInst = AS_INSTANCE(args[1]);
+  AudioStream stream = extractAudioStream(streamInst);
+  return BOOL_VAL(IsAudioStreamProcessed(stream));
+}
+
+static Value playAudioStreamRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *streamInst = AS_INSTANCE(args[1]);
+  AudioStream stream = extractAudioStream(streamInst);
+  PlayAudioStream(stream);
+  return NIL_VAL;
+}
+
+static Value pauseAudioStreamRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *streamInst = AS_INSTANCE(args[1]);
+  AudioStream stream = extractAudioStream(streamInst);
+  PauseAudioStream(stream);
+  return NIL_VAL;
+}
+
+static Value resumeAudioStreamRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *streamInst = AS_INSTANCE(args[1]);
+  AudioStream stream = extractAudioStream(streamInst);
+  ResumeAudioStream(stream);
+  return NIL_VAL;
+}
+
+static Value isAudioStreamPlayingRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *streamInst = AS_INSTANCE(args[1]);
+  AudioStream stream = extractAudioStream(streamInst);
+  return BOOL_VAL(IsAudioStreamPlaying(stream));
+}
+
+static Value stopAudioStreamRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE)) {
+    return NIL_VAL;
+  }
+  ObjInstance *streamInst = AS_INSTANCE(args[1]);
+  AudioStream stream = extractAudioStream(streamInst);
+  StopAudioStream(stream);
+  return NIL_VAL;
+}
+
+static Value setAudioStreamVolumeRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  ObjInstance *streamInst = AS_INSTANCE(args[1]);
+  AudioStream stream = extractAudioStream(streamInst);
+  SetAudioStreamVolume(stream, AS_NUMBER(args[2]));
+  return NIL_VAL;
+}
+
+static Value setAudioStreamPitchRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  ObjInstance *streamInst = AS_INSTANCE(args[1]);
+  AudioStream stream = extractAudioStream(streamInst);
+  SetAudioStreamPitch(stream, AS_NUMBER(args[2]));
+  return NIL_VAL;
+}
+
+static Value setAudioStreamPanRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_ANY, ARG_INSTANCE, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  ObjInstance *streamInst = AS_INSTANCE(args[1]);
+  AudioStream stream = extractAudioStream(streamInst);
+  SetAudioStreamPan(stream, AS_NUMBER(args[2]));
+  return NIL_VAL;
+}
+
+static Value setAudioStreamBufferSizeDefaultRLNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_ANY, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  SetAudioStreamBufferSizeDefault(AS_NUMBER(args[1]));
+  return NIL_VAL;
 }
 
 static Value createColor(double r, double g, double b, double a) {
@@ -1546,6 +2268,21 @@ void registerRaylibNatives() {
   soundKlassRef = soundKlass;
   defineNativeInstanceField(raylibInstance, "Sound", 5, pop());
 
+  ObjKlass *waveKlass = newKlass(copyString("Wave", 4, &vm.strings), OBJ_INSTANCE);
+  push(OBJ_VAL(waveKlass));
+  waveKlassRef = waveKlass;
+  defineNativeInstanceField(raylibInstance, "Wave", 4, pop());
+
+  ObjKlass *musicKlass = newKlass(copyString("Music", 5, &vm.strings), OBJ_INSTANCE);
+  push(OBJ_VAL(musicKlass));
+  musicKlassRef = musicKlass;
+  defineNativeInstanceField(raylibInstance, "Music", 5, pop());
+
+  ObjKlass *audioStreamKlass = newKlass(copyString("AudioStream", 11, &vm.strings), OBJ_INSTANCE);
+  push(OBJ_VAL(audioStreamKlass));
+  audioStreamKlassRef = audioStreamKlass;
+  defineNativeInstanceField(raylibInstance, "AudioStream", 11, pop());
+
   ObjKlass *imgKlass = newKlass(copyString("Image", 5, &vm.strings), OBJ_INSTANCE);
   push(OBJ_VAL(imgKlass));
   imgKlassRef = imgKlass;
@@ -1695,6 +2432,54 @@ void registerRaylibNatives() {
   defineNativeInstanceMethod(raylibInstance, "stop_sound", 10, stopSoundRLNative);
   defineNativeInstanceMethod(raylibInstance, "unload_sound", 12, unloadSoundRLNative);
   defineNativeInstanceMethod(raylibInstance, "is_sound_playing", 16, isSoundPlayingRLNative);
+
+  // Wave/Sound loading/unloading methods
+  defineNativeInstanceMethod(raylibInstance, "load_wave", 9, loadWaveRLNative);
+  defineNativeInstanceMethod(raylibInstance, "load_sound_from_wave", 20, loadSoundFromWaveRLNative);
+  defineNativeInstanceMethod(raylibInstance, "load_sound_alias", 16, loadSoundAliasRLNative);
+  defineNativeInstanceMethod(raylibInstance, "unload_wave", 11, unloadWaveRLNative);
+  defineNativeInstanceMethod(raylibInstance, "unload_sound_alias", 18, unloadSoundAliasRLNative);
+  defineNativeInstanceMethod(raylibInstance, "export_wave", 11, exportWaveRLNative);
+
+  // Wave/Sound management methods
+  defineNativeInstanceMethod(raylibInstance, "pause_sound", 11, pauseSoundRLNative);
+  defineNativeInstanceMethod(raylibInstance, "resume_sound", 12, resumeSoundRLNative);
+  defineNativeInstanceMethod(raylibInstance, "set_sound_volume", 16, setSoundVolumeRLNative);
+  defineNativeInstanceMethod(raylibInstance, "set_sound_pitch", 15, setSoundPitchRLNative);
+  defineNativeInstanceMethod(raylibInstance, "set_sound_pan", 13, setSoundPanRLNative);
+  defineNativeInstanceMethod(raylibInstance, "wave_copy", 9, waveCopyRLNative);
+  defineNativeInstanceMethod(raylibInstance, "wave_crop", 9, waveCropRLNative);
+  defineNativeInstanceMethod(raylibInstance, "wave_format", 11, waveFormatRLNative);
+
+  // Music management methods
+  defineNativeInstanceMethod(raylibInstance, "load_music_stream", 17, loadMusicStreamRLNative);
+  defineNativeInstanceMethod(raylibInstance, "unload_music_stream", 19, unloadMusicStreamRLNative);
+  defineNativeInstanceMethod(raylibInstance, "play_music_stream", 17, playMusicStreamRLNative);
+  defineNativeInstanceMethod(raylibInstance, "is_music_stream_playing", 23, isMusicStreamPlayingRLNative);
+  defineNativeInstanceMethod(raylibInstance, "update_music_stream", 19, updateMusicStreamRLNative);
+  defineNativeInstanceMethod(raylibInstance, "stop_music_stream", 17, stopMusicStreamRLNative);
+  defineNativeInstanceMethod(raylibInstance, "pause_music_stream", 18, pauseMusicStreamRLNative);
+  defineNativeInstanceMethod(raylibInstance, "resume_music_stream", 19, resumeMusicStreamRLNative);
+  defineNativeInstanceMethod(raylibInstance, "seek_music_stream", 17, seekMusicStreamRLNative);
+  defineNativeInstanceMethod(raylibInstance, "set_music_volume", 16, setMusicVolumeRLNative);
+  defineNativeInstanceMethod(raylibInstance, "set_music_pitch", 15, setMusicPitchRLNative);
+  defineNativeInstanceMethod(raylibInstance, "set_music_pan", 13, setMusicPanRLNative);
+  defineNativeInstanceMethod(raylibInstance, "get_music_time_length", 21, getMusicTimeLengthRLNative);
+  defineNativeInstanceMethod(raylibInstance, "get_music_time_played", 21, getMusicTimePlayedRLNative);
+
+  // AudioStream management methods
+  defineNativeInstanceMethod(raylibInstance, "load_audio_stream", 17, loadAudioStreamRLNative);
+  defineNativeInstanceMethod(raylibInstance, "unload_audio_stream", 19, unloadAudioStreamRLNative);
+  defineNativeInstanceMethod(raylibInstance, "is_audio_stream_processed", 25, isAudioStreamProcessedRLNative);
+  defineNativeInstanceMethod(raylibInstance, "play_audio_stream", 17, playAudioStreamRLNative);
+  defineNativeInstanceMethod(raylibInstance, "pause_audio_stream", 18, pauseAudioStreamRLNative);
+  defineNativeInstanceMethod(raylibInstance, "resume_audio_stream", 19, resumeAudioStreamRLNative);
+  defineNativeInstanceMethod(raylibInstance, "is_audio_stream_playing", 23, isAudioStreamPlayingRLNative);
+  defineNativeInstanceMethod(raylibInstance, "stop_audio_stream", 17, stopAudioStreamRLNative);
+  defineNativeInstanceMethod(raylibInstance, "set_audio_stream_volume", 23, setAudioStreamVolumeRLNative);
+  defineNativeInstanceMethod(raylibInstance, "set_audio_stream_pitch", 22, setAudioStreamPitchRLNative);
+  defineNativeInstanceMethod(raylibInstance, "set_audio_stream_pan", 20, setAudioStreamPanRLNative);
+  defineNativeInstanceMethod(raylibInstance, "set_audio_stream_buffer_size_default", 36, setAudioStreamBufferSizeDefaultRLNative);
 
   // rtextures
   defineNativeInstanceMethod(raylibInstance, "load_image", 10, loadImageRLNative);

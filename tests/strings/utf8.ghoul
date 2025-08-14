@@ -1,0 +1,44 @@
+# UTF-8 and Emoji Support Test
+
+print "$expect$";
+# ASCII: char length = byte length
+print 11;
+print 11;
+# Emoji: char length < byte length (emojis are multi-byte)
+print 16;
+print 22;
+# Unicode mix: various multi-byte characters
+print 21;
+print 39;
+# Greek letters: multi-byte characters
+print 12;
+print 22;
+# Math symbols: multi-byte characters
+print 10;
+print 27;
+
+print "$actual$";
+# Test basic ASCII
+:ascii_str = "Hello World";
+print ascii_str.len();
+print ascii_str.byte_len();
+
+# Test UTF-8 with emojis
+:emoji_str = "Hello 👋 World 🌍!";
+print emoji_str.len();
+print emoji_str.byte_len();
+
+# Test various Unicode characters
+:unicode_str = "Héllo Wörld! 你好世界 🎉🚀✨";
+print unicode_str.len();
+print unicode_str.byte_len();
+
+# Test Greek letters
+:greek_str = "αβγδε ΑΒΓ ΔΕ";
+print greek_str.len();
+print greek_str.byte_len();
+
+# Test mathematical symbols
+:math_str = "∑∫∞≠≤≥±×÷√";
+print math_str.len();
+print math_str.byte_len();

@@ -1,4 +1,5 @@
 #include "common_native.h"
+#include "../utf8.h"
 
 bool checkArgCount(int argCount, int expectedCount) {
   if (argCount != expectedCount) {
@@ -1027,8 +1028,56 @@ static Value lenStringNative(int argCount, Value *args) {
     return NIL_VAL;
   };
   ObjString *string = AS_STRING(args[0]);
-  double count = (double)string->length;
-  return NUMBER_VAL(count);
+  
+  if (string == NULL || string->chars == NULL) {
+    return NUMBER_VAL(0.0);
+  }
+  
+  int utf8_chars = utf8_get_cached_length(string);
+  return NUMBER_VAL((double)utf8_chars);
+}
+
+static Value byteLenStringNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_STRING)) {
+    return NIL_VAL;
+  };
+  ObjString *string = AS_STRING(args[0]);
+  
+  // Handle null strings safely
+  if (string == NULL) {
+    return NUMBER_VAL(0.0);
+  }
+  
+  // Return byte count (original length)
+  return NUMBER_VAL((double)string->length);
+}
+
+static Value isValidUtf8StringNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_STRING)) {
+    return NIL_VAL;
+  };
+  ObjString *string = AS_STRING(args[0]);
+  
+  if (string == NULL || string->chars == NULL) {
+    return BOOL_VAL(true);
+  }
+  
+  bool is_valid = utf8_is_valid(string->chars, string->length);
+  return BOOL_VAL(is_valid);
+}
+
+static Value isAsciiOnlyStringNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_STRING)) {
+    return NIL_VAL;
+  };
+  ObjString *string = AS_STRING(args[0]);
+  
+  if (string == NULL || string->chars == NULL) {
+    return BOOL_VAL(true);
+  }
+  
+  bool is_ascii = utf8_get_cached_is_ascii(string);
+  return BOOL_VAL(is_ascii);
 }
 
 static Value containsStringNative(int argCount, Value *args) {
@@ -1137,6 +1186,9 @@ static ObjKlass *createStringClass() {
   ObjKlass *stringKlass = defineKlass("String", 6, OBJ_STRING);
   defineNativeKlassMethod(stringKlass, "init", 4, initStringNative);
   defineNativeKlassMethod(stringKlass, "len", 3, lenStringNative);
+  defineNativeKlassMethod(stringKlass, "byte_len", 8, byteLenStringNative);
+  defineNativeKlassMethod(stringKlass, "is_valid_utf8", 13, isValidUtf8StringNative);
+  defineNativeKlassMethod(stringKlass, "is_ascii_only", 13, isAsciiOnlyStringNative);
   defineNativeKlassMethod(stringKlass, "contains", 8, containsStringNative);
   defineNativeKlassMethod(stringKlass, "split", 5, splitStringNative);
   defineNativeKlassMethod(stringKlass, "asnum", 5, asNumberStringNative);

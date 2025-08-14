@@ -174,6 +174,9 @@ ObjString *allocateString(char *chars, int length, uint32_t hash,
   string->chars = chars;
   string->klass = klass;
   initTable(&string->fields);
+  
+  string->char_length = -1;
+  string->is_ascii = false;
 
   push(OBJ_VAL(string));
   tableSet(stringTable, string, NIL_VAL);

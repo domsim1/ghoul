@@ -9,13 +9,26 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#include <fcntl.h>
+#include <io.h>
 #else
 #include <libgen.h>
+#include <locale.h>
 #endif
 
 #include "vm.h"
 
 static char actualpath[PATH_MAX + 1];
+
+static void setupUTF8Support() {
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+#else
+    setlocale(LC_ALL, "");
+    setlocale(LC_CTYPE, "en_US.UTF-8");
+#endif
+}
 
 static char* getExecutableDir() {
     static char execDir[PATH_MAX + 1];
@@ -266,6 +279,7 @@ static void loadStd() {
 }
 
 int main(int argc, const char *argv[]) {
+  setupUTF8Support();
   initVM();
   loadStd();
 

@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "scanner.h"
+#include "utf8.h"
 
 Scanner scanner;
 

@@ -1,0 +1,50 @@
+# UTF-8 Edge Cases Test
+
+print "$expect$";
+# Empty string
+print 0;
+print 0;
+print true;
+# Single ASCII character
+print 1;
+print 1;
+print true;
+# Single emoji (4 bytes)
+print 1;
+print 4;
+print true;
+# Mixed content should all be valid UTF-8
+print true;
+print true;
+print true;
+print true;
+
+print "$actual$";
+# Test empty string
+:empty_str = "";
+print empty_str.len();
+print empty_str.byte_len();
+print empty_str.is_valid_utf8();
+
+# Test single ASCII character
+:single_ascii = "A";
+print single_ascii.len();
+print single_ascii.byte_len();
+print single_ascii.is_valid_utf8();
+
+# Test single emoji
+:single_emoji = "🚀";
+print single_emoji.len();
+print single_emoji.byte_len();
+print single_emoji.is_valid_utf8();
+
+# Test various valid UTF-8 strings
+:ascii_str = "Hello World";
+:emoji_str = "Hello 👋 World 🌍!";
+:unicode_str = "Héllo Wörld! 你好世界 🎉🚀✨";
+:greek_str = "αβγδε ΑΒΓ ΔΕ";
+
+print ascii_str.is_valid_utf8();
+print emoji_str.is_valid_utf8();
+print unicode_str.is_valid_utf8();
+print greek_str.is_valid_utf8();

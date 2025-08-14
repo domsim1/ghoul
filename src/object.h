@@ -84,6 +84,8 @@ struct ObjString {
   ObjKlass *klass;
   Table fields;
   char *chars;
+  int char_length;
+  bool is_ascii;
 };
 
 typedef struct ObjUpvalue {

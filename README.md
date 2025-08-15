@@ -41,7 +41,8 @@ bot.greet("World"); # Output: Hello World, I'm Ghoul!
 
 ### Prerequisites
 
-- **Linux/macOS**: GCC, Make, GNU Readline, libcurl, raylib
+- **Linux**: GCC, Make, GNU Readline, libcurl, raylib
+- **macOS**: Clang, Make, GNU Readline, raylib
 - **Windows**: MSYS2 UCRT64 environment (see detailed setup below)
 - **Testing**: Go runtime (for test suite)
 

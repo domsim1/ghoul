@@ -9,4 +9,4 @@ test.ghoul
 build/
 .cache/
 compile_commands.json
-
+ghoul.dSYM/

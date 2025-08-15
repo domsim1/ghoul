@@ -1,19 +1,25 @@
-#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <readline/history.h>
+#include <locale.h>
 #include <readline/readline.h>
-#include <unistd.h>
+#include <readline/history.h>
 
 #ifdef _WIN32
-#include <windows.h>
-#include <fcntl.h>
-#include <io.h>
+  #include <windows.h>
+  #include <libgen.h>
+  #ifndef PATH_MAX
+    #define PATH_MAX MAX_PATH
+  #endif
+#elif defined(__APPLE__)
+  #include <mach-o/dyld.h>
+  #include <libgen.h>
+  #include <limits.h>
+  #include <unistd.h>
 #else
-#include <libgen.h>
-#include <locale.h>
+  #include <unistd.h>
+  #include <libgen.h>
+  #include <limits.h>
 #endif
 
 #include "vm.h"
@@ -22,59 +28,119 @@ static char actualpath[PATH_MAX + 1];
 
 static void setupUTF8Support() {
 #ifdef _WIN32
-    SetConsoleOutputCP(CP_UTF8);
-    SetConsoleCP(CP_UTF8);
+  SetConsoleOutputCP(CP_UTF8);
+  SetConsoleCP(CP_UTF8);
 #else
-    setlocale(LC_ALL, "");
-    setlocale(LC_CTYPE, "en_US.UTF-8");
+  setlocale(LC_ALL, "");
+  setlocale(LC_CTYPE, "en_US.UTF-8");
 #endif
 }
 
-static char* getExecutableDir() {
-    static char execDir[PATH_MAX + 1];
-    static int initialized = 0;
-    
-    if (initialized) {
-        return execDir;
+static char* portable_dirname(char* path) {
+  char* last_slash = NULL;
+  char* p = path;
+  
+  if (!path || !*path) {
+    return ".";
+  }
+  
+  while (*p) {
+    if (*p == '/' || *p == '\\') {
+      last_slash = p;
     }
-    
-#ifdef _WIN32
-    DWORD result = GetModuleFileName(NULL, execDir, PATH_MAX);
-    if (result == 0 || result == PATH_MAX) {
-        return NULL;
-    }
-    
-    char *lastSlash = strrchr(execDir, '\\');
-    if (lastSlash != NULL) {
-        *lastSlash = '\0';
-    } else {
-        return NULL;
-    }
-#else
-    ssize_t len = readlink("/proc/self/exe", execDir, PATH_MAX - 1);
-    if (len == -1 || len == 0) {
-        return NULL;
-    }
-    execDir[len] = '\0';
-    
-    char tempPath[PATH_MAX + 1];
-    strncpy(tempPath, execDir, PATH_MAX);
-    tempPath[PATH_MAX] = '\0';
-    
-    char *dir = dirname(tempPath);
-    if (dir == NULL) {
-        return NULL;
-    }
-    
-    if (strlen(dir) >= PATH_MAX) {
-        return NULL;
-    }
-    
-    strcpy(execDir, dir);
-#endif
-    
-    initialized = 1;
+    p++;
+  }
+  
+  if (!last_slash) {
+    return ".";
+  }
+  
+  if (last_slash == path) {
+    *(last_slash + 1) = '\0';
+    return path;
+  }
+  
+  *last_slash = '\0';
+  return path;
+}
+
+static char* getExecutableDir(void) {
+  static char execDir[PATH_MAX + 1];
+  static int initialized = 0;
+  
+  if (initialized) {
     return execDir;
+  }
+
+  char path[PATH_MAX + 1] = {0};
+
+#ifdef _WIN32
+  DWORD len = GetModuleFileNameA(NULL, path, sizeof(path) - 1);
+  if (len == 0) {
+    fprintf(stderr, "Failed to get executable path on Windows (Error: %lu)\n", GetLastError());
+    return NULL;
+  }
+  if (len >= sizeof(path) - 1) {
+    fprintf(stderr, "Executable path too long on Windows\n");
+    return NULL;
+  }
+  path[len] = '\0';
+
+#elif defined(__APPLE__)
+  uint32_t size = sizeof(path) - 1;
+  if (_NSGetExecutablePath(path, &size) != 0) {
+    fprintf(stderr, "Executable path too long on macOS (required size: %u)\n", size);
+    return NULL;
+  }
+  
+  char resolved[PATH_MAX + 1];
+  if (realpath(path, resolved) != NULL) {
+    if (strlen(resolved) < sizeof(path)) {
+      strcpy(path, resolved);
+    } else {
+      fprintf(stderr, "Resolved path too long on macOS\n");
+      return NULL;
+    }
+  }
+
+#else
+  ssize_t len = readlink("/proc/self/exe", path, sizeof(path) - 1);
+  if (len == -1) {
+    fprintf(stderr, "Failed to get executable path on Linux\n");
+    return NULL;
+  }
+  if (len == 0) {
+    fprintf(stderr, "Empty executable path on Linux\n");
+    return NULL;
+  }
+  if (len >= (ssize_t)(sizeof(path) - 1)) {
+    fprintf(stderr, "Executable path too long on Linux\n");
+    return NULL;
+  }
+  path[len] = '\0';
+#endif
+
+  char temp[PATH_MAX + 1];
+  if (strlen(path) >= sizeof(temp)) {
+    fprintf(stderr, "Path too long for processing\n");
+    return NULL;
+  }
+  strcpy(temp, path);
+
+  char* dir = portable_dirname(temp);
+  if (!dir) {
+    fprintf(stderr, "Failed to get directory name\n");
+    return NULL;
+  }
+  
+  if (strlen(dir) >= sizeof(execDir)) {
+    fprintf(stderr, "Directory path too long for buffer\n");
+    return NULL;
+  }
+  strcpy(execDir, dir);
+
+  initialized = 1;
+  return execDir;
 }
 
 static int get_nesting_level(const char *input) {
@@ -82,7 +148,7 @@ static int get_nesting_level(const char *input) {
   int paren_count = 0;
   int in_string = 0;
   char string_char = 0;
-  
+
   for (const char *p = input; *p; p++) {
     if (!in_string) {
       if (*p == '"' || *p == '\'') {
@@ -98,12 +164,12 @@ static int get_nesting_level(const char *input) {
         paren_count--;
       }
     } else {
-      if (*p == string_char && (p == input || *(p-1) != '\\')) {
+      if (*p == string_char && (p == input || *(p - 1) != '\\')) {
         in_string = 0;
       }
     }
   }
-  
+
   return brace_count + paren_count + (in_string ? 1 : 0);
 }
 
@@ -116,7 +182,7 @@ static char* create_prompt(int nesting_level) {
     strcpy(prompt, "ghoul> ");
     return prompt;
   }
-  
+
   int base_indent = 7;
   int additional_indent = nesting_level * 2;
   int total_spaces = base_indent + additional_indent;
@@ -125,21 +191,21 @@ static char* create_prompt(int nesting_level) {
   if (prompt == NULL) {
     return NULL;
   }
-  
+
   for (int i = 0; i < total_spaces; i++) {
     prompt[i] = ' ';
   }
   prompt[total_spaces] = '.';
   prompt[total_spaces + 1] = ' ';
   prompt[total_spaces + 2] = '\0';
-  
+
   return prompt;
 }
 
 static void repl() {
   char *full_input = NULL;
   size_t full_input_size = 0;
-  
+
   for (;;) {
     int nesting_level = (full_input == NULL) ? 0 : get_nesting_level(full_input);
     char *prompt = create_prompt(nesting_level);
@@ -158,7 +224,6 @@ static void repl() {
         free(full_input);
         full_input = NULL;
       }
-      printf("\nBye!\n");
       break;
     }
 
@@ -202,7 +267,7 @@ static void repl() {
       full_input_size = 0;
     }
   }
-  
+
   if (full_input) {
     free(full_input);
   }
@@ -251,30 +316,82 @@ static void runFile(const char *path) {
     exit(70);
 }
 
+static int file_exists(const char* path) {
+  FILE* file = fopen(path, "r");
+  if (file) {
+    fclose(file);
+    return 1;
+  }
+  return 0;
+}
+
 static void loadStd() {
-  char *execDir = getExecutableDir();
-  if (execDir == NULL) {
-    fprintf(stderr, "Warning: Failed to get executable directory, using fallback path.\n");
-    runFile("std/std.ghoul");
-    return;
-  }
-  
   static char stdPath[PATH_MAX + 1];
-  int result = snprintf(stdPath, sizeof(stdPath), "%s%sstd%sstd.ghoul", 
-                       execDir, 
+  int found = 0;
+
+  const char* search_paths[] = {
+    NULL,                                    // Will be set to executable dir
 #ifdef _WIN32
-                       "\\", "\\"
+    "C:\\Program Files\\ghoul\\std\\std.ghoul",
+    "C:\\ghoul\\std\\std.ghoul",
 #else
-                       "/", "/"
+    "/usr/local/share/ghoul/std/std.ghoul",  // System install location
+    "/usr/share/ghoul/std/std.ghoul",        // Alternative system location
+    "/opt/ghoul/std/std.ghoul",              // Optional software location
 #endif
-  );
-  
-  if (result >= PATH_MAX || result < 0) {
-    fprintf(stderr, "Warning: Standard library path too long, using fallback.\n");
-    runFile("std/std.ghoul");
-    return;
+    "std/std.ghoul",                         // Current directory fallback
+    "./std/std.ghoul",                       // Explicit current directory
+    NULL
+  };
+
+  // Try executable directory first
+  char *execDir = getExecutableDir();
+  if (execDir != NULL) {
+    int result = snprintf(stdPath, sizeof(stdPath), "%s%sstd%sstd.ghoul",
+                          execDir,
+#ifdef _WIN32
+                          "\\", "\\"
+#else
+                          "/", "/"
+#endif
+    );
+
+    if (result > 0 && result < PATH_MAX && file_exists(stdPath)) {
+      found = 1;
+    }
   }
-  
+
+  // If not found in executable directory, try other locations
+  if (!found) {
+    for (int i = 1; search_paths[i] != NULL; i++) {
+      if (file_exists(search_paths[i])) {
+        strncpy(stdPath, search_paths[i], sizeof(stdPath) - 1);
+        stdPath[sizeof(stdPath) - 1] = '\0';
+        found = 1;
+        break;
+      }
+    }
+  }
+
+  if (!found) {
+    fprintf(stderr, "Error: Could not find standard library (std.ghoul).\n");
+    fprintf(stderr, "Searched in:\n");
+    if (execDir) {
+      fprintf(stderr, "  %s%sstd%sstd.ghoul\n", execDir,
+#ifdef _WIN32
+              "\\", "\\"
+#else
+              "/", "/"
+#endif
+      );
+    }
+    for (int i = 1; search_paths[i] != NULL; i++) {
+      fprintf(stderr, "  %s\n", search_paths[i]);
+    }
+    fprintf(stderr, "Please ensure ghoul is properly installed or run from the source directory.\n");
+    exit(74);
+  }
+
   runFile(stdPath);
 }
 

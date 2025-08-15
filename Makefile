@@ -98,14 +98,6 @@ debug: LDFLAGS += -fsanitize=address -fsanitize=undefined
 debug: $(cfiles) $(hfiles) $(vcfiles)
 	$(CC) $(WARN) -g $(DEFINES) $(CFLAGS) -o $(EXE) $(cfiles) $(vcfiles) $(LIBS) $(LDFLAGS) $(WIN_STACK)
 
-# Check for missing dependencies
-.PHONY: check-deps
-check-deps:
-	@echo "Checking for required dependencies..."
-	@pkg-config --exists readline 2>/dev/null || echo "Warning: readline development package not found"
-	@pkg-config --exists raylib 2>/dev/null || echo "Warning: raylib development package not found"
-	@pkg-config --exists libcurl 2>/dev/null || echo "Warning: libcurl development package not found"
-	@command -v go >/dev/null 2>&1 || echo "Warning: Go not found (needed for tests)"
 
 # Show build configuration
 .PHONY: config
@@ -131,6 +123,5 @@ help:
 	@echo "  install   - Install to system (requires sudo)"
 	@echo "  uninstall - Remove from system (requires sudo)"
 	@echo "  compiledb - Generate compile_commands.json for IDEs"
-	@echo "  check-deps- Check for required dependencies"
 	@echo "  config    - Show build configuration"
 	@echo "  help      - Show this help message"

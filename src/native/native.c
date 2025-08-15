@@ -1043,12 +1043,9 @@ static Value byteLenStringNative(int argCount, Value *args) {
   };
   ObjString *string = AS_STRING(args[0]);
   
-  // Handle null strings safely
   if (string == NULL) {
     return NUMBER_VAL(0.0);
   }
-  
-  // Return byte count (original length)
   return NUMBER_VAL((double)string->length);
 }
 
@@ -1142,28 +1139,36 @@ static Value initErrorNative(int argCount, Value *args) {
 
 static ObjKlass *createFileClass() {
   ObjKlass *fileKlass = defineKlass("File", 4, OBJ_FILE);
+  return fileKlass;
+}
+
+static void addFileMethods(ObjKlass *fileKlass) {
   defineNativeKlassMethod(fileKlass, "init", 4, initFileNative);
   defineNativeKlassMethod(fileKlass, "close", 5, closeFileNative);
   defineNativeKlassMethod(fileKlass, "write", 5, writeFileNative);
   defineNativeKlassMethod(fileKlass, "read", 4, readFileNative);
-
-  return fileKlass;
 }
 
 static ObjKlass *createListClass() {
   ObjKlass *listKlass = defineKlass("List", 4, OBJ_LIST);
+  return listKlass;
+}
+
+static void addListMethods(ObjKlass *listKlass) {
   defineNativeKlassMethod(listKlass, "init", 4, initListNative);
   defineNativeKlassMethod(listKlass, "push", 4, pushListNative);
   defineNativeKlassMethod(listKlass, "pop", 3, popListNative);
   defineNativeKlassMethod(listKlass, "len", 3, lenListNative);
   defineNativeKlassMethod(listKlass, "remove", 6, removeListNative);
   defineNativeKlassMethod(listKlass, "join", 4, joinListNative);
-
-  return listKlass;
 }
 
 static ObjKlass *createMapClass() {
   ObjKlass *mapKlass = defineKlass("Map", 3, OBJ_MAP);
+  return mapKlass;
+}
+
+static void addMapMethods(ObjKlass *mapKlass) {
   defineNativeKlassMethod(mapKlass, "init", 4, initMapNative);
   defineNativeKlassMethod(mapKlass, "keys", 4, keysMapNative);
   defineNativeKlassMethod(mapKlass, "values", 6, valuesMapNative);
@@ -1172,8 +1177,6 @@ static ObjKlass *createMapClass() {
   defineNativeKlassMethod(mapKlass, "get", 3, getMapNative);
   defineNativeKlassMethod(mapKlass, "set", 3, setMapNative);
   defineNativeKlassMethod(mapKlass, "delete", 6, deleteMapNative);
-
-  return mapKlass;
 }
 
 static ObjKlass *createPairClass() {
@@ -1184,6 +1187,10 @@ static ObjKlass *createPairClass() {
 
 static ObjKlass *createStringClass() {
   ObjKlass *stringKlass = defineKlass("String", 6, OBJ_STRING);
+  return stringKlass;
+}
+
+static void addStringMethods(ObjKlass *stringKlass) {
   defineNativeKlassMethod(stringKlass, "init", 4, initStringNative);
   defineNativeKlassMethod(stringKlass, "len", 3, lenStringNative);
   defineNativeKlassMethod(stringKlass, "byte_len", 8, byteLenStringNative);
@@ -1202,22 +1209,35 @@ static ObjKlass *createStringClass() {
   defineNativeKlassMethod(stringKlass, "substring", 9, substringStringNative);
   defineNativeKlassMethod(stringKlass, "replace", 7, replaceStringNative);
   defineNativeKlassMethod(stringKlass, "replace_all", 11, replaceAllStringNative);
-
-  return stringKlass;
 }
 
 static ObjKlass *createErrorClass() {
   ObjKlass *errKlass = defineKlass("Error", 5, OBJ_INSTANCE);
-  defineNativeKlassMethod(errKlass, "init", 4, initErrorNative);
-
   return errKlass;
 }
 
+static void addErrorMethods(ObjKlass *errKlass) {
+  defineNativeKlassMethod(errKlass, "init", 4, initErrorNative);
+}
+
 void registerBuiltInKlasses() {
+  // Create string class first WITHOUT methods and set global reference immediately
+  vm.klass.string = createStringClass();
+  
+  // Create other classes WITHOUT methods first
   vm.klass.list = createListClass();
   vm.klass.file = createFileClass();
-  vm.klass.string = createStringClass();
   vm.klass.error = createErrorClass();
   vm.klass.map = createMapClass();
   vm.klass.pair = createPairClass();
+}
+
+void registerBuiltInKlassMethods() {
+  // Now add methods to all classes - at this point vm.klass.string is available
+  addStringMethods(vm.klass.string);
+  addListMethods(vm.klass.list);
+  addFileMethods(vm.klass.file);
+  addErrorMethods(vm.klass.error);
+  addMapMethods(vm.klass.map);
+  // Pair class has no methods
 }

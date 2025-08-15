@@ -1,0 +1,56 @@
+# Test for string method calls on strings that match native method names
+# This tests the fix for NULL klass field segfault bug
+
+print "$expect$";
+print "Testing direct method name strings...";
+print "close";
+print "5";
+print "read";
+print "4";
+print "write";
+print "5";
+print "init";
+print "4";
+print "Testing split operation with method names...";
+print "window_should_close";
+print "should_close";
+print "12";
+print "close";
+print "5";
+print "All tests passed!";
+
+print "$actual$";
+
+# Test direct creation of strings that match method names
+print "Testing direct method name strings...";
+:close_str = "close";
+print close_str;
+print String(close_str.len());
+
+:read_str = "read";
+print read_str;
+print String(read_str.len());
+
+:write_str = "write";
+print write_str;
+print String(write_str.len());
+
+:init_str = "init";
+print init_str;
+print String(init_str.len());
+
+# Test split operation that creates strings matching method names
+print "Testing split operation with method names...";
+:test_string = "window_should_close";
+:parts = test_string.split("_should_");
+print test_string;
+print parts[1];  # This returns "should_close", not "close"
+print String(parts[1].len());  # This was causing segfault
+
+# Test creating "close" string through split operation
+:close_test = "file_close_operation";
+:close_parts = close_test.split("_");
+print close_parts[1];  # This should be "close"
+print String(close_parts[1].len());  # Test .len() on "close"
+
+print "All tests passed!";

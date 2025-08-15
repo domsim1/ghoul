@@ -3,6 +3,7 @@
 
 void registerNatives();
 void registerBuiltInKlasses();
+void registerBuiltInKlassMethods();
 
 void registerMathNatives();
 void registerRequestNatives();

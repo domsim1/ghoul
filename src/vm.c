@@ -25,34 +25,6 @@ static void resetStack() {
   vm.openUpvalues = NULL;
 }
 
-// ObjString *createStracktrace() {
-//   int len = 0;
-//   char *stacktrace = ALLOCATE(char, 0);
-//   for (int i = vm.frameCount - 1; i >= 0; i--) {
-//     CallFrame *frame = &vm.frames[i];
-//     ObjFunction *function = frame->closure->function;
-//     size_t instruction = frame->ip - function->chunk.code - 1;
-//     int strLen =
-//         snprintf(NULL, 0, "[line %d of %s] in %s%s\n",
-//                  getLine(&function->chunk, instruction),
-//                  getLineFileName(&function->chunk, instruction),
-//                  function->name == NULL ? "script" : function->name->chars,
-//                  function->name == NULL ? "" : "()");
-//     char str[strLen + 1];
-//     int oldlen = len;
-//     len += strLen + 1;
-//     snprintf(str, strLen + 1, "[line %d of %s] in %s%s\n",
-//              getLine(&function->chunk, instruction),
-//              getLineFileName(&function->chunk, instruction),
-//              function->name == NULL ? "script" : function->name->chars,
-//              function->name == NULL ? "" : "()");
-//     stacktrace = GROW_ARRAY(char, stacktrace, oldlen, len + 1);
-//     strcat(stacktrace, str);
-//   }
-//   ObjString *stack = copyString(stacktrace, len - 1, &vm.strings);
-//   FREE(char, stacktrace);
-//   return stack;
-// }
 
 void runtimeError(const char *format, ...) {
   va_list args;
@@ -92,6 +64,18 @@ void initVM() {
   initTable(&vm.strings);
   initTable(&vm.useStrings);
 
+  vm.klass.list = NULL;
+  vm.klass.file = NULL;
+  vm.klass.string = NULL;
+  vm.klass.error = NULL;
+  vm.klass.pair = NULL;
+  vm.klass.map = NULL;
+
+  vm.keep = NULL;
+  vm.shouldPanic = false;
+
+  registerBuiltInKlasses();
+  
   vm.string.init = NULL;
   vm.string.isError = NULL;
   vm.string.message = NULL;
@@ -113,10 +97,8 @@ void initVM() {
   vm.string.y = copyString("y", 1, &vm.strings);
   vm.string.z = copyString("z", 1, &vm.strings);
 
-  vm.keep = NULL;
-  vm.shouldPanic = false;
-
-  registerBuiltInKlasses();
+  registerBuiltInKlassMethods();
+  
   registerNatives();
 }
 

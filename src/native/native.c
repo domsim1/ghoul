@@ -282,6 +282,204 @@ static Value readFileNative(int argCount, Value *args) {
   return pop();
 }
 
+static Value eofFileNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_FILE)) {
+    return NIL_VAL;
+  }
+  ObjFile *file = AS_FILE(args[0]);
+  return BOOL_VAL(feof(file->file));
+}
+
+static Value tellFileNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_FILE)) {
+    return NIL_VAL;
+  }
+  ObjFile *file = AS_FILE(args[0]);
+  long pos = ftell(file->file);
+  if (pos == -1) {
+    runtimeError("Could not get file position.");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  return NUMBER_VAL((double)pos);
+}
+
+static Value seekFileNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 3, args, NATIVE_NORMAL, ARG_FILE, ARG_NUMBER, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  ObjFile *file = AS_FILE(args[0]);
+  long offset = (long)AS_NUMBER(args[1]);
+  int whence = (int)AS_NUMBER(args[2]);
+  
+  if (whence < 0 || whence > 2) {
+    runtimeError("Seek whence must be 0 (SEEK_SET), 1 (SEEK_CUR), or 2 (SEEK_END).");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  if (fseek(file->file, offset, whence) != 0) {
+    runtimeError("Could not seek in file.");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  return NIL_VAL;
+}
+
+static Value rewindFileNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_FILE)) {
+    return NIL_VAL;
+  }
+  ObjFile *file = AS_FILE(args[0]);
+  rewind(file->file);
+  return NIL_VAL;
+}
+
+static Value readAllFileNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_FILE)) {
+    return NIL_VAL;
+  }
+  ObjFile *file = AS_FILE(args[0]);
+  
+  long currentPos = ftell(file->file);
+  
+  fseek(file->file, 0, SEEK_END);
+  long size = ftell(file->file);
+  fseek(file->file, currentPos, SEEK_SET);
+  
+  if (size == -1) {
+    runtimeError("Could not determine file size.");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  long remaining = size - currentPos;
+  if (remaining <= 0) {
+    return OBJ_VAL(copyString("", 0, &vm.strings));
+  }
+  
+  char *buffer = ALLOCATE(char, remaining + 1);
+  size_t bytesRead = fread(buffer, 1, remaining, file->file);
+  buffer[bytesRead] = '\0';
+  
+  push(OBJ_VAL(copyString(buffer, bytesRead, &vm.strings)));
+  FREE_ARRAY(char, buffer, remaining + 1);
+  return pop();
+}
+
+static Value readLineFileNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_FILE)) {
+    return NIL_VAL;
+  }
+  ObjFile *file = AS_FILE(args[0]);
+  
+  int count = 0;
+  int capacity = 8;
+  int oldCapacity = 0;
+  char *str = NULL;
+  str = GROW_ARRAY(char, str, oldCapacity, capacity);
+  
+  do {
+    char c = fgetc(file->file);
+    if (c == EOF) {
+      break;
+    }
+    if (c == '\n') {
+      break;
+    }
+    if (c == '\r') {
+      char next = fgetc(file->file);
+      if (next != '\n' && next != EOF) {
+        ungetc(next, file->file); 
+      }
+      break;
+    }
+    
+    if (capacity < count + 1) {
+      oldCapacity = capacity;
+      capacity = GROW_CAPACITY(oldCapacity);
+      str = GROW_ARRAY(char, str, oldCapacity, capacity);
+    }
+    str[count] = c;
+    count++;
+  } while (true);
+  
+  push(OBJ_VAL(copyString(str, count, &vm.strings)));
+  FREE_ARRAY(char, str, capacity);
+  return pop();
+}
+
+static Value readBytesFileNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_FILE, ARG_NUMBER)) {
+    return NIL_VAL;
+  }
+  ObjFile *file = AS_FILE(args[0]);
+  int bytesToRead = (int)AS_NUMBER(args[1]);
+  
+  if (bytesToRead < 0) {
+    runtimeError("Number of bytes to read must be non-negative.");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  if (bytesToRead == 0) {
+    return OBJ_VAL(copyString("", 0, &vm.strings));
+  }
+  
+  char *buffer = ALLOCATE(char, bytesToRead + 1);
+  size_t bytesRead = fread(buffer, 1, bytesToRead, file->file);
+  buffer[bytesRead] = '\0';
+  
+  push(OBJ_VAL(copyString(buffer, bytesRead, &vm.strings)));
+  FREE_ARRAY(char, buffer, bytesToRead + 1);
+  return pop();
+}
+
+static Value writeLineFileNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 2, args, NATIVE_NORMAL, ARG_FILE, ARG_STRING)) {
+    return NIL_VAL;
+  }
+  ObjFile *file = AS_FILE(args[0]);
+  ObjString *str = AS_STRING(args[1]);
+  
+  for (int i = 0; i < str->length; i++) {
+    if (fputc(str->chars[i], file->file) == EOF) {
+      runtimeError("Could not write to file!");
+      vm.shouldPanic = true;
+      return NIL_VAL;
+    }
+  }
+  
+  if (fputc('\n', file->file) == EOF) {
+    runtimeError("Could not write to file!");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  
+  return NIL_VAL;
+}
+
+static Value flushFileNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_FILE)) {
+    return NIL_VAL;
+  }
+  ObjFile *file = AS_FILE(args[0]);
+  if (fflush(file->file) != 0) {
+    runtimeError("Could not flush file buffer.");
+    vm.shouldPanic = true;
+    return NIL_VAL;
+  }
+  return NIL_VAL;
+}
+
+static Value isClosedFileNative(int argCount, Value *args) {
+  if (!checkArgs(argCount, 1, args, NATIVE_NORMAL, ARG_FILE)) {
+    return NIL_VAL;
+  }
+  ObjFile *file = AS_FILE(args[0]);
+  return BOOL_VAL(file->file == NULL);
+}
+
 static Value initListNative(int argCount, Value *args) {
   if (!checkArgs(argCount, 1, args, NATIVE_VARIADIC, ARG_ANY)) {
     return NIL_VAL;
@@ -1147,6 +1345,16 @@ static void addFileMethods(ObjKlass *fileKlass) {
   defineNativeKlassMethod(fileKlass, "close", 5, closeFileNative);
   defineNativeKlassMethod(fileKlass, "write", 5, writeFileNative);
   defineNativeKlassMethod(fileKlass, "read", 4, readFileNative);
+  defineNativeKlassMethod(fileKlass, "eof", 3, eofFileNative);
+  defineNativeKlassMethod(fileKlass, "read_all", 8, readAllFileNative);
+  defineNativeKlassMethod(fileKlass, "read_line", 9, readLineFileNative);
+  defineNativeKlassMethod(fileKlass, "read_bytes", 10, readBytesFileNative);
+  defineNativeKlassMethod(fileKlass, "write_line", 10, writeLineFileNative);
+  defineNativeKlassMethod(fileKlass, "flush", 5, flushFileNative);
+  defineNativeKlassMethod(fileKlass, "is_closed", 9, isClosedFileNative);
+  defineNativeKlassMethod(fileKlass, "tell", 4, tellFileNative);
+  defineNativeKlassMethod(fileKlass, "seek", 4, seekFileNative);
+  defineNativeKlassMethod(fileKlass, "rewind", 6, rewindFileNative);
 }
 
 static ObjKlass *createListClass() {

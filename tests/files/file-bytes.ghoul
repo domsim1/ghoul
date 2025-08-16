@@ -1,0 +1,49 @@
+print "$expect$";
+print "Hello";
+print " ";
+print "World";
+print "!";
+print "";
+print "12345";
+print "67890";
+print "ABC";
+print "$actual$";
+
+# Create test file with known byte content
+:f = File("./files/folder/bytes.txt", "w");
+f.write("Hello World!");
+f.close();
+
+# Test read_bytes() with different byte counts
+:f2 = File("./files/folder/bytes.txt", "r");
+
+# Read first 5 bytes
+print f2.read_bytes(5);
+
+# Read next 1 byte (space)
+print f2.read_bytes(1);
+
+# Read next 5 bytes
+print f2.read_bytes(5);
+
+# Read last 1 byte
+print f2.read_bytes(1);
+
+# Try reading beyond end of file (should return empty string)
+print f2.read_bytes(10);
+
+f2.close();
+
+# Test read_bytes() with larger file
+:f4 = File("./files/folder/numbers.txt", "w");
+f4.write("1234567890ABCDEFGHIJ");
+f4.close();
+
+:f5 = File("./files/folder/numbers.txt", "r");
+
+# Read in chunks
+print f5.read_bytes(5);
+print f5.read_bytes(5);
+print f5.read_bytes(3);
+
+f5.close();

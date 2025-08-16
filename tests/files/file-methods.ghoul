@@ -1,0 +1,41 @@
+print "$expect$";
+print "false";
+print "Hello World!";
+print "First line";
+print "Second line";
+print "Third line";
+print "false";
+print "true";
+print "$actual$";
+
+# Test eof() method
+:f = File("./files/folder/test.txt", "r");
+print f.eof();
+f.close();
+
+# Test read_all() method
+:f2 = File("./files/folder/multiline.txt", "w");
+f2.write("Hello World!");
+f2.close();
+:f2_read = File("./files/folder/multiline.txt", "r");
+print f2_read.read_all();
+f2_read.close();
+
+# Test write_line() and read_line() methods
+:f3 = File("./files/folder/lines.txt", "w");
+f3.write_line("First line");
+f3.write_line("Second line");
+f3.write_line("Third line");
+f3.close();
+
+:f3_read = File("./files/folder/lines.txt", "r");
+print f3_read.read_line();
+print f3_read.read_line();
+print f3_read.read_line();
+f3_read.close();
+
+# Test is_closed() method
+:f4 = File("./files/folder/test.txt", "r");
+print f4.is_closed();
+f4.close();
+print f4.is_closed();

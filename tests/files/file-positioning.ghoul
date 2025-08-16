@@ -1,0 +1,44 @@
+print "$expect$";
+print "0";
+print "5";
+print "10";
+print "0";
+print "H";
+print "0";
+print "10";
+print "$actual$";
+
+# Create test file with known content
+:f = File("./files/folder/position.txt", "w");
+f.write("Hello Test");
+f.close();
+
+# Test tell() method - get current position
+:f2 = File("./files/folder/position.txt", "r");
+print f2.tell();
+
+# Read 5 characters and check position
+f2.read_bytes(5);
+print f2.tell();
+
+# Read remaining characters and check position (should be at end)
+f2.read_all();
+print f2.tell();
+
+# Test rewind() method - reset to beginning
+f2.rewind();
+print f2.tell();
+
+# Test seek() method - seek to position 0 (SEEK_SET = 0)
+# Read first character to verify position
+print f2.read_bytes(1);
+
+# Test seek() to beginning using different method
+f2.seek(0, 0);
+print f2.tell();
+
+# Seek to end using SEEK_END (2)
+f2.seek(0, 2);
+print f2.tell();
+
+f2.close();

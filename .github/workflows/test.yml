@@ -1,40 +1,115 @@
 name: 'Test'
-
 on:
   push:
+    paths-ignore:
+      - '**.md'
+  pull_request:
     paths-ignore:
       - '**.md'
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            cc: gcc
+          - os: macos-latest
+            cc: clang
+          - os: windows-latest
+            cc: gcc
+    
+    runs-on: ${{ matrix.os }}
+    
     steps:
     - uses: actions/checkout@v4
+    
     - name: Setup Go
       uses: actions/setup-go@v5
       with:
         go-version: '1.22.x'
-    - name: Install GNU Readline
-      shell: bash
-      run: sudo apt install -y libreadline-dev
-    - name: Install libcurl
-      shell: bash
-      run: sudo apt install -y libcurl4-openssl-dev
-    - name: Install raylib
-      shell: bash
+        cache: false  # Disable Go module caching since we don't have go.mod
+
+    # Ubuntu/Linux Dependencies
+    - name: Install Linux Dependencies
+      if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends libglfw3 libglfw3-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev libwayland-dev libxkbcommon-dev
-        # Build raylib from source to avoid PPA issues
-        git clone https://github.com/raysan5/raylib.git
-        cd raylib
-        mkdir build && cd build
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON ..
-        make -j$(nproc)
-        sudo make install
-        sudo ldconfig
-        cd ../..
-    - name: Run and Show test results
-      shell: bash
-      run: make test
+        sudo apt-get install -y build-essential libreadline-dev libcurl4-openssl-dev
+        # Install raylib dependencies first
+        sudo apt-get install -y --no-install-recommends libglfw3-dev libgl1-mesa-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev
+        # Try to install raylib from package first, fall back to building if needed
+        if ! sudo apt-get install -y libraylib-dev 2>/dev/null; then
+          echo "Package libraylib-dev not available, building from source..."
+          # Use a specific stable version instead of latest
+          git clone --depth 1 --branch 5.0 https://github.com/raysan5/raylib.git
+          cd raylib
+          mkdir build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_PREFIX=/usr/local ..
+          make -j2  # Reduce parallelism to avoid resource limits
+          sudo make install
+          sudo ldconfig
+          cd ../..
+        else
+          echo "Successfully installed raylib from package"
+        fi
+
+    # macOS Dependencies
+    - name: Install macOS Dependencies
+      if: runner.os == 'macOS'
+      run: |
+        # Only install if not already present
+        brew list raylib &>/dev/null || brew install raylib
+        brew list readline &>/dev/null || brew install readline
+        brew list curl &>/dev/null || brew install curl
+        # Ensure pkg-config can find the libraries
+        echo "PKG_CONFIG_PATH=$(brew --prefix)/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
+
+    # Windows Dependencies (MSYS2)
+    - name: Setup MSYS2
+      if: runner.os == 'Windows'
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: UCRT64
+        update: true
+        install: >-
+          base-devel
+          mingw-w64-ucrt-x86_64-gcc
+          mingw-w64-ucrt-x86_64-make
+          mingw-w64-ucrt-x86_64-readline
+          mingw-w64-ucrt-x86_64-curl
+          mingw-w64-ucrt-x86_64-raylib
+          mingw-w64-ucrt-x86_64-pkgconf
+          mingw-w64-ucrt-x86_64-go
+
+    # Build and Test - Linux/macOS
+    - name: Build and Test (Unix)
+      if: runner.os != 'Windows'
+      run: |
+        export CC=${{ matrix.cc }}
+        make config
+        make test
+      env:
+        CC: ${{ matrix.cc }}
+
+    # Build and Test - Windows
+    - name: Build and Test (Windows)
+      if: runner.os == 'Windows'
+      shell: msys2 {0}
+      run: |
+        export CC=gcc
+        # Verify Go is available
+        which go
+        go version
+        make config
+        make test
+
+    # Upload test results on failure
+    - name: Upload test logs on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-logs-${{ matrix.os }}
+        path: tests/*.log
+        retention-days: 7

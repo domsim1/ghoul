@@ -352,10 +352,3 @@ print uppercase;  # "THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG"
 :sanitized = user_input.trim().replace_all("<", "&lt;").replace_all(">", "&gt;");
 print sanitized;  # "JavaScript Alert!"
 ```
-
-
-## See Also
-
-- [Value Types](./Values.md) - Overview of Ghoul's type system
-- [Lists](./List.md) - Working with arrays
-- [Standard Library](./StandardLibrary.md) - Built-in functions
